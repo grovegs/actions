@@ -3,7 +3,7 @@ name: Github Release
 on:
   workflow_call:
     inputs:
-      name:
+      title:
         required: true
         type: string
       version:
@@ -38,8 +38,8 @@ jobs:
 
           if [[ "${{ inputs.version }}" != "0.0.0" ]]; then
             gh release create ${{ inputs.version }} $ASSET_FILES \
-              --title "${{ inputs.name }} ${{ inputs.version }}" --generate-notes --notes-start-tag "${{ inputs.version }}"
+              --title "${{ inputs.title }}" --generate-notes --notes-start-tag "${{ inputs.version }}"
           else
             gh release create ${{ inputs.version }} $ASSET_FILES \
-              --title "${{ inputs.name }} ${{ inputs.version }}"
+              --title "${{ inputs.title }}"
           fi

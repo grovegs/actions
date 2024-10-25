@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}" >> $GITHUB_ENV
+          echo "ARTIFACT=$ARTIFACT_DIR/${{ inputs.name }}.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -36,10 +36,10 @@ jobs:
 
       - name: ✏️ Rename NuGet Package
         run: |
-          mv $ARTIFACT_DIR/${{ inputs.id }}.${{ inputs.version }}.nupkg $PACKAGE_DIR/$ARTIFACT_NAME.nupkg
+          mv $ARTIFACT_DIR/${{ inputs.id }}.${{ inputs.version }}.nupkg $ARTIFACT
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: nuget-package
-          path: $PACKAGE_DIR/$ARTIFACT_NAME.nupkg
+          path: $ARTIFACT
