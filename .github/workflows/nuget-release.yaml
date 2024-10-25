@@ -1,0 +1,29 @@
+name: Nuget Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔗 Set Dynamic Paths
+        run: |
+          echo "ARTIFACT=./artifacts/package/release/${{ inputs.name }}-${{ inputs.version }}.nupkg" >> $GITHUB_ENV
+
+      - name: 📥 Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-package
+          path: $ARTIFACT
+
+      - name: 🚀 Publish NuGet Package
+        run: dotnet nuget push $ARTIFACT --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --source https://api.nuget.org/v3/index.json

@@ -1,0 +1,46 @@
+name: Godot Pack
+
+on:
+  workflow_call:
+    inputs:
+      path:
+        required: true
+        type: string
+      id:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      ARTIFACT_DIR: ./artifacts/package/release
+
+    steps:
+      - name: 🔗 Set Dynamic Paths
+        run: |
+          echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}-godot-addon" >> $GITHUB_ENV
+
+      - name: 📦 Pack Godot Addon
+        run: |
+          mkdir -p $ARTIFACT_DIR/$ARTIFACT_NAME
+          cp -r ${{ inputs.path }} $ARTIFACT_DIR/$ARTIFACT_NAME
+          cp README.md LICENSE $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.id }}
+          sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.id }}/plugin.cfg
+
+      - name: 🗜️ Zip Godot Addon
+        run: |
+          cd $ARTIFACT_DIR && zip -r $ARTIFACT_NAME.zip $ARTIFACT_NAME
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-addon
+          path: $ARTIFACT_DIR/$ARTIFACT_NAME.zip
