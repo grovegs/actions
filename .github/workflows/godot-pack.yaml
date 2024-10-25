@@ -3,16 +3,16 @@ name: Godot Pack
 on:
   workflow_call:
     inputs:
-      addon_path:
+      path:
         required: true
         type: string
-      project_id:
+      id:
         required: true
         type: string
-      project_version:
+      version:
         required: true
         type: string
-      package_name:
+      name:
         required: true
         type: string
 
@@ -26,14 +26,14 @@ jobs:
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT_NAME=${{ inputs.package_name }}-${{ inputs.project_version }}-godot-addon" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}-godot-addon" >> $GITHUB_ENV
 
       - name: 📦 Pack Godot Addon
         run: |
           mkdir -p $ARTIFACT_DIR/$ARTIFACT_NAME
-          cp -r ${{ inputs.addon_path }} $ARTIFACT_DIR/$ARTIFACT_NAME
-          cp README.md LICENSE $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.project_id }}
-          sed -i 's/version="[^"]*"/version="'${{ inputs.project_version }}'"/' $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.project_id }}/plugin.cfg
+          cp -r ${{ inputs.path }} $ARTIFACT_DIR/$ARTIFACT_NAME
+          cp README.md LICENSE $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.id }}
+          sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT_DIR/$ARTIFACT_NAME/${{ inputs.id }}/plugin.cfg
 
       - name: 🗜️ Zip Godot Addon
         run: |

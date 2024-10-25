@@ -3,10 +3,10 @@ name: .NET Build
 on:
   workflow_call:
     inputs:
-      project_path:
+      path:
         required: true
         type: string
-      project_version:
+      version:
         required: true
         type: string
 
@@ -21,10 +21,10 @@ jobs:
           global-json-file: global.json
 
       - name: ♻️ Restore Project
-        run: dotnet restore ${{ inputs.project_path }}
+        run: dotnet restore ${{ inputs.path }}
 
       - name: ⚙️ Build Project
-        run: dotnet build --no-restore --configuration Release -p:Version=${{ inputs.project_version }} ${{ inputs.project_path }}
+        run: dotnet build --no-restore --configuration Release -p:Version=${{ inputs.version }} ${{ inputs.path }}
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4

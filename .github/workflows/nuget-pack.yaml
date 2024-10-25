@@ -3,13 +3,13 @@ name: Nuget Pack
 on:
   workflow_call:
     inputs:
-      project_id:
+      id:
         required: true
         type: string
-      project_version:
+      version:
         required: true
         type: string
-      package_name:
+      name:
         required: true
         type: string
 
@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT_NAME=${{ inputs.project_id }}-${{ inputs.project_version }}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}" >> $GITHUB_ENV
 
       - name: 📥 Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -32,11 +32,11 @@ jobs:
           path: ./artifacts
 
       - name: 📦 Pack NuGet Package
-        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.project_version }} ./artifacts
+        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.version }} ./artifacts
 
       - name: ✏️ Rename NuGet Package
         run: |
-          mv $ARTIFACT_DIR/${{ inputs.project_id }}.${{ inputs.project_version }}.nupkg $PACKAGE_DIR/$ARTIFACT_NAME.nupkg
+          mv $ARTIFACT_DIR/${{ inputs.id }}.${{ inputs.version }}.nupkg $PACKAGE_DIR/$ARTIFACT_NAME.nupkg
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4

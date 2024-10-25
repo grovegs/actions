@@ -3,10 +3,10 @@ name: Nuget Release
 on:
   workflow_call:
     inputs:
-      project_version:
+      version:
         required: true
         type: string
-      package_name:
+      name:
         required: true
         type: string
 
@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT=./artifacts/package/release/${{ inputs.package_name }}-${{ inputs.project_version }}.nupkg" >> $GITHUB_ENV
+          echo "ARTIFACT=./artifacts/package/release/${{ inputs.name }}-${{ inputs.version }}.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4

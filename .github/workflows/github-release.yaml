@@ -3,13 +3,13 @@ name: Github Release
 on:
   workflow_call:
     inputs:
-      project_name:
+      name:
         required: true
         type: string
-      project_version:
+      version:
         required: true
         type: string
-      artifact_names:
+      artifacts:
         required: true
         type: string
 
@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: 📥 Download Artifacts
         run: |
-          IFS=',' read -ra ARTIFACT_NAMES <<< "${{ inputs.artifact_names }}"
+          IFS=',' read -ra ARTIFACT_NAMES <<< "${{ inputs.artifacts }}"
           for ARTIFACT_NAME in "${ARTIFACT_NAMES[@]}"; do
             actions/download-artifact@v4 --name "$ARTIFACT_NAME" --path "./artifacts/$ARTIFACT_NAME"
           done
@@ -29,17 +29,17 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git tag "${{ inputs.project_version }}"
-          git push origin "${{ inputs.project_version }}"
+          git tag "${{ inputs.version }}"
+          git push origin "${{ inputs.version }}"
 
       - name: 📝 Create GitHub Release
         run: |
           ASSET_FILES=$(find ./artifacts -type f)
 
-          if [[ "${{ inputs.project_version }}" != "0.0.0" ]]; then
-            gh release create $PROJECT_VERSION $ASSET_FILES \
-              --title "${{ inputs.project_name }} ${{ inputs.project_version }}" --generate-notes --notes-start-tag "${{ inputs.project_version }}"
+          if [[ "${{ inputs.version }}" != "0.0.0" ]]; then
+            gh release create ${{ inputs.version }} $ASSET_FILES \
+              --title "${{ inputs.name }} ${{ inputs.version }}" --generate-notes --notes-start-tag "${{ inputs.version }}"
           else
-            gh release create $PROJECT_VERSION $ASSET_FILES \
-              --title "${{ inputs.project_name }} ${{ inputs.project_version }}"
+            gh release create ${{ inputs.version }} $ASSET_FILES \
+              --title "${{ inputs.name }} ${{ inputs.version }}"
           fi
