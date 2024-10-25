@@ -1,0 +1,45 @@
+name: Nuget Pack
+
+on:
+  workflow_call:
+    inputs:
+      project_id:
+        required: true
+        type: string
+      project_version:
+        required: true
+        type: string
+      package_name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      ARTIFACT_DIR: ./artifacts/package/release
+
+    steps:
+      - name: 🔗 Set Dynamic Paths
+        run: |
+          echo "ARTIFACT_NAME=${{ inputs.project_id }}-${{ inputs.project_version }}" >> $GITHUB_ENV
+
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dotnet-build
+          path: ./artifacts
+
+      - name: 📦 Pack NuGet Package
+        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.project_version }} ./artifacts
+
+      - name: ✏️ Rename NuGet Package
+        run: |
+          mv $ARTIFACT_DIR/${{ inputs.project_id }}.${{ inputs.project_version }}.nupkg $PACKAGE_DIR/$ARTIFACT_NAME.nupkg
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: $PACKAGE_DIR/$ARTIFACT_NAME.nupkg

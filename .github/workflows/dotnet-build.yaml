@@ -1,0 +1,38 @@
+name: .NET Build
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+      project_version:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔄 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🛠️ Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: ♻️ Restore Project
+        run: dotnet restore ${{ inputs.project_path }}
+
+      - name: ⚙️ Build Project
+        run: dotnet build --no-restore --configuration Release -p:Version=${{ inputs.project_version }} ${{ inputs.project_path }}
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-build
+          path: ./artifacts/*

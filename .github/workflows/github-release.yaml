@@ -1,0 +1,45 @@
+name: Github Release
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      project_version:
+        required: true
+        type: string
+      artifact_names:
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Download Artifacts
+        run: |
+          IFS=',' read -ra ARTIFACT_NAMES <<< "${{ inputs.artifact_names }}"
+          for ARTIFACT_NAME in "${ARTIFACT_NAMES[@]}"; do
+            actions/download-artifact@v4 --name "$ARTIFACT_NAME" --path "./artifacts/$ARTIFACT_NAME"
+          done
+
+      - name: 🔖 Create Tag and Push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "${{ inputs.project_version }}"
+          git push origin "${{ inputs.project_version }}"
+
+      - name: 📝 Create GitHub Release
+        run: |
+          ASSET_FILES=$(find ./artifacts -type f)
+
+          if [[ "${{ inputs.project_version }}" != "0.0.0" ]]; then
+            gh release create $PROJECT_VERSION $ASSET_FILES \
+              --title "${{ inputs.project_name }} ${{ inputs.project_version }}" --generate-notes --notes-start-tag "${{ inputs.project_version }}"
+          else
+            gh release create $PROJECT_VERSION $ASSET_FILES \
+              --title "${{ inputs.project_name }} ${{ inputs.project_version }}"
+          fi
