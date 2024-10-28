@@ -3,23 +3,33 @@ name: Nuget Release
 on:
   workflow_call:
     inputs:
-      name:
+      id:
         required: true
+        type: string
+      version:
+        required: true
+        type: string
+      platform:
+        required: false
         type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ARTIFACT_DIR: ./artifacts/package/release
+
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT=./artifacts/package/release/${{ inputs.name }}.nupkg" >> $GITHUB_ENV
+          FILE_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}
+          echo "ARTIFACT=$ARTIFACT_DIR/$FILE_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: nuget-package
+          name: nuget-package${{ format('-{0}', inputs.platform) || '' }}
           path: $ARTIFACT
 
       - name: 🚀 Publish NuGet Package

@@ -12,31 +12,33 @@ on:
       version:
         required: true
         type: string
-      name:
-        required: true
-        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     env:
-      ARTIFACT_DIR: ./artifacts/package/release
+      ARTIFACT_DIR: ./artifacts
 
     steps:
+      - name: 🔗 Set Dynamic Paths
+        run: |
+          echo "ARTIFACT_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}-godot-addon" >> $GITHUB_ENV
+          echo "ARTIFACT"=$ARTIFACT_DIR/$ARTIFACT_NAME" >> $GITHUB_ENV
+
       - name: 📦 Pack Godot Addon
         run: |
-          mkdir -p $ARTIFACT_DIR/${{ inputs.name }}
-          cp -r ${{ inputs.path }} $ARTIFACT_DIR/${{ inputs.name }}
-          cp README.md LICENSE $ARTIFACT_DIR/${{ inputs.name }}/${{ inputs.id }}
-          sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT_DIR/${{ inputs.name }}/${{ inputs.id }}/plugin.cfg
+          mkdir -p $ARTIFACT
+          cp -r ${{ inputs.path }} $ARTIFACT
+          cp README.md LICENSE $ARTIFACT/${{ inputs.id }}
+          sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT/${{ inputs.id }}/plugin.cfg
 
       - name: 🗜️ Zip Godot Addon
         run: |
-          cd $ARTIFACT_DIR && zip -r ${{ inputs.name }}.zip ${{ inputs.name }}
+          cd $ARTIFACT_DIR && zip -r $ARTIFACT_NAME.zip $ARTIFACT_NAME
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: godot-addon
-          path: $ARTIFACT_DIR/${{ inputs.name }}.zip
+          path: $ARTIFACT.zip
