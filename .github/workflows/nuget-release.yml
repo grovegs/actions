@@ -3,6 +3,9 @@ name: Nuget Release
 on:
   workflow_call:
     inputs:
+      name:
+        required: true
+        type: string
       id:
         required: true
         type: string
@@ -21,9 +24,9 @@ jobs:
       ARTIFACT_DIR: ./artifacts
 
     steps:
-      - name: 🔗 Set Dynamic Paths
+      - name: 🔗 Set Variables
         run: |
-          echo "ARTIFACT_NAME=$(echo '${{ inputs.id }}' | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}" >> $GITHUB_ENV
           echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
