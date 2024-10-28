@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          ARTIFACT_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}
+          echo "ARTIFACT_NAME=$(echo '${{ inputs.id }}' | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}" >> $GITHUB_ENV
           echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
