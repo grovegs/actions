@@ -36,7 +36,7 @@ jobs:
       - name: 📦 Pack Godot Addon
         run: |
           mkdir -p $ARTIFACT
-          cp -r ${{ inputs.path }} $ARTIFACT
+          cp -r ${{ inputs.path }}/* $ARTIFACT
           cp README.md LICENSE $ARTIFACT/${{ inputs.id }}
           sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT/${{ inputs.id }}/plugin.cfg
 
