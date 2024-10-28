@@ -9,8 +9,8 @@ on:
       version:
         required: true
         type: string
-      name:
-        required: true
+      platform:
+        required: false
         type: string
 
 jobs:
@@ -18,17 +18,18 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARTIFACT_DIR: ./artifacts/package/release
+      ARTIFACT_DIR: ./artifacts
 
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT=$ARTIFACT_DIR/${{ inputs.name }}.nupkg" >> $GITHUB_ENV
+          ARTIFACT_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}
+          echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dotnet-build
+          name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
           path: ./artifacts
 
       - name: 📦 Pack NuGet Package
@@ -36,10 +37,10 @@ jobs:
 
       - name: ✏️ Rename NuGet Package
         run: |
-          mv $ARTIFACT_DIR/${{ inputs.id }}.${{ inputs.version }}.nupkg $ARTIFACT
+          mv $ARTIFACT_DIR/package/release/${{ inputs.id }}.${{ inputs.version }}.nupkg $ARTIFACT
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nuget-package
+          name: nuget-package${{ format('-{0}', inputs.platform) || '' }}
           path: $ARTIFACT

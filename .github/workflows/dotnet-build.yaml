@@ -9,6 +9,9 @@ on:
       version:
         required: true
         type: string
+      platform:
+        required: false
+        type: string
 
 jobs:
   build:
@@ -29,5 +32,5 @@ jobs:
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dotnet-build
+          name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
           path: ./artifacts/*
