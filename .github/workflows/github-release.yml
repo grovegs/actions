@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARTIFACT_DIR: artifacts
+      ARTIFACT_DIR: ./artifacts
 
     steps:
       - name: 📥 Download Artifacts

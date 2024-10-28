@@ -6,6 +6,9 @@ on:
       name:
         required: true
         type: string
+      source:
+        required: true
+        type: string
       id:
         required: true
         type: string
@@ -20,27 +23,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      ARTIFACT_DIR: artifacts
-
     steps:
       - name: 🔗 Set Variables
         run: |
           echo "ARTIFACT_NAME=${{ inputs.name }}-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}" >> $GITHUB_ENV
-          echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
+          echo "ARTIFACT=$artifacts/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
           name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
-          path: $ARTIFACT_DIR
+          path: $source/$id
 
       - name: 📦 Pack NuGet Package
-        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.version }} $ARTIFACT_DIR
+        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.version }} $source/$id/artifacts
 
       - name: ✏️ Rename NuGet Package
         run: |
-          mv $ARTIFACT_DIR/package/release/${{ inputs.id }}.${{ inputs.version }}.nupkg $ARTIFACT
+          mv $source/$id/package/release/${{ inputs.id }}.${{ inputs.version }}.nupkg $ARTIFACT
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4

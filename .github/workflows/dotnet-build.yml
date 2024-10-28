@@ -3,7 +3,10 @@ name: .NET Build
 on:
   workflow_call:
     inputs:
-      path:
+      source:
+        required: true
+        type: string
+      id:
         required: true
         type: string
       version:
@@ -17,9 +20,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      ARTIFACT_DIR: artifacts
-
     steps:
       - name: 🔄 Checkout Code
         uses: actions/checkout@v4
@@ -30,13 +30,13 @@ jobs:
           global-json-file: global.json
 
       - name: ♻️ Restore Project
-        run: dotnet restore ${{ inputs.path }}
+        run: dotnet restore ${{ inputs.source }}/${{ inputs.id }}.csproj
 
       - name: ⚙️ Build Project
-        run: dotnet build --no-restore --configuration Release -p:Version=${{ inputs.version }} ${{ inputs.path }}
+        run: dotnet build --no-restore --configuration Release -p:Version=${{ inputs.version }} ${{ inputs.source }}/${{ inputs.id }}.csproj
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
-          path: $ARTIFACT_DIR/*
+          path: ${{ inputs.source }}/artifacts

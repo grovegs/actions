@@ -3,10 +3,10 @@ name: Godot Pack
 on:
   workflow_call:
     inputs:
-      path:
+      name:
         required: true
         type: string
-      name:
+      source:
         required: true
         type: string
       id:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARTIFACT_DIR: artifacts
+      ARTIFACT_DIR: ./artifacts
 
     steps:
       - name: 🔄 Checkout Code
@@ -36,7 +36,7 @@ jobs:
       - name: 📦 Pack Godot Addon
         run: |
           mkdir -p $ARTIFACT
-          cp -r ${{ inputs.path }}/* $ARTIFACT
+          cp -r $source/$id $ARTIFACT
           cp README.md LICENSE $ARTIFACT/${{ inputs.id }}
           sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ARTIFACT/${{ inputs.id }}/plugin.cfg
 
