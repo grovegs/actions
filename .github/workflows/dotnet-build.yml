@@ -17,7 +17,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ARTIFACT_DIR: ./artifacts
+
     steps:
+      - name: 🔄 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: 🛠️ Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -33,4 +41,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
-          path: ./artifacts/*
+          path: $ARTIFACT_DIR/*

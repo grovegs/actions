@@ -21,6 +21,11 @@ jobs:
       ARTIFACT_DIR: ./artifacts
 
     steps:
+      - name: 🔄 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: 🔗 Set Dynamic Paths
         run: |
           echo "ARTIFACT_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}-godot-addon" >> $GITHUB_ENV

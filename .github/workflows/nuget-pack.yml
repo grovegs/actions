@@ -30,10 +30,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dotnet-project${{ format('-{0}', inputs.platform) || '' }}
-          path: ./artifacts
+          path: $ARTIFACT_DIR
 
       - name: 📦 Pack NuGet Package
-        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.version }} ./artifacts
+        run: dotnet pack --no-build --configuration Release /p:PackageVersion=${{ inputs.version }} $ARTIFACT_DIR
 
       - name: ✏️ Rename NuGet Package
         run: |

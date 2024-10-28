@@ -18,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARTIFACT_DIR: ./artifacts/package/release
+      ARTIFACT_DIR: ./artifacts
 
     steps:
       - name: 🔗 Set Dynamic Paths
         run: |
-          FILE_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}
-          echo "ARTIFACT=$ARTIFACT_DIR/$FILE_NAME.nupkg" >> $GITHUB_ENV
+          ARTIFACT_NAME=${{ inputs.id }}" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-${{ inputs.version }}${{ format('-{0}', inputs.platform) || '' }}
+          echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME.nupkg" >> $GITHUB_ENV
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
