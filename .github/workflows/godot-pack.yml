@@ -26,8 +26,8 @@ jobs:
 
       - name: 🔗 Set Dynamic Paths
         run: |
-          echo "ARTIFACT_NAME=$(echo "$PROJECT_ID" | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-$PROJECT_VERSION-godot-addon" >> $GITHUB_ENV
-          echo "ARTIFACT"=$ARTIFACT_DIR/$ARTIFACT_NAME" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=$(echo '$PROJECT_ID' | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')-$PROJECT_VERSION-godot-addon" >> $GITHUB_ENV
+          echo "ARTIFACT=$ARTIFACT_DIR/$ARTIFACT_NAME" >> $GITHUB_ENV
 
       - name: 📦 Pack Godot Addon
         run: |
