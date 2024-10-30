@@ -41,7 +41,7 @@ jobs:
 
       - name: 📦 Unpack Godot Addon
         run: |
-          unzip -o ./artifacts/test.zip -d ./artifacts/test
+          unzip -o ./artifacts/test.zip -d ./artifacts
 
       - name: 🔍 Validate plugin.cfg Version
         run: |
