@@ -1,0 +1,45 @@
+name: GitHub Release
+description: Creates a GitHub release and uploads specified artifacts.
+
+inputs:
+  title:
+    description: The title for the GitHub release.
+    required: true
+  version:
+    description: The version number for the release.
+    required: true
+  artifacts:
+    description: A JSON array of NuGet artifact names to download and include in the release.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: 📥 Download Artifacts
+      shell: bash
+      run: |
+        ARTIFACTS=$(echo ${{ inputs.artifacts }} | jq -r '.[]')
+        for ARTIFACT in $ARTIFACTS; do
+          actions/download-artifact@v4 --name $ARTIFACT --path ./artifacts
+        done
+
+    - name: 🔖 Create Tag and Push
+      shell: bash
+      run: |
+        git config user.name GitHub Actions
+        git config user.email actions@github.com
+        git tag ${{ inputs.version }}
+        git push origin ${{ inputs.version }}
+
+    - name: 📝 Create GitHub Release
+      shell: bash
+      run: |
+        FILES=$(find ./artifacts -type f)
+
+        if [[ ${{ inputs.version }} != 0.0.0 ]]; then
+          gh release create ${{ inputs.version }} $FILES \
+            --title ${{ inputs.title }} --generate-notes --notes-start-tag ${{ inputs.version }}
+        else
+          gh release create ${{ inputs.version }} $FILES \
+            --title ${{ inputs.title }}
+        fi
