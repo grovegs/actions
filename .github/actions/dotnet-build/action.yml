@@ -1,0 +1,36 @@
+name: ".NET Build"
+description: "Build a .NET project"
+
+inputs:
+  project:
+    description: "The relative path to the .NET project (.csproj) file"
+    required: true
+  version:
+    description: "The version number to set for the build"
+    required: true
+  configuration:
+    description: "The build configuration (e.g., Release or Debug)"
+    required: true
+  global-json-file:
+    description: "The path to the global.json file specifying the .NET SDK version"
+    required: false
+    default: global.json
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔄 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: ${{ inputs.global-json-file }}
+
+    - name: ♻️ Restore Project
+      shell: bash
+      run: dotnet restore ${{ inputs.project }}
+
+    - name: ⚙️ Build Project
+      shell: bash
+      run: dotnet build --no-restore --configuration ${{ inputs.configuration }} -p:Version=${{ inputs.version }} ${{ inputs.project }}
