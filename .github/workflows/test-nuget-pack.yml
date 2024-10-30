@@ -32,6 +32,15 @@ jobs:
           configuration: Release
           artifact-name: "test"
 
+      - name: 🗑️ Remove Local Artifacts
+        run: rm -r ./artifacts
+
+      - name: 📥 Download Nuget Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "test"
+          path: ./artifacts
+
       - name: ✅ Validate NuGet Package
         run: |
           if [ ! -f ./artifacts/test.nupkg ]; then
