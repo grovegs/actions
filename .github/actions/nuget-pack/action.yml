@@ -1,26 +1,26 @@
-name: "Nuget Pack"
-description: "Packages a .NET project and uploads the NuGet artifact."
+name: Nuget Pack
+description: Packages a .NET project and uploads the NuGet artifact.
 
 inputs:
   project:
-    description: "Path to the .NET project (.csproj) file, relative to the repository root."
+    description: Path to the .NET project (.csproj) file, relative to the repository root.
     required: true
   version:
-    description: "Version number to apply to the package."
+    description: Version number to apply to the package.
     required: true
   configuration:
-    description: "Build configuration (e.g., Release or Debug) for the package."
+    description: Build configuration (e.g., Release or Debug) for the package.
     required: true
   name:
-    description: "Desired name for the uploaded NuGet package artifact."
+    description: Desired name for the uploaded NuGet package artifact.
     required: true
   duration:
-    description: "Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period."
+    description: Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period.
     required: false
     default: "1"
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: 📦 Pack NuGet Package
       shell: bash

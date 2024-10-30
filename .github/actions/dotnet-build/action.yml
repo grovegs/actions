@@ -1,23 +1,23 @@
-name: ".NET Build"
-description: "Build a .NET project"
+name: .NET Build
+description: Build a .NET project.
 
 inputs:
   project:
-    description: "The relative path to the .NET project (.csproj) file"
+    description: The relative path to the .NET project (.csproj) file.
     required: true
   version:
-    description: "The version number to set for the build"
+    description: The version number to set for the build.
     required: true
   configuration:
-    description: "The build configuration (e.g., Release or Debug)"
+    description: The build configuration (e.g., Release or Debug).
     required: true
   global-json-file:
-    description: "The path to the global.json file specifying the .NET SDK version"
+    description: The path to the global.json file specifying the .NET SDK version.
     required: false
     default: global.json
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: 🛠️ Setup .NET SDK
       uses: actions/setup-dotnet@v4

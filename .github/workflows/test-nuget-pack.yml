@@ -30,7 +30,7 @@ jobs:
           project: ./sandbox/ConsoleApp/ConsoleApp.csproj
           version: 0.0.1
           configuration: Release
-          name: "test"
+          name: test
 
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ./artifacts
@@ -38,13 +38,13 @@ jobs:
       - name: 📥 Download Nuget Artifact
         uses: actions/download-artifact@v4
         with:
-          name: "test"
+          name: test
           path: ./artifacts
 
       - name: ✅ Validate NuGet Package
         run: |
           if [ ! -f ./artifacts/test.nupkg ]; then
-            echo "NuGet package not found!"
+            echo NuGet package not found!
             exit 1
           fi
-          echo "NuGet package downloaded successfully: ./artifacts/test.nupkg"
+          echo NuGet package downloaded successfully: ./artifacts/test.nupkg

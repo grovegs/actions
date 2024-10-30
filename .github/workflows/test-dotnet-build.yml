@@ -25,5 +25,5 @@ jobs:
 
       - name: 📂 List Output Directory
         run: |
-          echo "Contents of the build output directory:"
+          echo Contents of the build output directory:
           ls -R ./sandbox/ConsoleApp/bin/Release

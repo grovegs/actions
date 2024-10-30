@@ -1,23 +1,23 @@
-name: "Godot Pack"
-description: "Packages and uploads the Godot addon artifact."
+name: Godot Pack
+description: Packages and uploads the Godot addon artifact.
 
 inputs:
   addon:
-    description: "Path to the Godot addon, relative to the repository root."
+    description: Path to the Godot addon, relative to the repository root.
     required: true
   version:
-    description: "Version number to apply to the package."
+    description: Version number to apply to the package.
     required: true
   name:
-    description: "Desired name for the uploaded Godot addon artifact."
+    description: Desired name for the uploaded Godot addon artifact.
     required: true
   duration:
-    description: "Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period."
+    description: Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period.
     required: false
     default: "1"
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: 🚚 Copy Godot Addon
       shell: bash
