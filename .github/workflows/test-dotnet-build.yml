@@ -1,12 +1,7 @@
-name: 🧪 Test actions/dotnet-build
+name: 🧪 Test Dotnet Build
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   test:

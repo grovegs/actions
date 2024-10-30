@@ -1,0 +1,19 @@
+name: 🧪 Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-dotnet-build:
+    uses: ./.github/workflows/test-dotnet-build.yml
+
+  test-godot-pack:
+    uses: ./.github/workflows/test-godot-pack.yml
+
+  test-nuget-pack:
+    uses: ./.github/workflows/test-nuget-pack.yml

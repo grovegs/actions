@@ -1,12 +1,7 @@
-name: 🧪 Test actions/nuget-pack
+name: 🧪 Test Nuget Pack
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   test:

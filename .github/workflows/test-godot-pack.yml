@@ -1,12 +1,7 @@
-name: 🧪 Test actions/godot-pack
+name: 🧪 Test Godot Pack
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   test:
