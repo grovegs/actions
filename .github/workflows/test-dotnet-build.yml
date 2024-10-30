@@ -1,0 +1,29 @@
+name: 🧪 Test actions/dotnet-build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build Project
+        uses: ./.github/actions/dotnet-build
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          global-json-file: ./sandbox/ConsoleApp/global.json
+
+      - name: 📂 List Output Directory
+        run: |
+          echo "Contents of the build output directory:"
+          ls -R ./sandbox/ConsoleApp/bin/Release
