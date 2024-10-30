@@ -47,4 +47,4 @@ jobs:
             echo "NuGet package not found!"
             exit 1
           fi
-          echo "NuGet package created successfully: ./artifacts/test.nupkg"
+          echo "NuGet package downloaded successfully: ./artifacts/test.nupkg"
