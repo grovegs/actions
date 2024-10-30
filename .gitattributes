@@ -39,7 +39,6 @@
 # Scripts
 *.bash     text eol=lf
 *.fish     text eol=lf
-*.ksh      text eol=lf
 *.sh       text eol=lf
 *.zsh      text eol=lf
 *.bat      text eol=crlf
@@ -55,27 +54,26 @@
 
 # Archives
 *.7z       binary
-*.bz       binary
-*.bz2      binary
-*.bzip2    binary
 *.gz       binary
-*.lz       binary
-*.lzma     binary
-*.rar      binary
 *.tar      binary
-*.taz      binary
-*.tbz      binary
-*.tbz2     binary
 *.tgz      binary
-*.tlz      binary
-*.txz      binary
-*.xz       binary
-*.Z        binary
 *.zip      binary
-*.zst      binary
 
 # Text files where line endings should be preserved
 *.patch    -text
+
+# Dotnet files
+*.cs       text diff=csharp
+*.cshtml   text diff=html
+*.csx      text diff=csharp
+*.sln      text eol=crlf
+*.csproj   text eol=crlf
+
+# Apply override to all files in the directory
+*.md linguist-detectable
+
+# Fix syntax highlighting on GitHub to allow comments
+.vscode/*.json linguist-language=JSON-with-Comments
 
 # Exclude files from exporting
 .gitattributes export-ignore
