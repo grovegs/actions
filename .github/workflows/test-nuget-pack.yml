@@ -1,0 +1,41 @@
+name: 🧪 Test actions/nuget-pack
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build .NET Project
+        uses: ./.github/actions/dotnet-build
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          global-json-file: ./sandbox/ConsoleApp/global.json
+
+      - name: 📦 Pack NuGet Package
+        uses: ./.github/actions/nuget-pack
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          artifact-name: "test"
+
+      - name: ✅ Validate NuGet Package
+        run: |
+          if [ ! -f ./artifacts/test.nupkg ]; then
+            echo "NuGet package not found!"
+            exit 1
+          fi
+          echo "NuGet package created successfully: ./artifacts/test.nupkg"
