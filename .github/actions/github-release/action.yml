@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
-        FILES=$(find ./artifacts -type f)
+        FILES=$(ls -p ./artifacts | xargs)
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
           gh release create ${{ inputs.version }} $FILES \
