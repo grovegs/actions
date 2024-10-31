@@ -8,22 +8,15 @@ inputs:
   version:
     description: The version number for the release.
     required: true
-  artifacts:
-    description: A JSON array of NuGet artifact names to download and include in the release.
-    required: false
-    default: "[]"
 
 runs:
   using: composite
   steps:
-    - name: 📥 Download Artifacts
-      shell: bash
-      run: |
-        ARTIFACTS=$(echo '${{ inputs.artifacts }}' | jq -r '.[]')
-        for ARTIFACT in $ARTIFACTS; do
-          echo Downloading artifact: $ARTIFACT
-          actions/download-artifact@v4 --name $ARTIFACT --path ./artifacts
-        done
+    - name: 📥 Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+        merge-multiple: true
 
     - name: 🔖 Create Tag and Push
       shell: bash
