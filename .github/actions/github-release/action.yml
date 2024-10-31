@@ -21,6 +21,7 @@ runs:
       run: |
         ARTIFACTS=$(echo '${{ inputs.artifacts }}' | jq -r '.[]')
         for ARTIFACT in $ARTIFACTS; do
+          echo Downloading artifact: $ARTIFACT
           actions/download-artifact@v4 --name $ARTIFACT --path ./artifacts
         done
 
