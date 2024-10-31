@@ -34,6 +34,14 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
+        if [[ -d "./artifacts" ]]; then
+          echo "Listing files in artifacts:"
+          ls -l ./artifacts
+        else
+          echo "Artifacts directory does not exist."
+          exit 1
+        fi
+
         FILES=$(ls -p ./artifacts | xargs)
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
