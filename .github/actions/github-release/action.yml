@@ -11,6 +11,7 @@ inputs:
   artifacts:
     description: A JSON array of NuGet artifact names to download and include in the release.
     required: false
+    default: "[]"
 
 runs:
   using: composite
