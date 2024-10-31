@@ -38,8 +38,8 @@ runs:
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
           gh release create ${{ inputs.version }} $FILES \
-            --title "${{ inputs.title }} ${{ inputs.version }}" --generate-notes --notes-start-tag ${{ inputs.version }}
+            --title "${{ inputs.title }}" --generate-notes --notes-start-tag ${{ inputs.version }}
         else
           gh release create ${{ inputs.version }} $FILES \
-            --title "${{ inputs.title }} ${{ inputs.version }}"
+            --title "${{ inputs.title }}"
         fi
