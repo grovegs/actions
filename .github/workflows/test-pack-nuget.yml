@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🏗️ Build .NET Project
-        uses: ./.github/actions/dotnet-build
+        uses: ./.github/actions/build-dotnet
         with:
           project: ./sandbox/ConsoleApp/ConsoleApp.csproj
           version: 0.0.1
@@ -20,7 +20,7 @@ jobs:
           global-json-file: ./sandbox/ConsoleApp/global.json
 
       - name: 📦 Pack NuGet Package
-        uses: ./.github/actions/nuget-pack
+        uses: ./.github/actions/pack-nuget
         with:
           project: ./sandbox/ConsoleApp/ConsoleApp.csproj
           version: 0.0.1
