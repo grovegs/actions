@@ -2,7 +2,7 @@ name: Version Bumper
 description: Calculates and bumps the next version based on the latest Git tag.
 
 inputs:
-  bump-type:
+  version-type:
     description: Type of version bump (major, minor, patch).
     required: true
 
@@ -27,7 +27,7 @@ runs:
       id: bump_version
       run: |
         IFS=. read -r major minor patch <<< ${{ steps.fetch_latest_tag.outputs.latest_tag }}
-        case ${{ inputs.bump-type }} in
+        case ${{ inputs.version-type }} in
           major) major=$((major + 1)); minor=0; patch=0 ;;
           minor) minor=$((minor + 1)); patch=0 ;;
           patch) patch=$((patch + 1)) ;;
