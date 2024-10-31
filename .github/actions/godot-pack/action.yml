@@ -8,7 +8,7 @@ inputs:
   version:
     description: Version number to apply to the package.
     required: true
-  name:
+  artifact:
     description: Desired name for the uploaded Godot addon artifact.
     required: true
   duration:
@@ -22,21 +22,21 @@ runs:
     - name: 🚚 Copy Godot Addon
       shell: bash
       run: |
-        ARTIFACT="./artifacts/${{ inputs.name }}"
+        ARTIFACT="./artifacts/${{ inputs.artifact }}"
         mkdir -p $ARTIFACT
         cp -r ${{ inputs.addon }} $ARTIFACT
 
     - name: 📦 Pack Godot Addon
       shell: bash
       run: |
-        ADDON="./artifacts/${{ inputs.name }}/$(basename ${{ inputs.addon }})"
+        ADDON="./artifacts/${{ inputs.artifact }}/$(basename ${{ inputs.addon }})"
         cp README.md LICENSE $ADDON
         sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $ADDON/plugin.cfg
-        cd ./artifacts && zip -r ${{ inputs.name }}.zip ${{ inputs.name }}
+        cd ./artifacts && zip -r ${{ inputs.artifact }}.zip ${{ inputs.artifact }}
 
     - name: 📤 Upload Addon Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.name }}
-        path: ./artifacts/${{ inputs.name }}.zip
+        name: ${{ inputs.artifact }}
+        path: ./artifacts/${{ inputs.artifact }}.zip
         retention-days: ${{ inputs.duration }}
