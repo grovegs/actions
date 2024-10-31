@@ -42,7 +42,13 @@ runs:
           exit 1
         fi
 
-        FILES=$(ls -p ./artifacts | xargs)
+        FILES=$(find ./artifacts -type f | xargs)
+        echo "Files to be attached to release: $FILES"
+
+        if [[ -z "$FILES" ]]; then
+          echo "No files found to upload."
+          exit 1
+        fi
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
           gh release create ${{ inputs.version }} $FILES \
