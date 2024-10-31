@@ -1,0 +1,36 @@
+name: Version Bumper
+description: Calculates and bumps the next version based on the latest Git tag.
+
+inputs:
+  bump-type:
+    description: Type of version bump (major, minor, patch).
+    required: true
+
+outputs:
+  NEXT_VERSION:
+    description: The calculated next version based on the latest Git tag.
+    value: ${{ steps.bump_version.outputs.next_version }}
+
+runs:
+  using: composite
+  steps:
+    - name: 🔖 Fetch Latest Tag
+      shell: bash
+      id: fetch_latest_tag
+      run: |
+        git fetch --tags
+        latest_tag=$(git tag --sort=-v:refname | head -n 1 || echo 0.0.0)
+        echo latest_tag=${latest_tag} >> $GITHUB_OUTPUT
+
+    - name: 🧮 Bump Version
+      shell: bash
+      id: bump_version
+      run: |
+        IFS=. read -r major minor patch <<< ${{ steps.fetch_latest_tag.outputs.latest_tag }}
+        case ${{ inputs.bump-type }} in
+          major) major=$((major + 1)); minor=0; patch=0 ;;
+          minor) minor=$((minor + 1)); patch=0 ;;
+          patch) patch=$((patch + 1)) ;;
+        esac
+        next_version=$major.$minor.$patch
+        echo next_version=$next_version >> $GITHUB_OUTPUT
