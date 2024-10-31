@@ -28,6 +28,8 @@ runs:
 
     - name: 📝 Create GitHub Release
       shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         FILES=$(find ./artifacts -type f)
 
