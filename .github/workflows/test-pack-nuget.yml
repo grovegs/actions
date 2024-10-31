@@ -25,7 +25,7 @@ jobs:
           project: ./sandbox/ConsoleApp/ConsoleApp.csproj
           version: 0.0.1
           configuration: Release
-          name: test
+          artifact: test
 
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ./artifacts

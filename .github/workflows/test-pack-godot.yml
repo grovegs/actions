@@ -15,7 +15,7 @@ jobs:
         with:
           addon: ./sandbox/GodotApp/addons/TestAddon
           version: 0.0.1
-          name: test-addon
+          artifact: test-addon
 
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ./artifacts
