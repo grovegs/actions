@@ -2,8 +2,8 @@ name: Nuget Release
 description: Uploads NuGet package to nuget.org.
 
 inputs:
-  name:
-    description: The name of the NuGet package.
+  artifact:
+    description: The name of the NuGet artifact to be downloaded and published.
     required: true
   api-key:
     description: NuGet API key used for authenticating and publishing the package.
@@ -12,6 +12,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: 📥 Download Nuget Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: ./artifacts
+
     - name: 🚀 Publish NuGet Package
       shell: bash
-      run: dotnet nuget push ./artifacts/${{ inputs.name }}.nupkg --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
+      run: dotnet nuget push ./artifacts/${{ inputs.artifact }}.nupkg --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
