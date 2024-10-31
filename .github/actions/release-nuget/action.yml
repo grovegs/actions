@@ -1,4 +1,4 @@
-name: Nuget Release
+name: Release Nuget
 description: Uploads NuGet package to nuget.org.
 
 inputs:

@@ -1,4 +1,4 @@
-name: 🧪 Test Godot Pack
+name: 🧪 Test pack-godot
 
 on:
   workflow_call:

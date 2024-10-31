@@ -1,4 +1,4 @@
-name: Godot Pack
+name: Pack Godot
 description: Packages and uploads the Godot addon artifact.
 
 inputs:

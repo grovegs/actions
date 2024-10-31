@@ -1,4 +1,4 @@
-name: Nuget Pack
+name: Pack Nuget
 description: Packages a .NET project and uploads the NuGet artifact.
 
 inputs:

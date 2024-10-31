@@ -1,4 +1,4 @@
-name: Version Bumper
+name: Bump Version
 description: Calculates and bumps the next version based on the latest Git tag.
 
 inputs:

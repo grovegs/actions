@@ -1,4 +1,4 @@
-name: 🧪 Test Nuget Pack
+name: 🧪 Test pack-nuget
 
 on:
   workflow_call:

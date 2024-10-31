@@ -1,4 +1,4 @@
-name: GitHub Release
+name: Release Github
 description: Creates a GitHub release and uploads specified artifacts.
 
 inputs:
