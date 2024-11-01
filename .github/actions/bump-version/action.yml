@@ -7,7 +7,7 @@ inputs:
     required: true
 
 outputs:
-  NEXT_VERSION:
+  next_version:
     description: The calculated next version based on the latest Git tag.
     value: ${{ steps.bump_version.outputs.next_version }}
 
