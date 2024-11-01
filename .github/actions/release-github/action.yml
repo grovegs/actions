@@ -34,12 +34,12 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
-        FILES=$(find ./artifacts -type f | xargs)
+        files=$(find ./artifacts -type f | xargs)
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
-          gh release create ${{ inputs.version }} $FILES \
+          gh release create ${{ inputs.version }} $files \
             --title "${{ inputs.title }}" --generate-notes --notes-start-tag ${{ inputs.version }}
         else
-          gh release create ${{ inputs.version }} $FILES \
+          gh release create ${{ inputs.version }} $files \
             --title "${{ inputs.title }}"
         fi
