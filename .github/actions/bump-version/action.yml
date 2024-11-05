@@ -9,7 +9,7 @@ inputs:
 outputs:
   latest-version:
     description: The latest version, derived from the latest Git tag.
-    value: ${{ steps.bump_version.outputs.latest_version }}
+    value: ${{ steps.fetch_version.outputs.latest_version }}
   next-version:
     description: The calculated next version based on the latest version.
     value: ${{ steps.bump_version.outputs.next_version }}
@@ -28,7 +28,7 @@ runs:
           latest_version="0.0.0"
         fi
 
-        echo latest_version=${latest_version} >> $GITHUB_OUTPUT
+        echo latest_version=$latest_version >> $GITHUB_OUTPUT
 
     - name: 🧮 Bump Version
       shell: bash
