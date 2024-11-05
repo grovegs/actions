@@ -5,11 +5,11 @@ inputs:
   title:
     description: The title for the GitHub release.
     required: true
+  version:
+    description: The version number for the release.
+    required: true
   latest-version:
     description: The latest version number for the release.
-    required: true
-  next-version:
-    description: The next version number for the release.
     required: true
   github-token:
     description: The GitHub token for authentication.
@@ -29,8 +29,8 @@ runs:
       run: |
         git config user.name GitHub Actions
         git config user.email actions@github.com
-        git tag ${{ inputs.next-version }}
-        git push origin ${{ inputs.next-version }}
+        git tag ${{ inputs.version }}
+        git push origin ${{ inputs.version }}
 
     - name: 📝 Create GitHub Release
       shell: bash
@@ -39,10 +39,10 @@ runs:
       run: |
         files=$(find ./artifacts -type f | xargs)
 
-        if [[ ${{ inputs.next-version }} != 0.0.0 ]]; then
-          gh release create ${{ inputs.next-version }} $files \
+        if [[ ${{ inputs.version }} != 0.0.0 ]]; then
+          gh release create ${{ inputs.version }} $files \
             --title "${{ inputs.title }}" --generate-notes --notes-start-tag ${{ inputs.latest-version }}
         else
-          gh release create ${{ inputs.next-version }} $files \
+          gh release create ${{ inputs.version }} $files \
             --title "${{ inputs.title }}"
         fi
