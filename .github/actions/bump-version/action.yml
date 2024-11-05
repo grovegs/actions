@@ -7,31 +7,34 @@ inputs:
     required: true
 
 outputs:
-  next_version:
+  latest-version:
+    description: The next calculated version, derived from the latest Git tag.
+    value: ${{ steps.bump_version.outputs.fetch_version }}
+  next-version:
     description: The calculated next version based on the latest Git tag.
     value: ${{ steps.bump_version.outputs.next_version }}
 
 runs:
   using: composite
   steps:
-    - name: 🔖 Fetch Latest Tag
+    - name: 🔖 Fetch Version
       shell: bash
-      id: fetch_latest_tag
+      id: fetch_version
       run: |
         git fetch --tags
-        latest_tag=$(git tag --sort=-v:refname | head -n 1)
+        latest_version=$(git tag --sort=-v:refname | head -n 1)
 
-        if [ -z "$latest_tag" ]; then
-          latest_tag="0.0.0"
+        if [ -z "$latest_version" ]; then
+          latest_version="0.0.0"
         fi
 
-        echo latest_tag=${latest_tag} >> $GITHUB_OUTPUT
+        echo latest_version=${latest_version} >> $GITHUB_OUTPUT
 
     - name: 🧮 Bump Version
       shell: bash
       id: bump_version
       run: |
-        IFS=. read -r major minor patch <<< "${{ steps.fetch_latest_tag.outputs.latest_tag }}"
+        IFS=. read -r major minor patch <<< "${{ steps.fetch_version.outputs.latest_version }}"
 
         case "${{ inputs.version-type }}" in
           major) major=$((major + 1)); minor=0; patch=0 ;;
