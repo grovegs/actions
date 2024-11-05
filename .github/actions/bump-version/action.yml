@@ -7,10 +7,10 @@ inputs:
     required: true
 
 outputs:
-  latest_version:
+  latest-version:
     description: The next calculated version, derived from the latest Git tag.
     value: ${{ steps.bump_version.outputs.fetch_version }}
-  next_version:
+  next-version:
     description: The calculated next version based on the latest Git tag.
     value: ${{ steps.bump_version.outputs.next_version }}
 
