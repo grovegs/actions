@@ -9,11 +9,11 @@ on:
       - main
 
 jobs:
-  test-dotnet-build:
+  dotnet_build_tests:
     uses: ./.github/workflows/test-build-dotnet.yml
 
-  test-godot-pack:
+  godot_pack_tests:
     uses: ./.github/workflows/test-pack-godot.yml
 
-  test-nuget-pack:
+  nuget_pack_tests:
     uses: ./.github/workflows/test-pack-nuget.yml
