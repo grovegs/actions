@@ -1,0 +1,71 @@
+name: Setup Godot Tests
+
+on:
+  workflow_call:
+
+jobs:
+  test-setup-godot:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository to get the action code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up necessary inputs for testing
+      - name: Set up inputs for testing
+        id: setup-inputs
+        run: |
+          echo "platform=linux" >> $GITHUB_ENV
+          echo "global-json-file=sandbox/GodotApp/global.json" >> $GITHUB_ENV
+
+      # Run the Setup Godot action
+      - name: Run Setup Godot action
+        uses: ./
+        with:
+          platform: ${{ env.platform }}
+          global-json-file: ${{ env.global-json-file }}
+
+      # Verify the output (version of Godot)
+      - name: Verify Godot version
+        run: |
+          echo "Version set by the action: ${{ steps.read_version.outputs.version }}"
+          if [[ -z "${{ steps.read_version.outputs.version }}" ]]; then
+            echo "Error: Version is empty."
+            exit 1
+          fi
+
+      # Verify that the Godot executable was downloaded
+      - name: Verify Godot download
+        run: |
+          if [[ ! -f "${{ steps.download_godot.outputs.file }}" ]]; then
+            echo "Error: Godot download failed. File not found."
+            exit 1
+          fi
+          echo "Godot downloaded to: ${{ steps.download_godot.outputs.file }}"
+
+      # Verify the installation
+      - name: Verify Godot installation
+        run: |
+          if [[ ! -x "${{ steps.download_godot.outputs.file }}" ]]; then
+            echo "Error: Godot installation failed. File not executable."
+            exit 1
+          fi
+          echo "Godot installed and executable: ${{ steps.download_godot.outputs.file }}"
+
+      # Check cache behavior
+      - name: Check Godot cache
+        run: |
+          cache_dir=~/.godot
+          if [[ -d "$cache_dir" ]]; then
+            echo "Godot cache exists at $cache_dir"
+          else
+            echo "Error: Godot cache not found."
+            exit 1
+          fi
+
+      # Optional: Clean up if needed (e.g., remove cached files)
+      - name: Clean up
+        run: |
+          rm -rf ~/.godot
+          echo "Cleaned up the Godot cache."
