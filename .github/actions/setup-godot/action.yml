@@ -1,0 +1,41 @@
+name: Setup Godot
+description: Downloads, installs, and caches Godot for the specified platform.
+
+inputs:
+  platform:
+    description: The target platform for Godot (e.g., linux, macos, windows).
+    required: true
+  global-json-file:
+    description: Path to the `global.json` file to extract the Godot version.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 📖 Read Godot version
+      id: read_version
+      shell: bash
+      run: |
+        chmod +x ./src/setup-godot/read_version.sh
+        ./src/setup-godot/read_version.sh "${{ inputs.global-json-file }}"
+
+    - name: ⬇️ Download Godot
+      id: download_godot
+      shell: bash
+      run: |
+        chmod +x ./src/setup-godot/download_godot.sh
+        ./src/setup-godot/download_godot.sh "${{ inputs.platform }}" "${{ steps.read_version.outputs.version }}" "~/.godot"
+
+    - name: ⚙️ Install Godot
+      shell: bash
+      run: |
+        chmod +x ./src/setup-godot/install_godot.sh
+        ./src/setup-godot/install_godot.sh "${{ steps.download_godot.outputs.file }}"
+
+    - name: 💾 Cache Godot
+      uses: actions/cache@v4
+      with:
+        path: ~/.godot
+        key: godot-${{ steps.read_version.outputs.version }}-${{ inputs.platform }}
+        restore-keys: |
+          godot-${{ steps.read_version.outputs.version }}-${{ inputs.platform }}
