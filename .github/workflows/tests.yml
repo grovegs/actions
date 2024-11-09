@@ -118,3 +118,6 @@ jobs:
             exit 1
           fi
           echo NuGet package downloaded successfully: ./artifacts/test.nupkg
+
+  setup_godot_tests:
+    uses: ./tests/setup-godot-tests.yml

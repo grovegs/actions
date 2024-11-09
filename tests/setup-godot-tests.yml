@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  test-setup-godot:
+  setup_godot_tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +14,6 @@ jobs:
 
       # Set up necessary inputs for testing
       - name: Set up inputs for testing
-        id: setup-inputs
         run: |
           echo "platform=linux" >> $GITHUB_ENV
           echo "global-json-file=sandbox/GodotApp/global.json" >> $GITHUB_ENV
