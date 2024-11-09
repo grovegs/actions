@@ -8,24 +8,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository to get the action code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up necessary inputs for testing
       - name: Set up inputs for testing
         run: |
           echo "platform=linux" >> $GITHUB_ENV
           echo "global-json-file=sandbox/GodotApp/global.json" >> $GITHUB_ENV
 
-      # Run the Setup Godot action
       - name: Run Setup Godot action
         uses: ./
         with:
           platform: ${{ env.platform }}
           global-json-file: ${{ env.global-json-file }}
 
-      # Verify the output (version of Godot)
       - name: Verify Godot version
         run: |
           echo "Version set by the action: ${{ steps.read_version.outputs.version }}"
@@ -34,7 +30,6 @@ jobs:
             exit 1
           fi
 
-      # Verify that the Godot executable was downloaded
       - name: Verify Godot download
         run: |
           if [[ ! -f "${{ steps.download_godot.outputs.file }}" ]]; then
@@ -43,7 +38,6 @@ jobs:
           fi
           echo "Godot downloaded to: ${{ steps.download_godot.outputs.file }}"
 
-      # Verify the installation
       - name: Verify Godot installation
         run: |
           if [[ ! -x "${{ steps.download_godot.outputs.file }}" ]]; then
@@ -52,7 +46,6 @@ jobs:
           fi
           echo "Godot installed and executable: ${{ steps.download_godot.outputs.file }}"
 
-      # Check cache behavior
       - name: Check Godot cache
         run: |
           cache_dir=~/.godot
@@ -63,7 +56,6 @@ jobs:
             exit 1
           fi
 
-      # Optional: Clean up if needed (e.g., remove cached files)
       - name: Clean up
         run: |
           rm -rf ~/.godot
