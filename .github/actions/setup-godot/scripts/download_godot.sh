@@ -33,4 +33,4 @@ if ! curl -L -o "$path/$(basename "$url")" "$url"; then
 fi
 
 file_name=$(basename "$url")
-echo "::set-output name=file::$path/$file_name"
+echo "$path/$file_name"

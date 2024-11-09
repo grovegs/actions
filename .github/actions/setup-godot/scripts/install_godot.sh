@@ -23,4 +23,4 @@ fi
 
 rm "$file_name"
 
-echo "::set-output name=file::$file_dir/$file_name .zip)"
+echo "$file_dir/$(basename "$file_name" .zip)"

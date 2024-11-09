@@ -6,7 +6,6 @@ if [ $# -ne 1 ]; then
 fi
 
 global_json_file="$1"
-
 version=$(sed -n 's/.*"Godot\.NET\.Sdk": "\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/p' "$global_json_file")
 
 if [ -z "$version" ]; then
@@ -20,4 +19,4 @@ if [ "$patch" -eq 0 ]; then
     version="${major}.${minor}"
 fi
 
-echo "::set-output name=version::$version"
+echo "$version"
