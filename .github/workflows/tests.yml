@@ -9,14 +9,14 @@ on:
       - main
 
 jobs:
-  dotnet_build_tests:
-    uses: ./tests/dotnet-build-tests.yml
+  build_dotnet_tests:
+    uses: ./tests/build-dotnet-tests.yml
 
-  godot_pack_tests:
-    uses: ./tests/godot-pack-tests.yml
+  pack_godot_tests:
+    uses: ./tests/pack-godot-tests.yml
 
-  nuget_pack_tests:
-    uses: ./tests/nuget-pack-tests.yml
+  pack_nuget_tests:
+    uses: ./tests/pack-nuget-tests.yml
 
   setup_godot_tests:
     uses: ./tests/setup-godot-tests.yml
