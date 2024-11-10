@@ -8,21 +8,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up inputs for testing
-        run: |
-          echo "platform=linux" >> $GITHUB_ENV
-          echo "global-json-file=sandbox/GodotApp/global.json" >> $GITHUB_ENV
-
-      - name: Run Setup Godot action
-        uses: ./
+      - name: 🚀 Run Setup Godot Action
+        uses: ./.github/actions/setup-godot
         with:
-          platform: ${{ env.platform }}
-          global-json-file: ${{ env.global-json-file }}
+          platform: linux
+          global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: Verify Godot version
+      - name: 🔍 Verify Godot Version
         run: |
           echo "Version set by the action: ${{ steps.read_version.outputs.version }}"
           if [[ -z "${{ steps.read_version.outputs.version }}" ]]; then
@@ -30,7 +25,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Godot download
+      - name: 📥 Verify Godot Download
         run: |
           if [[ ! -f "${{ steps.download_godot.outputs.file }}" ]]; then
             echo "Error: Godot download failed. File not found."
@@ -38,7 +33,7 @@ jobs:
           fi
           echo "Godot downloaded to: ${{ steps.download_godot.outputs.file }}"
 
-      - name: Verify Godot installation
+      - name: 🛠️ Verify Godot Installation
         run: |
           if [[ ! -x "${{ steps.download_godot.outputs.file }}" ]]; then
             echo "Error: Godot installation failed. File not executable."
@@ -46,7 +41,7 @@ jobs:
           fi
           echo "Godot installed and executable: ${{ steps.download_godot.outputs.file }}"
 
-      - name: Check Godot cache
+      - name: 🗃️ Check Godot Cache
         run: |
           cache_dir=~/.godot
           if [[ -d "$cache_dir" ]]; then
@@ -56,7 +51,7 @@ jobs:
             exit 1
           fi
 
-      - name: Clean up
+      - name: 🧹 Clean Up
         run: |
           rm -rf ~/.godot
           echo "Cleaned up the Godot cache."
