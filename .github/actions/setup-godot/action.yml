@@ -16,23 +16,23 @@ runs:
       id: read_version
       shell: bash
       run: |
-        chmod +x .scripts/read_version.sh
-        version=$(./scripts/read_version.sh "${{ inputs.global-json-file }}")
+        chmod +x scripts/read_version.sh
+        version=$(scripts/read_version.sh "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
     - name: ⬇️ Download Godot
       id: download_godot
       shell: bash
       run: |
-        chmod +x ./scripts/download_godot.sh
-        file=$(./scripts/download_godot.sh "${{ inputs.platform }}" "${{ steps.read_version.outputs.version }}" "~/.godot")
-        echo file="$file" >> "$GITHUB_OUTPUT"ƒ
+        chmod +x scripts/download_godot.sh
+        file=$(scripts/download_godot.sh "${{ inputs.platform }}" "${{ steps.read_version.outputs.version }}" "~/.godot")
+        echo file="$file" >> "$GITHUB_OUTPUT"
 
     - name: ⚙️ Install Godot
       shell: bash
       run: |
-        chmod +x ./scripts/install_godot.sh
-        ./scripts/install_godot.sh "${{ steps.download_godot.outputs.file }}"
+        chmod +x scripts/install_godot.sh
+        scripts/install_godot.sh "${{ steps.download_godot.outputs.file }}"
 
     - name: 💾 Cache Godot
       uses: actions/cache@v4
