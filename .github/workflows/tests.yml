@@ -10,13 +10,13 @@ on:
 
 jobs:
   build_dotnet_tests:
-    uses: ./.github/workflows/tests/build-dotnet-tests.yml
+    uses: ./.github/workflows/build-dotnet-tests.yml
 
   pack_godot_tests:
-    uses: ./.github/workflows/tests/pack-godot-tests.yml
+    uses: ./.github/workflows/pack-godot-tests.yml
 
   pack_nuget_tests:
-    uses: ./.github/workflows/tests/pack-nuget-tests.yml
+    uses: ./.github/workflows/pack-nuget-tests.yml
 
   setup_godot_tests:
-    uses: ./.github/workflows/tests/setup-godot-tests.yml
+    uses: ./.github/workflows/setup-godot-tests.yml
