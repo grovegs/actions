@@ -21,35 +21,18 @@ runs:
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
-    - name: 📖 Read Godot platform
-      id: read_platform
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/read_platform.sh"
-        platform=$("${{ github.action_path }}/scripts/read_platform.sh" "${{ runner.os }}")
-        echo platform="$platform" >> "$GITHUB_OUTPUT"
-
-    - name: 💾 Cache Godot
-      id: cache_godot
-      uses: actions/cache@v4
-      with:
-        path: ${{ inputs.path }}
-        key: godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
-        restore-keys: |
-          godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
-
     - name: ⬇️ Download Godot
       id: download_godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+      #if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
-        file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.read_platform.outputs.platform }}" "${{ inputs.path }}")
+        file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo file="$file" >> "$GITHUB_OUTPUT"
 
     - name: ⚙️ Install Godot
       id: install_godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+      #if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
@@ -59,4 +42,4 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/link_godot.sh"
-        "${{ github.action_path }}/scripts/link_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.read_platform.outputs.platform }}" "${{ inputs.path }}" "${{ runner.os }}"
+        "${{ github.action_path }}/scripts/link_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"

@@ -1,25 +1,17 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]; then
-    echo "Usage: $0 <version> <platform> <path> <runner_os>"
+if [ $# -ne 3 ]; then
+    echo "Usage: $0 <version> <path> <runner_os>"
     exit 1
 fi
 
 version="$1"
-platform="$2"
-path="$3"
-runner_os="$4"
-
-godot="$path/Godot_v$version-stable_mono_$platform"
-
-if [ ! -e "$godot" ] && [ "$runner_os" != "macOS" ]; then
-    echo "Error: Godot binary not found at $godot"
-    exit 1
-fi
+path="$2"
+runner_os="$3"
 
 case "$runner_os" in
 Linux)
-    if ln -sf "$godot" /usr/local/bin/godot; then
+    if sudo ln -sf "$path/Godot_v$version-stable_mono_linux_x86_64/Godot_$version-stable_mono_linux.x86_64" /usr/local/bin/godot; then
         echo "Linked Godot binary for Linux at /usr/local/bin/godot"
     else
         echo "Error: Failed to link Godot binary on Linux"
@@ -27,7 +19,7 @@ Linux)
     fi
     ;;
 macOS)
-    if ln -sf "$godot/Godot.app/Contents/MacOS/Godot" /usr/local/bin/godot; then
+    if sudo ln -sf "$path/Godot_v$version-stable_mono_macos.universal/Godot.app/Contents/MacOS/Godot" /usr/local/bin/godot; then
         echo "Linked Godot binary for macOS at /usr/local/bin/godot"
     else
         echo "Error: Failed to link Godot binary on macOS"
@@ -35,7 +27,7 @@ macOS)
     fi
     ;;
 Windows)
-    echo "::add-path::$godot"
+    echo "::add-path::$path/Godot_v$version-stable_mono_win64"
     echo "Added Godot path for Windows"
     ;;
 *)
@@ -43,3 +35,12 @@ Windows)
     exit 1
     ;;
 esac
+
+"$path/Godot_v$version-stable_mono_linux_x86_64/Godot_v$version-stable_mono_linux.x86_64" --version
+
+if command -v godot &>/dev/null; then
+    godot --version
+else
+    echo "Error: 'godot' command not found"
+    exit 1
+fi

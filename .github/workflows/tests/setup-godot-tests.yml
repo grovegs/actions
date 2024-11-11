@@ -15,32 +15,20 @@ jobs:
         id: setup_godot
         uses: ./.github/actions/setup-godot
         with:
-          platform: linux
           global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: 🔍 Verify Godot Version
+      - name: 🔗 Verify Godot Command
         run: |
-          echo "Version set by the action: ${{ steps.setup_godot.outputs.version }}"
-          if [[ -z "${{ steps.setup_godot.outputs.version }}" ]]; then
-            echo "Error: Version is empty."
+          if [[ ! -L /usr/local/bin/godot ]]; then
+            echo "Error: Symlink for Godot does not exist at /usr/local/bin/godot."
             exit 1
           fi
 
-      - name: 📥 Verify Godot Download
-        run: |
-          if [[ ! -f "${{ steps.setup_godot.outputs.file }}" ]]; then
-            echo "Error: Godot download failed. File not found."
-            exit 1
-          fi
-          echo "Godot downloaded to: ${{ steps.setup_godot.outputs.file }}"
+          echo "Godot command verified successfully."
 
       - name: 🛠️ Verify Godot Installation
         run: |
-          if [[ ! -x "${{ steps.setup_godot.outputs.file }}" ]]; then
-            echo "Error: Godot installation failed. File not executable."
-            exit 1
-          fi
-          echo "Godot installed and executable: ${{ steps.setup_godot.outputs.file }}"
+          godot
 
       - name: 🗃️ Check Godot Cache
         run: |
