@@ -2,12 +2,13 @@ name: Setup Godot
 description: Downloads, installs, and caches Godot for the specified platform.
 
 inputs:
-  platform:
-    description: The target platform for Godot (e.g., linux, macos, windows).
-    required: true
   global-json-file:
     description: Path to the `global.json` file to extract the Godot version.
     required: true
+  path:
+    description: Path to the `global.json` file to extract the Godot version.
+    required: false
+    default: ~/.godot
 
 runs:
   using: composite
@@ -16,28 +17,46 @@ runs:
       id: read_version
       shell: bash
       run: |
-        chmod +x scripts/read_version.sh
-        version=$(scripts/read_version.sh "${{ inputs.global-json-file }}")
+        chmod +x "${{ github.action_path }}/scripts/read_version.sh"
+        version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
+
+    - name: 📖 Read Godot platform
+      id: read_platform
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/read_platform.sh"
+        platform=$("${{ github.action_path }}/scripts/read_platform.sh" "${{ runner.os }}")
+        echo platform="$platform" >> "$GITHUB_OUTPUT"
+
+    - name: 💾 Cache Godot
+      id: cache_godot
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.path }}
+        key: godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
+        restore-keys: |
+          godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
 
     - name: ⬇️ Download Godot
       id: download_godot
+      if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        chmod +x scripts/download_godot.sh
-        file=$(scripts/download_godot.sh "${{ inputs.platform }}" "${{ steps.read_version.outputs.version }}" "~/.godot")
+        chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
+        file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.read_platform.outputs.platform }}" "${{ inputs.path }}")
         echo file="$file" >> "$GITHUB_OUTPUT"
 
     - name: ⚙️ Install Godot
+      id: install_godot
+      if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        chmod +x scripts/install_godot.sh
-        scripts/install_godot.sh "${{ steps.download_godot.outputs.file }}"
+        chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
+        "${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.download_godot.outputs.file }}"
 
-    - name: 💾 Cache Godot
-      uses: actions/cache@v4
-      with:
-        path: ~/.godot
-        key: godot-${{ steps.read_version.outputs.version }}-${{ inputs.platform }}
-        restore-keys: |
-          godot-${{ steps.read_version.outputs.version }}-${{ inputs.platform }}
+    - name: 🔗 Link Godot Command
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/link_godot.sh"
+        "${{ github.action_path }}/scripts/link_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.read_platform.outputs.platform }}" "${{ inputs.path }}" "${{ runner.os }}"

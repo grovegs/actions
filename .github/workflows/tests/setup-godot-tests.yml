@@ -12,6 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🚀 Run Setup Godot Action
+        id: setup_godot
         uses: ./.github/actions/setup-godot
         with:
           platform: linux
@@ -19,27 +20,27 @@ jobs:
 
       - name: 🔍 Verify Godot Version
         run: |
-          echo "Version set by the action: ${{ steps.read_version.outputs.version }}"
-          if [[ -z "${{ steps.read_version.outputs.version }}" ]]; then
+          echo "Version set by the action: ${{ steps.setup_godot.outputs.version }}"
+          if [[ -z "${{ steps.setup_godot.outputs.version }}" ]]; then
             echo "Error: Version is empty."
             exit 1
           fi
 
       - name: 📥 Verify Godot Download
         run: |
-          if [[ ! -f "${{ steps.download_godot.outputs.file }}" ]]; then
+          if [[ ! -f "${{ steps.setup_godot.outputs.file }}" ]]; then
             echo "Error: Godot download failed. File not found."
             exit 1
           fi
-          echo "Godot downloaded to: ${{ steps.download_godot.outputs.file }}"
+          echo "Godot downloaded to: ${{ steps.setup_godot.outputs.file }}"
 
       - name: 🛠️ Verify Godot Installation
         run: |
-          if [[ ! -x "${{ steps.download_godot.outputs.file }}" ]]; then
+          if [[ ! -x "${{ steps.setup_godot.outputs.file }}" ]]; then
             echo "Error: Godot installation failed. File not executable."
             exit 1
           fi
-          echo "Godot installed and executable: ${{ steps.download_godot.outputs.file }}"
+          echo "Godot installed and executable: ${{ steps.setup_godot.outputs.file }}"
 
       - name: 🗃️ Check Godot Cache
         run: |
