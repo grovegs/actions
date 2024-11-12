@@ -20,8 +20,9 @@ jobs:
 
       - name: Check Cache Integrity
         run: |
-          if [ ! -d "$HOME/.godot" ]; then
-            echo "Error: No cache found at $HOME/.godot."
+          ls ~/.godot
+          if [ ! -d ~/.godot ]; then
+            echo "Error: No cache found at ~/.godot"
             exit 1
           fi
 
