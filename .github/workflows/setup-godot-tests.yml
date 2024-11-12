@@ -16,17 +16,11 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
-          path: ~/.godot
-
-      - name: Debug
-        run: |
-          echo "~/.godot" ~/.godot
-          echo "HOME" $HOME
-          echo "ROOT" ~/
+          path: ${{ runner.temp }}
 
       - name: 🔍 Validate Godot Cache
         run: |
-          if ! [ -d "home/runner/.godot" ]; then
+          if ! [ -d "${{ runner.temp }}/.godot" ]; then
               echo "Error: Godot cache is not found."
               exit 1
           fi
