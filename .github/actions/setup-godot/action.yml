@@ -6,7 +6,7 @@ inputs:
     description: Path to the `global.json` file to extract the Godot version.
     required: true
   path:
-    description: Path to the `global.json` file to extract the Godot version.
+    description: Path to the installation directory for Godot.
     required: false
     default: ~/.godot
 
@@ -21,20 +21,25 @@ runs:
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
-    - name: 💾 Cache Godot
+    - name: 💾 Restore Cache Godot
       id: cache_godot
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
-        path: ${{ inputs.path }}
-        key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
+        key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
 
     - name: ⬇️ Download Godot
       id: download_godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+      if: steps.cache_godot.outputs.cache-hit != 'true' # Check if cache was missed
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
         file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
+
+    - name: 💾 Save Cache Godot
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
 
     - name: ⚙️ Install Godot
       id: install_godot
@@ -44,10 +49,12 @@ runs:
         executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
 
-    - name: Check Cache Integrity
+    - name: Verify Cache Path
       shell: bash
       run: |
-        if [ ! -d ${{ inputs.path }} ]; then
-          echo "Error: No cache found at ${{ inputs.path }}"
-          exit 1
-        fi
+        echo "Cache Path: ${{ inputs.path }}"
+        ls -la ${{ inputs.path }}
+
+    - name: Debug Cache Hit
+      shell: bash
+      run: echo "Cache Hit ${{ steps.cache_godot.outputs.cache-hit }}"
