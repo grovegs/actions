@@ -43,3 +43,11 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
         executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
+
+    - name: Check Cache Integrity
+      shell: bash
+      run: |
+        if [ ! -d ~/.godot ]; then
+          echo "Error: No cache found at ~/.godot"
+          exit 1
+        fi
