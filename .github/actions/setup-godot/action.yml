@@ -43,7 +43,3 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
         executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
-
-    - name: Debug Verify Godot Directory After Download
-      shell: bash
-      run: ls -la "${{ inputs.path }}"
