@@ -16,7 +16,7 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
-          path: home/runner/.godot
+          path: ~/.godot
 
       - name: Debug
         run: |
