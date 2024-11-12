@@ -18,13 +18,6 @@ jobs:
           global-json-file: ./sandbox/GodotApp/global.json
           path: ~/.godot
 
-      - name: Check Cache Integrity
-        run: |
-          if [ ! -d ~/.godot ]; then
-            echo "Error: No cache found at ~/.godot"
-            exit 1
-          fi
-
       - name: Validate Godot Installation
         run: |
           if ! [ -x "$GODOT" ]; then
