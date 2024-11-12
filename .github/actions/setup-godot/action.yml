@@ -24,7 +24,7 @@ runs:
       id: cache_godot
       uses: actions/cache/restore@v4
       with:
-        key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
+        key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
         path: ${{ inputs.path }}
 
     - name: ⬇️ Download Godot
