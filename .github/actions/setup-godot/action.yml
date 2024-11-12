@@ -30,14 +30,14 @@ runs:
 
     - name: ⬇️ Download Godot
       id: download_godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+      #if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
         file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
 
     - name: 💾 Save Cache Godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+      #if: steps.cache_godot.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
