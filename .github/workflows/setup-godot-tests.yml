@@ -18,6 +18,12 @@ jobs:
           global-json-file: ./sandbox/GodotApp/global.json
           path: home/runner/.godot
 
+      - name: Debug
+        run: |
+          echo "~/.godot" ~/.godot
+          echo "HOME" $HOME
+          echo "ROOT" ~/
+
       - name: 🔍 Validate Godot Cache
         run: |
           if ! [ -d "home/runner/.godot" ]; then
