@@ -16,11 +16,11 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
-          path: ${~}/.godot
+          path: $(echo ~)/.godot
 
       - name: 🔍 Validate Godot Cache
         run: |
-          if ! [ -d ${~}/.godot ]; then
+          if ! [ -d $(echo ~)/.godot ]; then
               echo "Error: Godot cache is not found."
               exit 1
           fi
