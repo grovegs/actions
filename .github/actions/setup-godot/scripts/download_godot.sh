@@ -50,3 +50,5 @@ if ! unzip "$downloaded_file" -d "$path"; then
 fi
 
 rm "$downloaded_file"
+
+echo "File downloaded: $path"
