@@ -17,21 +17,16 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: 🛠️ Verify Godot Installation
+      - name: Check Cache Integrity
         run: |
-          $GODOT --version
-
-      - name: 🗃️ Check Godot Cache
-        run: |
-          cache_dir=~/.godot
-          if [[ -d "$cache_dir" ]]; then
-            echo "Godot cache exists at $cache_dir"
-          else
-            echo "Error: Godot cache not found."
+          if [ ! -d "~/.godot" ]; then
+            echo "Error: No cache found at ~/.godot."
             exit 1
           fi
 
-      - name: 🧹 Clean Up
+      - name: Validate Godot Installation
         run: |
-          rm -rf ~/.godot
-          echo "Cleaned up the Godot cache."
+          if ! [ -x "$GODOT" ]; then
+              echo "Error: Godot executable is not installed correctly."
+              exit 1
+          fi
