@@ -28,11 +28,16 @@ runs:
         key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
         path: ${{ inputs.path }}
 
+    - name: 📂 Check Path Contents (After Restore)
+      shell: bash
+      run: ls -la ${{ inputs.path }}
+
     - name: ⬇️ Download Godot
       id: download_godot
       if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        mkdir -p "${{ inputs.path }}"  # Ensure path exists
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
         "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"
 
@@ -42,6 +47,10 @@ runs:
       with:
         key: ${{ steps.cache_godot.outputs.cache-primary-key }}
         path: ${{ inputs.path }}
+
+    - name: 📂 Check Path Contents (After Download)
+      shell: bash
+      run: ls -la ${{ inputs.path }}
 
     - name: ⚙️ Install Godot
       id: install_godot
