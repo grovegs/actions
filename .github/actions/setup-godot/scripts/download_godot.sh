@@ -52,3 +52,4 @@ fi
 rm "$downloaded_file"
 
 echo "File downloaded: $path"
+ls "$path"
