@@ -30,6 +30,7 @@ case "$runner_os" in
     ;;
 esac
 
+echo "File downloading..."
 file_name=Godot_v${version}-stable_mono_${platform}
 url="https://github.com/godotengine/godot/releases/download/${version}-stable/${file_name}.zip"
 downloaded_file=$path/$file_name.zip
