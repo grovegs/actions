@@ -16,9 +16,15 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
-          path: home/runner/.godot
 
-      - name: Validate Godot Installation
+      - name: 🔍 Validate Godot Cache
+        run: |
+          if ! [ -d "$HOME/.godot" ]; then
+              echo "Error: Godot cache is not found."
+              exit 1
+          fi
+
+      - name: 🛠️ Validate Godot Installation
         run: |
           if ! [ -x "$GODOT" ]; then
               echo "Error: Godot executable is not installed correctly."
