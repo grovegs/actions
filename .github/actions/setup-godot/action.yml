@@ -21,6 +21,10 @@ runs:
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
+    - name: Create Godot Cache Directory
+      shell: bash
+      run: mkdir -p "${{ inputs.path }}"
+
     - name: 💾 Cache Godot
       id: cache_godot
       uses: actions/cache@v4
