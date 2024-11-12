@@ -29,7 +29,7 @@ runs:
       uses: actions/cache/restore@v4
       with:
         key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
-        path: ${{ inputs.path }}
+        path: "${{ inputs.path }}"
 
     - name: ⬇️ Download Godot
       id: download_godot
@@ -44,7 +44,7 @@ runs:
       uses: actions/cache/save@v4
       with:
         key: ${{ steps.cache_godot.outputs.cache-primary-key }}
-        path: ${{ inputs.path }}
+        path: "${{ inputs.path }}"
 
     - name: ⚙️ Install Godot
       id: install_godot
