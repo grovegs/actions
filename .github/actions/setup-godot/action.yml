@@ -26,6 +26,7 @@ runs:
       uses: actions/cache/restore@v4
       with:
         key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
+        path: ${{ inputs.path }}
 
     - name: ⬇️ Download Godot
       id: download_godot
@@ -39,8 +40,8 @@ runs:
       if: steps.cache_godot.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        path: ${{ inputs.path }}
         key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
+        path: ${{ inputs.path }}
 
     - name: ⚙️ Install Godot
       id: install_godot
