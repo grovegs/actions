@@ -16,7 +16,6 @@ runs:
       id: read_version
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/read_version.sh"
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
@@ -36,7 +35,6 @@ runs:
       if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
         "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"
 
     - name: 💾 Save Cache Godot
@@ -50,6 +48,5 @@ runs:
       id: install_godot
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
         executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
