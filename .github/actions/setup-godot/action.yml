@@ -30,17 +30,17 @@ runs:
 
     - name: ⬇️ Download Godot
       id: download_godot
-      #if: steps.cache_godot.outputs.cache-hit != 'true'
+      if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
-        file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
+        "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"
 
     - name: 💾 Save Cache Godot
-      #if: steps.cache_godot.outputs.cache-hit != 'true'
+      if: steps.cache_godot.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        key: ${{ runner.os }}-godot-${{ steps.read_version.outputs.version }}
+        key: ${{ steps.cache_godot.outputs.cache-primary-key }}
         path: ${{ inputs.path }}
 
     - name: ⚙️ Install Godot
@@ -50,13 +50,3 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
         executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
-
-    - name: Verify Cache Path
-      shell: bash
-      run: |
-        echo "Cache Path: ${{ inputs.path }}"
-        ls -la ${{ inputs.path }}
-
-    - name: Debug Cache Hit
-      shell: bash
-      run: echo "Cache Hit ${{ steps.cache_godot.outputs.cache-hit }}"
