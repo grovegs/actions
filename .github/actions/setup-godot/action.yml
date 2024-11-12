@@ -26,7 +26,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ inputs.path }}
-        key: godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
+        key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
 
     - name: ⬇️ Download Godot
       id: download_godot
