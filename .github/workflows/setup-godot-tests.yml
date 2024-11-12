@@ -17,18 +17,9 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: 🔗 Verify Godot Command
-        run: |
-          if [[ ! -L /usr/local/bin/godot ]]; then
-            echo "Error: Symlink for Godot does not exist at /usr/local/bin/godot."
-            exit 1
-          fi
-
-          echo "Godot command verified successfully."
-
       - name: 🛠️ Verify Godot Installation
         run: |
-          godot
+          $GODOT --version
 
       - name: 🗃️ Check Godot Cache
         run: |

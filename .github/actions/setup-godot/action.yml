@@ -21,25 +21,25 @@ runs:
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
+    - name: 💾 Cache Godot
+      id: cache_godot
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.path }}
+        key: godot-${{ steps.read_version.outputs.version }}-${{ steps.read_platform.outputs.platform }}
+
     - name: ⬇️ Download Godot
       id: download_godot
-      #if: steps.cache_godot.outputs.cache-hit != 'true'
+      if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
         file=$("${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
-        echo file="$file" >> "$GITHUB_OUTPUT"
 
     - name: ⚙️ Install Godot
       id: install_godot
-      #if: steps.cache_godot.outputs.cache-hit != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
-        "${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.download_godot.outputs.file }}"
-
-    - name: 🔗 Link Godot Command
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/link_godot.sh"
-        "${{ github.action_path }}/scripts/link_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"
+        executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
+        echo GODOT="$executable_file" >> "$GITHUB_ENV"

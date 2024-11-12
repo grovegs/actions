@@ -30,12 +30,23 @@ case "$runner_os" in
     ;;
 esac
 
-url="https://github.com/godotengine/godot/releases/download/${version}-stable/Godot_v${version}-stable_mono_${platform}.zip"
+file_name=Godot_v${version}-stable_mono_${platform}
+url="https://github.com/godotengine/godot/releases/download/${version}-stable/${file_name}.zip"
+downloaded_file=$path/$file_name.zip
 
-if ! curl -L -o "$path/$(basename "$url")" "$url"; then
+if ! curl -L -o "$downloaded_file" "$url"; then
     echo "Download failed."
     exit 1
 fi
 
-file_name=$(basename "$url")
-echo "$path/$file_name"
+if [ ! -f "$downloaded_file" ]; then
+    echo "Error: File '$downloaded_file' not found!"
+    exit 1
+fi
+
+if ! unzip "$downloaded_file" -d "$path"; then
+    echo "Error: Extraction failed."
+    exit 1
+fi
+
+rm "$downloaded_file"
