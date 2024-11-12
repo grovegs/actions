@@ -16,7 +16,7 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
-          path: ~/.godot
+          path: home/runner/.godot
 
       - name: Validate Godot Installation
         run: |
