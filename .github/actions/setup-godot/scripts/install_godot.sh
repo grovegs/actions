@@ -15,9 +15,6 @@ Linux)
 macOS)
     executable_file=~/.godot/Godot_v"${version}".app/Contents/MacOS/Godot
     ;;
-Windows)
-    executable_file=~/.godot/Godot_v"${version}"/Godot_v${version}-stable_mono_win64_console.exe
-    ;;
 *)
     echo "Error: Unsupported platform '$runner_os'"
     exit 1

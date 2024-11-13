@@ -20,9 +20,6 @@ case "$runner_os" in
 "macOS")
     platform="macos.universal"
     ;;
-"Windows")
-    platform="win64"
-    ;;
 *)
     echo "Error: Unsupported platform '$runner_os'."
     exit 1
@@ -56,9 +53,6 @@ case "$runner_os" in
     ;;
 "macOS")
     mv ~/.godot/Godot_mono.app ~/.godot/Godot_v"${version}".app
-    ;;
-"Windows")
-    mv ~/.godot/Godot_v4.3-stable_mono_win64 ~/.godot/Godot_v"${version}"
     ;;
 *)
     echo "Error: Unsupported platform '$runner_os'."
