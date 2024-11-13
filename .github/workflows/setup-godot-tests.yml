@@ -1,0 +1,35 @@
+name: Setup Godot Tests
+
+on:
+  workflow_call:
+
+jobs:
+  setup_godot_tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Run Setup Godot Action
+        id: setup_godot
+        uses: ./.github/actions/setup-godot
+        with:
+          global-json-file: ./sandbox/GodotApp/global.json
+
+      - name: 🔍 Validate Godot Cache
+        run: |
+          if ! [ -d ~/.godot ]; then
+              echo "Error: Godot cache is not found."
+              exit 1
+          fi
+
+      - name: 🛠️ Validate Godot Installation
+        run: |
+          if ! [ -x "$GODOT" ]; then
+              echo "Error: Godot executable is not installed correctly."
+              exit 1
+          fi

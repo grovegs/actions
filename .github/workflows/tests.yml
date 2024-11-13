@@ -9,112 +9,14 @@ on:
       - main
 
 jobs:
-  dotnet_build_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
+  build_dotnet_tests:
+    uses: ./.github/workflows/build-dotnet-tests.yml
 
-      - name: 🏗️ Build Project
-        uses: ./.github/actions/build-dotnet
-        with:
-          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
-          version: 0.0.1
-          configuration: Release
-          global-json-file: ./sandbox/ConsoleApp/global.json
+  pack_godot_tests:
+    uses: ./.github/workflows/pack-godot-tests.yml
 
-      - name: 📂 List Output Directory
-        run: |
-          echo Contents of the build output directory:
-          ls -R ./sandbox/ConsoleApp/bin/Release
+  pack_nuget_tests:
+    uses: ./.github/workflows/pack-nuget-tests.yml
 
-  godot_pack_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 📦 Pack Godot Package
-        uses: ./.github/actions/pack-godot
-        with:
-          addon: ./sandbox/GodotApp/addons/TestAddon
-          version: 0.0.1
-          artifact: test-addon
-
-      - name: 🗑️ Remove Local Artifacts
-        run: rm -r ./artifacts
-
-      - name: 📥 Download Addon Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: test-addon
-          path: ./artifacts
-
-      - name: ✅ Validate Godot Addon
-        run: |
-          if [ ! -f ./artifacts/test-addon.zip ]; then
-            echo Godot addon not found!
-            exit 1
-          fi
-          echo Godot addon downloaded successfully: ./artifacts/test-addon.zip
-
-      - name: 📦 Unpack Godot Addon
-        run: |
-          unzip -o ./artifacts/test-addon.zip -d ./artifacts
-
-      - name: 🔍 Validate plugin.cfg Version
-        run: |
-          if [ ! -f ./artifacts/test-addon/TestAddon/plugin.cfg ]; then
-            echo plugin.cfg not found!
-            exit 1
-          fi
-
-          expected_version=0.0.1
-          actual_version=$(grep -oP 'version="\K[^"]*' ./artifacts/test-addon/TestAddon/plugin.cfg)
-
-          if [ "$actual_version" != "$expected_version" ]; then
-            echo Version mismatch! Expected: $expected_version, Found: $actual_version
-            exit 1
-          fi
-
-          echo Version validated successfully: $actual_version
-
-  nuget_pack_tests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 🏗️ Build .NET Project
-        uses: ./.github/actions/build-dotnet
-        with:
-          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
-          version: 0.0.1
-          configuration: Release
-          global-json-file: ./sandbox/ConsoleApp/global.json
-
-      - name: 📦 Pack NuGet Package
-        uses: ./.github/actions/pack-nuget
-        with:
-          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
-          version: 0.0.1
-          configuration: Release
-          artifact: test
-
-      - name: 🗑️ Remove Local Artifacts
-        run: rm -r ./artifacts
-
-      - name: 📥 Download Nuget Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: test
-          path: ./artifacts
-
-      - name: ✅ Validate NuGet Package
-        run: |
-          if [ ! -f ./artifacts/test.nupkg ]; then
-            echo NuGet package not found!
-            exit 1
-          fi
-          echo NuGet package downloaded successfully: ./artifacts/test.nupkg
+  setup_godot_tests:
+    uses: ./.github/workflows/setup-godot-tests.yml

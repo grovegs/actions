@@ -1,0 +1,45 @@
+name: Pack Nuget Tests
+
+on:
+  workflow_call:
+
+jobs:
+  pack_nuget_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build .NET Project
+        uses: ./.github/actions/build-dotnet
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          global-json-file: ./sandbox/ConsoleApp/global.json
+
+      - name: 📦 Pack NuGet Package
+        uses: ./.github/actions/pack-nuget
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          artifact: test
+
+      - name: 🗑️ Remove Local Artifacts
+        run: rm -r ./artifacts
+
+      - name: 📥 Download Nuget Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test
+          path: ./artifacts
+
+      - name: ✅ Validate NuGet Package
+        run: |
+          if [ ! -f ./artifacts/test.nupkg ]; then
+            echo NuGet package not found!
+            exit 1
+          fi
+          echo NuGet package downloaded successfully: ./artifacts/test.nupkg

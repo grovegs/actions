@@ -1,0 +1,25 @@
+name: Build Dotnet Tests
+
+on:
+  workflow_call:
+
+jobs:
+  build_dotnet_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build Project
+        uses: ./.github/actions/build-dotnet
+        with:
+          project: ./sandbox/ConsoleApp/ConsoleApp.csproj
+          version: 0.0.1
+          configuration: Release
+          global-json-file: ./sandbox/ConsoleApp/global.json
+
+      - name: 📂 List Output Directory
+        run: |
+          echo Contents of the build output directory:
+          ls -R ./sandbox/ConsoleApp/bin/Release
