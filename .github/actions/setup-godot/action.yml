@@ -5,9 +5,6 @@ inputs:
   global-json-file:
     description: Path to the `global.json` file to extract the Godot version.
     required: true
-  path:
-    description: Path to the installation directory for Godot.
-    required: true
 
 runs:
   using: composite
@@ -22,14 +19,14 @@ runs:
 
     - name: Debug Path Expansion
       shell: bash
-      run: echo "Path ${{ inputs.path }}"
+      run: echo "Path ~/.godot"
 
     - name: 💾 Restore Cache Godot
       id: cache_godot
       uses: actions/cache/restore@v4
       with:
         key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
-        path: $(echo "{{ inputs.path }}")
+        path: ~/.godot
 
     - name: ⬇️ Download Godot
       id: download_godot
@@ -37,19 +34,19 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
-        "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}"
+        "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}"
 
     - name: 💾 Save Cache Godot
       if: steps.cache_godot.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         key: ${{ steps.cache_godot.outputs.cache-primary-key }}
-        path: $(echo "{{ inputs.path }}")
+        path: ~/.godot
 
     - name: ⚙️ Install Godot
       id: install_godot
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
-        executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ inputs.path }}" "${{ runner.os }}")
+        executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
