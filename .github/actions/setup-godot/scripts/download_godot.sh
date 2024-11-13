@@ -49,3 +49,19 @@ if ! unzip -o "$downloaded_file" -d ~/.godot; then
 fi
 
 rm "$downloaded_file"
+
+case "$runner_os" in
+"Linux")
+    mv ~/.godot/Godot_v"${version}"-stable_mono_linux_x86_64 ~/.godot/Godot_v"${version}"
+    ;;
+"macOS")
+    mv ~/.godot/Godot_mono.app ~/.godot/Godot_v"${version}".app
+    ;;
+"Windows")
+    mv ~/.godot/Godot_v4.3-stable_mono_win64 ~/.godot/Godot_v"${version}"
+    ;;
+*)
+    echo "Error: Unsupported platform '$runner_os'."
+    exit 1
+    ;;
+esac
