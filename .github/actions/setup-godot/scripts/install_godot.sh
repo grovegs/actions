@@ -13,7 +13,7 @@ Linux)
     executable_file=~/.godot/Godot_v${version}-stable_mono_linux_x86_64/Godot_v${version}-stable_mono_linux.x86_64
     ;;
 macOS)
-    executable_file=~/.godot/Godot_v${version}-stable_mono_macos.universal/Godot.app/Contents/MacOS/Godot
+    executable_file=~/.godot/Godot_v${version}-stable_mono_macos.universal/Godot_mono.app/Contents/MacOS/Godot
     ;;
 Windows)
     executable_file=~/.godot/Godot_v${version}-stable_mono_win64_console.exe

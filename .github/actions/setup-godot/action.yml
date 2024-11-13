@@ -17,10 +17,6 @@ runs:
         version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
-    - name: Debug Path Expansion
-      shell: bash
-      run: echo "Path ~/.godot"
-
     - name: 💾 Restore Cache Godot
       id: cache_godot
       uses: actions/cache/restore@v4
