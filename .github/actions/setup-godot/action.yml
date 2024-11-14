@@ -64,6 +64,23 @@ runs:
     - name: ⚙️ Install Editor
       shell: bash
       run: |
+        # Ensure the script is executable
         chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
+
+        # Print the script location for debugging
+        echo "Script path: ${{ github.action_path }}/scripts/install_editor.sh"
+
+        # Run the script and capture the output (check for any issues)
         executable_file=$("${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}")
+
+        # Check if the script returned a valid executable path
+        if [ -z "$executable_file" ]; then
+          echo "Error: The script did not return a valid executable path."
+          exit 1
+        fi
+
+        # Output the executable path for debugging
+        echo "Godot executable file: $executable_file"
+
+        # Store the executable path in the environment
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
