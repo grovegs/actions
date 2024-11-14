@@ -13,7 +13,7 @@ if [ -z "${version}" ]; then
     exit 1
 fi
 
-IFS='.' read -r major minor patch <<<"{$version}"
+IFS='.' read -r major minor patch <<<"${version}"
 
 if [ "${patch}" -eq 0 ]; then
     version=${major}.${minor}
