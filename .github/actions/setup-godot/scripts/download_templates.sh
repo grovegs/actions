@@ -9,7 +9,7 @@ version="$1"
 templates_dir="$2"
 platforms="$3"
 
-platform_patterns=$(echo "$platforms" | tr ',' ' ' | tr ' ' '\n' | awk '{print "templates/"tolower($0)"*"}' | paste -sd ' ' -)
+platform_patterns=$(echo "$platforms" | tr ',' '\n' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | awk '{print "templates/" tolower($0) "*"}' | paste -sd ' ' -)
 
 if ! mkdir -p "${templates_dir}"; then
     echo "Error: Failed to create directory at ${templates_dir}."
