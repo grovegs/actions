@@ -1,12 +1,15 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
-    echo "Usage: $0 <version> <templates_dir>"
+if [ $# -ne 3 ]; then
+    echo "Usage: $0 <version> <templates_dir> <platforms>"
     exit 1
 fi
 
 version="$1"
 templates_dir="$2"
+platforms="$3"
+
+platform_patterns=$(echo "$platforms" | tr ',' ' ' | tr ' ' '\n' | awk '{print "templates/"tolower($0)"*"}' | paste -sd ' ' -)
 
 if ! mkdir -p "${templates_dir}"; then
     echo "Error: Failed to create directory at ${templates_dir}."
@@ -27,8 +30,9 @@ if [ ! -f "${downloaded_file}" ]; then
     exit 1
 fi
 
-if ! unzip -o "${downloaded_file}" -d "${templates_dir}"; then
-    echo "Error: Extraction failed for ${downloaded_file}."
+# shellcheck disable=SC2086
+if ! unzip -o "${downloaded_file}" "templates/version.txt" ${platform_patterns} -d "${templates_dir}"; then
+    echo "Error: Extraction failed for ${downloaded_file} with patterns ${platform_patterns}."
     exit 1
 fi
 

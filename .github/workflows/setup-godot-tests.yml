@@ -19,6 +19,7 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApp/global.json
+          template-platforms: iOS, Android
 
       - name: 🔍 Validate Editor Directory
         run: |
