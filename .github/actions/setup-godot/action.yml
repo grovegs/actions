@@ -31,7 +31,7 @@ runs:
         path: ~/.godot
 
     - name: ⬇️ Download Editor
-      if: steps.cache_editor.outputs.cache-hit != 'true' && inputs.cached == 'true'
+      if: steps.cache_editor.outputs.cache-hit != 'true' || inputs.cached != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
@@ -55,7 +55,7 @@ runs:
         enableCrossOsArchive: true
 
     - name: ⬇️ Download Templates
-      if: steps.cache_templates.outputs.cache-hit != 'true' && inputs.cached == 'true'
+      if: steps.cache_templates.outputs.cache-hit != 'true' || inputs.cached != 'true'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
