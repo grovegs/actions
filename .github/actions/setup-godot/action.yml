@@ -52,6 +52,7 @@ runs:
       with:
         key: godot-templates-${{ steps.get_version.outputs.version }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
+        enableCrossOsArchive: true
 
     - name: ⬇️ Download Templates
       if: steps.cache_templates.outputs.cache-hit != 'true'
@@ -66,6 +67,7 @@ runs:
       with:
         key: ${{ steps.cache_templates.outputs.cache-primary-key }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
+        enableCrossOsArchive: true
 
     - name: ⚙️ Install Editor
       shell: bash
