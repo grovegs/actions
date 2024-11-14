@@ -1,25 +1,12 @@
 #!/bin/bash
 
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 <version> <runner_os>"
+    echo "Usage: $0 <version> <templates_dir>"
     exit 1
 fi
 
 version="$1"
-runner_os="$2"
-
-case "${runner_os}" in
-"Linux")
-    templates_dir=~/.local/share/godot/export_templates
-    ;;
-"macOS")
-    templates_dir=~/Library/Application\ Support/Godot/export_templates
-    ;;
-*)
-    echo "Error: Unsupported platform ${runner_os}."
-    exit 1
-    ;;
-esac
+templates_dir="$2"
 
 if ! mkdir -p "${templates_dir}"; then
     echo "Error: Failed to create directory at ${templates_dir}."

@@ -14,7 +14,7 @@ if ! mkdir -p ${editor_dir}; then
     exit 1
 fi
 
-case "${runner_os}" in
+case ${runner_os} in
 "Linux")
     platform="linux_x86_64"
     ;;

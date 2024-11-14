@@ -8,7 +8,7 @@ fi
 version="$1"
 runner_os="$2"
 
-case "${runner_os}" in
+case ${runner_os} in
 Linux)
     executable_file=~/.godot/Godot_v${version}/Godot_v${version}-stable_mono_linux.x86_64
     ;;

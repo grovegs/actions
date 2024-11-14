@@ -21,7 +21,7 @@ runs:
       id: cache_editor
       uses: actions/cache/restore@v4
       with:
-        key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
+        key: godot-editor-${{ steps.read_version.outputs.version }}-${{ runner.os }}
         path: ~/.godot
 
     - name: ⬇️ Download Editor
@@ -37,6 +37,35 @@ runs:
       with:
         key: ${{ steps.cache_editor.outputs.cache-primary-key }}
         path: ~/.godot
+
+    - name: 📂 Get Templates Directory
+      id: get_templates_dir
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
+        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
+        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+
+    - name: 💾 Restore Cache Templates
+      id: cache_templates
+      uses: actions/cache/restore@v4
+      with:
+        key: godot-templates-${{ steps.read_version.outputs.version }}
+        path: ${{ steps.get_templates_dir.outputs.templates_dir }}
+
+    - name: ⬇️ Download Templates
+      if: steps.cache_templates.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
+        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
+
+    - name: 💾 Save Cache Templates
+      if: steps.cache_templates.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        key: ${{ steps.cache_templates.outputs.cache-primary-key }}
+        path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
     - name: ⚙️ Install Editor
       shell: bash

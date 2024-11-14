@@ -20,9 +20,29 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: 🔍 Validate Godot Cache
+      - name: 🔍 Validate Editor Cache
         run: |
           if ! [ -d ~/.godot ]; then
+              echo "Error: Godot cache is not found."
+              exit 1
+          fi
+
+      - name: 🔍 Validate Templates Cache
+        run: |
+          case ${{ matrix.os }} in
+          "ubuntu-latest")
+              templates_dir=~/.local/share/godot/export_templates
+              ;;
+          "macos-latest")
+              templates_dir=~/Library/Application\ Support/Godot/export_templates
+              ;;
+          *)
+              echo "Error: Unsupported platform ${runner_os}."
+              exit 1
+              ;;
+          esac
+
+          if ! [ -d ${templates_dir} ]; then
               echo "Error: Godot cache is not found."
               exit 1
           fi
