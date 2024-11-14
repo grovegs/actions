@@ -20,14 +20,14 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApp/global.json
 
-      - name: 🔍 Validate Editor Cache
+      - name: 🔍 Validate Editor Directory
         run: |
           if ! [ -d ~/.godot ]; then
-              echo "Error: Godot cache is not found."
+              echo "Error: Editor not found."
               exit 1
           fi
 
-      - name: 🔍 Validate Templates Cache
+      - name: 🔍 Validate Templates Directory
         run: |
           case ${{ matrix.os }} in
           "ubuntu-latest")
@@ -43,7 +43,7 @@ jobs:
           esac
 
           if ! [ -d ${templates_dir} ]; then
-              echo "Error: Godot cache is not found."
+              echo "Error: Directory not found."
               exit 1
           fi
 
