@@ -21,7 +21,7 @@ macOS)
     ;;
 esac
 
-if [ ! -f "{$executable_file}" ]; then
+if [ ! -f "${executable_file}" ]; then
     echo "Error: File ${executable_file} not found!"
     exit 1
 fi
