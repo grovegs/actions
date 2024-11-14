@@ -17,9 +17,9 @@ runs:
         version=$("${{ github.action_path }}/scripts/get_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
-    - name: 💾 Restore Cache Editor
+    - name: 💾 Cache Editor
       id: cache_editor
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v4
       with:
         key: godot-editor-${{ steps.get_version.outputs.version }}-${{ runner.os }}
         path: ~/.godot
@@ -31,13 +31,6 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
         "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
 
-    - name: 💾 Save Cache Editor
-      if: steps.cache_editor.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        key: ${{ steps.cache_editor.outputs.cache-primary-key }}
-        path: ~/.godot
-
     - name: 📂 Get Templates Directory
       id: get_templates_dir
       shell: bash
@@ -46,9 +39,9 @@ runs:
         templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
         echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
 
-    - name: 💾 Restore Cache Templates
+    - name: 💾 Cache Templates
       id: cache_templates
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v4
       with:
         key: godot-templates-${{ steps.get_version.outputs.version }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
@@ -60,14 +53,6 @@ runs:
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
         "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
-
-    - name: 💾 Save Cache Templates
-      if: steps.cache_templates.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        key: ${{ steps.cache_templates.outputs.cache-primary-key }}
-        path: ${{ steps.get_templates_dir.outputs.templates_dir }}
-        enableCrossOsArchive: true
 
     - name: ⚙️ Install Editor
       shell: bash
