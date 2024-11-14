@@ -61,7 +61,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
-        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ inputs.template-platforms }}")
+        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ inputs.template-platforms }}"
 
     - name: ⚙️ Install Editor
       shell: bash
