@@ -20,6 +20,7 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApp/global.json
           template-platforms: iOS, Android
+          cached: true
 
       - name: 🔍 Validate Editor Directory
         run: |
