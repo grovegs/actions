@@ -52,7 +52,7 @@ runs:
       if: inputs.cached == 'true'
       uses: actions/cache@v4
       with:
-        key: godot-templates-${{ steps.get_version.outputs.version }}-${{ hash(inputs.template-platforms) }}
+        key: godot-templates-${{ steps.get_version.outputs.version }}-${{ hashFiles(${{ inputs.template-platforms }}) }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
         enableCrossOsArchive: true
 
