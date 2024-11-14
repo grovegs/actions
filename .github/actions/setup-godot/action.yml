@@ -9,19 +9,19 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: 📖 Read Godot version
-      id: read_version
+    - name: 📖 Get Godot Version
+      id: get_version
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/read_version.sh"
-        version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
+        chmod +x "${{ github.action_path }}/scripts/get_version.sh"
+        version=$("${{ github.action_path }}/scripts/get_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
     - name: 💾 Restore Cache Editor
       id: cache_editor
       uses: actions/cache/restore@v4
       with:
-        key: godot-editor-${{ steps.read_version.outputs.version }}-${{ runner.os }}
+        key: godot-editor-${{ steps.get_version.outputs.version }}-${{ runner.os }}
         path: ~/.godot
 
     - name: ⬇️ Download Editor
@@ -29,7 +29,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
-        "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}"
+        "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
 
     - name: 💾 Save Cache Editor
       if: steps.cache_editor.outputs.cache-hit != 'true'
@@ -50,7 +50,7 @@ runs:
       id: cache_templates
       uses: actions/cache/restore@v4
       with:
-        key: godot-templates-${{ steps.read_version.outputs.version }}
+        key: godot-templates-${{ steps.get_version.outputs.version }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
     - name: ⬇️ Download Templates
@@ -58,7 +58,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
-        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.read_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
+        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
 
     - name: 💾 Save Cache Templates
       if: steps.cache_templates.outputs.cache-hit != 'true'
@@ -71,5 +71,5 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
-        executable_file=$("${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}")
+        executable_file=$("${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
