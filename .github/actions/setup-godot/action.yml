@@ -51,8 +51,12 @@ runs:
       id: get_templates_hash
       shell: bash
       run: |
-        templates_hash=$(echo -n ${{ inputs.template-platforms }} | md5)
-        echo templates_hash=${templates_hash} >> "$GITHUB_OUTPUT"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          templates_hash=$(echo -n "${{ inputs.template-platforms }}" | md5)
+        else
+          templates_hash=$(echo -n "${{ inputs.template-platforms }}" | md5sum | awk '{print $1}')
+        fi
+        echo "templates_hash=${templates_hash}" >> "$GITHUB_OUTPUT"
 
     - name: 💾 Cache Templates
       id: cache_templates
