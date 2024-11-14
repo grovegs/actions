@@ -42,7 +42,7 @@ jobs:
               ;;
           esac
 
-          if ! [ -d ${templates_dir} ]; then
+          if ! [ -d "${templates_dir}" ]; then
               echo "Error: Directory not found."
               exit 1
           fi
