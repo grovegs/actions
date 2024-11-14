@@ -47,12 +47,19 @@ runs:
         templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
         echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
 
+    - name: 📂 Get Templates Hash
+      id: get_templates_hash
+      shell: bash
+      run: |
+        templates_hash=$(echo -n ${{ inputs.template-platforms }} | md5)
+        echo templates_hash=${templates_hash} >> "$GITHUB_OUTPUT"
+
     - name: 💾 Cache Templates
       id: cache_templates
       if: inputs.cached == 'true'
       uses: actions/cache@v4
       with:
-        key: godot-templates-${{ steps.get_version.outputs.version }}-${{ hashFiles(${{ inputs.template-platforms }}) }}
+        key: godot-templates-${{ steps.get_version.outputs.version }}-${{ steps.get_templates_hash.outputs.templates_hash }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
         enableCrossOsArchive: true
 
