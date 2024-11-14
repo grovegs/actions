@@ -7,7 +7,7 @@ jobs:
   setup_godot_tests:
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
