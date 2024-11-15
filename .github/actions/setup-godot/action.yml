@@ -47,12 +47,21 @@ runs:
         templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
         echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
 
+    - name: 💾 Get Templates Id
+      id: get_templates_id
+      if: inputs.cached == 'true'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_id.sh"
+        templates_id=$("${{ github.action_path }}/scripts/get_templates_id.sh" "${{ inputs.template-platforms }}")
+        echo templates_id=${templates_id} >> "$GITHUB_OUTPUT"
+
     - name: 💾 Cache Templates
       id: cache_templates
       if: inputs.cached == 'true'
       uses: actions/cache@v4
       with:
-        key: godot-templates-${{ steps.get_version.outputs.version }} #TODO: add template-platforms hash
+        key: godot-templates-${{ steps.get_templates_id.outputs.templates_id }}-${{ steps.get_version.outputs.version }}-${{ runner.os }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
     - name: ⬇️ Download Templates
