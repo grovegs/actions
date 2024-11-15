@@ -5,44 +5,75 @@ inputs:
   global-json-file:
     description: Path to the `global.json` file to extract the Godot version.
     required: true
+  template-platforms:
+    description: Comma-separated list of target platforms for extracting specific Godot export templates (e.g., "iOS, Android, macOS, Linux, Windows").
+    required: true
+  cached:
+    description: Whether to use the cache for Godot.
+    required: false
+    default: "false"
 
 runs:
   using: composite
   steps:
-    - name: 📖 Read Godot version
-      id: read_version
+    - name: 📖 Get Godot Version
+      id: get_version
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/read_version.sh"
-        version=$("${{ github.action_path }}/scripts/read_version.sh" "${{ inputs.global-json-file }}")
+        chmod +x "${{ github.action_path }}/scripts/get_version.sh"
+        version=$("${{ github.action_path }}/scripts/get_version.sh" "${{ inputs.global-json-file }}")
         echo version="$version" >> "$GITHUB_OUTPUT"
 
-    - name: 💾 Restore Cache Godot
-      id: cache_godot
-      uses: actions/cache/restore@v4
+    - name: 💾 Cache Editor
+      id: cache_editor
+      if: inputs.cached == 'true'
+      uses: actions/cache@v4
       with:
-        key: godot-${{ steps.read_version.outputs.version }}-${{ runner.os }}
+        key: godot-editor-${{ steps.get_version.outputs.version }}-${{ runner.os }}
         path: ~/.godot
 
-    - name: ⬇️ Download Godot
-      id: download_godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
+    - name: ⬇️ Download Editor
+      if: steps.cache_editor.outputs.cache-hit != 'true' || inputs.cached != 'true'
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/download_godot.sh"
-        "${{ github.action_path }}/scripts/download_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}"
+        chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
+        "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
 
-    - name: 💾 Save Cache Godot
-      if: steps.cache_godot.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+    - name: 📂 Get Templates Directory
+      id: get_templates_dir
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
+        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
+        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+
+    - name: 💾 Get Templates Id
+      id: get_templates_id
+      if: inputs.cached == 'true'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_id.sh"
+        templates_id=$("${{ github.action_path }}/scripts/get_templates_id.sh" "${{ inputs.template-platforms }}")
+        echo templates_id=${templates_id} >> "$GITHUB_OUTPUT"
+
+    - name: 💾 Cache Templates
+      id: cache_templates
+      if: inputs.cached == 'true'
+      uses: actions/cache@v4
       with:
-        key: ${{ steps.cache_godot.outputs.cache-primary-key }}
-        path: ~/.godot
+        key: godot-templates-${{ steps.get_templates_id.outputs.templates_id }}-${{ steps.get_version.outputs.version }}-${{ runner.os }}
+        path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
-    - name: ⚙️ Install Godot
-      id: install_godot
+    - name: ⬇️ Download Templates
+      if: steps.cache_templates.outputs.cache-hit != 'true' || inputs.cached != 'true'
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/install_godot.sh"
-        executable_file=$("${{ github.action_path }}/scripts/install_godot.sh" "${{ steps.read_version.outputs.version }}" "${{ runner.os }}")
+        chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
+        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ inputs.template-platforms }}"
+
+    - name: ⚙️ Install Editor
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
+        executable_file=$("${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}")
         echo GODOT="$executable_file" >> "$GITHUB_ENV"
