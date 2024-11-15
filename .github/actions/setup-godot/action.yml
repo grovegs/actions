@@ -54,7 +54,6 @@ runs:
       with:
         key: godot-templates-${{ steps.get_version.outputs.version }} #TODO: add template-platforms hash
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
-        enableCrossOsArchive: true
 
     - name: ⬇️ Download Templates
       if: steps.cache_templates.outputs.cache-hit != 'true' || inputs.cached != 'true'
