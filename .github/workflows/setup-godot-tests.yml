@@ -18,7 +18,7 @@ jobs:
         id: setup_godot
         uses: ./.github/actions/setup-godot
         with:
-          global-json-file: ./sandbox/GodotApp/global.json
+          global-json-file: ./sandbox/GodotApplication/global.json
 
       - name: 🔍 Validate Godot Cache
         run: |
