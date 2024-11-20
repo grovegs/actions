@@ -18,12 +18,34 @@ jobs:
         id: setup_godot
         uses: ./.github/actions/setup-godot
         with:
-          global-json-file: ./sandbox/GodotApplication/global.json
+          global-json-file: ./sandbox/GodotApp/global.json
+          template-platforms: iOS, Android
+          cached: true
 
-      - name: 🔍 Validate Godot Cache
+      - name: 🔍 Validate Editor Directory
         run: |
           if ! [ -d ~/.godot ]; then
-              echo "Error: Godot cache is not found."
+              echo "Error: Editor not found."
+              exit 1
+          fi
+
+      - name: 🔍 Validate Templates Directory
+        run: |
+          case ${{ matrix.os }} in
+          "ubuntu-latest")
+              templates_dir=~/.local/share/godot/export_templates
+              ;;
+          "macos-latest")
+              templates_dir=~/Library/Application\ Support/Godot/export_templates
+              ;;
+          *)
+              echo "Error: Unsupported platform ${runner_os}."
+              exit 1
+              ;;
+          esac
+
+          if ! [ -d "${templates_dir}" ]; then
+              echo "Error: Directory not found."
               exit 1
           fi
 
