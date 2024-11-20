@@ -1,0 +1,62 @@
+name: Build Godot
+description: Build Godot project for selected platforms.
+
+inputs:
+  project:
+    description: The relative path to the Godot project folder.
+    required: true
+  version:
+    description: The build version to use for the output (e.g., 1.0.0).
+    required: true
+  platform:
+    description: The target platform for the build (e.g., Android, iOS, MacOS).
+    required: true
+  preset:
+    description: The export preset name to use from the Godot project settings.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 📂 Get Templates Directory
+      id: get_templates_dir
+      if: inputs.platform == 'Android'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
+        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
+        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Install Android Template
+      if: inputs.platform == 'Android'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_android_template.sh"
+        "${{ github.action_path }}/scripts/install_android_template.sh" "${{ inputs.project }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
+
+    - name: 📂 Get Options
+      id: get_options
+      shell: bash
+      run: |
+        case "${{ inputs.platform }}" in
+          Android)
+            chmod +x "${{ github.action_path }}/scripts/get_android_options.sh"
+            options=$("${{ github.action_path }}/scripts/get_android_options.sh" "${{ inputs.version }}")
+            ;;
+          iOS)
+            chmod +x "${{ github.action_path }}/scripts/get_ios_options.sh"
+            options=$("${{ github.action_path }}/scripts/get_ios_options.sh" "${{ inputs.version }}")
+            ;;
+          *)
+            echo "Unsupported platform: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+
+        echo options=${options} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Update Export Presets
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/update_export_presets.sh"
+        "${{ github.action_path }}/scripts/update_export_presets.sh" "${{ inputs.project }}/export_presets.cfg" "${{ inputs.preset }}" ${{ steps.get_options.outputs.options }}
