@@ -48,6 +48,9 @@ jobs:
               exit 1
           fi
 
+          echo "Templates directory found. Listing contents:"
+          ls -la "${templates_dir}"
+
       - name: 🛠️ Validate Godot Installation
         run: |
           if [ ! -L "/usr/local/bin/godot" ] || [ ! -L "/usr/local/bin/GodotSharp" ]; then
