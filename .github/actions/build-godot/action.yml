@@ -70,9 +70,11 @@ runs:
       shell: bash
       run: |
         if ! mkdir -p "./artifacts"; then
-          echo "Error: Failed to create directory at ${editor_dir}."
+          echo "Error: Failed to create directory at ./artifacts."
           exit 1
         fi
+
+        ls -la ./artifacts
 
         godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" "./artficats/${{ inputs.artifact }}.apk"
 
