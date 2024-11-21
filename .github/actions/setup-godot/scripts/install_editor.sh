@@ -15,7 +15,7 @@ Linux)
     ;;
 macOS)
     godot_executable=~/.godot/Godot_v${version}.app/Contents/MacOS/Godot
-    godot_sharp=~/.godot/Godot_v${version}/Resources/GodotSharp
+    godot_sharp=~/.godot/Godot_v${version}.app/Contents/Resources/GodotSharp
     ;;
 *)
     echo "Error: Unsupported platform ${runner_os}."
