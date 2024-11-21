@@ -17,19 +17,19 @@ runs:
   using: composite
   steps:
     - name: 📖 Get Godot Version
-      id: get_version
+      id: get_godot_version
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/get_version.sh"
-        version=$("${{ github.action_path }}/scripts/get_version.sh" "${{ inputs.global-json-file }}")
-        echo version="$version" >> "$GITHUB_OUTPUT"
+        chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
+        godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
+        echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
 
     - name: 💾 Cache Editor
       id: cache_editor
       if: inputs.cached == 'true'
       uses: actions/cache@v4
       with:
-        key: godot-editor-${{ steps.get_version.outputs.version }}-${{ runner.os }}
+        key: godot-editor-${{ steps.get_godot_version.outputs.godot_version }}-${{ runner.os }}
         path: ~/.godot
 
     - name: ⬇️ Download Editor
@@ -37,7 +37,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
-        "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
+        "${{ github.action_path }}/scripts/download_editor.sh" "${{ steps.get_godot_version.outputs.godot_version }}" "${{ runner.os }}"
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
@@ -61,7 +61,7 @@ runs:
       if: inputs.cached == 'true'
       uses: actions/cache@v4
       with:
-        key: godot-templates-${{ steps.get_templates_id.outputs.templates_id }}-${{ steps.get_version.outputs.version }}-${{ runner.os }}
+        key: godot-templates-${{ steps.get_templates_id.outputs.templates_id }}-${{ steps.get_godot_version.outputs.godot_version }}-${{ runner.os }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
     - name: ⬇️ Download Templates
@@ -69,10 +69,10 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
-        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_version.outputs.version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ inputs.target-platforms }}"
+        "${{ github.action_path }}/scripts/download_templates.sh" "${{ steps.get_godot_version.outputs.godot_version }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ inputs.target-platforms }}"
 
     - name: ⚙️ Install Editor
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
-        "${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
+        "${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_godot_version.outputs.godot_version }}" "${{ runner.os }}"
