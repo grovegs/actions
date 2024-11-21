@@ -51,7 +51,9 @@ jobs:
 
       - name: 🛠️ Validate Godot Installation
         run: |
-          if ! [ -x "$GODOT" ]; then
-              echo "Error: Godot executable is not installed correctly."
+          if [ ! -L "/usr/local/bin/godot" ] || [ ! -L "/usr/local/bin/GodotSharp" ]; then
+              echo "Error: Symlinks not found."
               exit 1
           fi
+
+          godot --version
