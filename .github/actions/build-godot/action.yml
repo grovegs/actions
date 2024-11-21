@@ -5,6 +5,9 @@ inputs:
   project:
     description: The relative path to the Godot project folder.
     required: true
+  global-json-file:
+    description: Path to the `global.json` file to extract the Godot version.
+    required: true
   version:
     description: The build version to use for the output (e.g., 1.0.0).
     required: true
@@ -34,12 +37,20 @@ runs:
         templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
         echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
 
+    - name: 📖 Get Godot Version
+      id: get_godot_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
+        godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
+        echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
+
     - name: 📂 Install Android Template
       if: inputs.platform == 'Android'
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_android_template.sh"
-        "${{ github.action_path }}/scripts/install_android_template.sh" "${{ inputs.project }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
+        "${{ github.action_path }}/scripts/install_android_template.sh" "${{ inputs.project }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ steps.get_godot_version.outputs.godot_version }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
