@@ -9,7 +9,8 @@ project_dir="$1"
 templates_dir="$2"
 godot_version="$3"
 
-android_source="${templates_dir}/${godot_version}.stable.mono/android_source.zip"
+template_dir=${templates_dir}/${godot_version}.stable.mono
+android_source="${template_dir}/android_source.zip"
 android_dir="${project_dir}/android"
 build_dir="${android_dir}/build"
 
@@ -23,7 +24,7 @@ if ! unzip -o "${android_source}" -d "${build_dir}"; then
     exit 1
 fi
 
-if ! cp "${templates_dir}/version.txt" "${android_dir}/.build_version"; then
+if ! cp "${template_dir}/version.txt" "${android_dir}/.build_version"; then
     echo "Error: Failed to copy version file to ${android_dir}/.build_version."
     exit 1
 fi
