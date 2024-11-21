@@ -43,18 +43,19 @@ jobs:
           artifact: godot-artifact
 
       - name: 🗑️ Remove Local Artifacts
-        run: rm -r ./artifacts
+        run: rm -r ~/.artficats
 
       - name: 📥 Download Nuget Artifact
         uses: actions/download-artifact@v4
         with:
           name: godot-artifact
-          path: ./artifacts
+          path: ~/.artficats
 
       - name: ✅ Validate Android Build
         run: |
-          if [ ! -f ./artifacts/godot-artifact.apk ]; then
+          if [ ! -f ~/.artficats/godot-artifact.apk ]; then
             echo Android build not found!
             exit 1
           fi
-          echo Android build downloaded successfully: ./artifacts/godot-artifact.apk
+
+          echo Android build downloaded successfully: ~/.artficats/godot-artifact.apk
