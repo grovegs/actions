@@ -75,5 +75,4 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
-        executable_file=$("${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}")
-        echo GODOT="$executable_file" >> "$GITHUB_ENV"
+        "${{ github.action_path }}/scripts/install_editor.sh" "${{ steps.get_version.outputs.version }}" "${{ runner.os }}"
