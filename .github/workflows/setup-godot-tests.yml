@@ -17,7 +17,7 @@ jobs:
       - name: 🚀 Run Setup Godot Action
         uses: ./.github/actions/setup-godot
         with:
-          global-json-file: ./sandbox/GodotApp/global.json
+          global-json-file: ./sandbox/GodotApplication/global.json
           template-platforms: iOS, Android
           cached: true
 
