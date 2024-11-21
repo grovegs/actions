@@ -57,7 +57,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
-        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ runner.os }}")
+        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ inputs.version }}")
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
     - name: 📂 Update Export Presets
