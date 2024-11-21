@@ -1,0 +1,45 @@
+name: Build Godot Tests
+
+on:
+  workflow_call:
+
+jobs:
+  build_dotnet_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Setup Godot Action
+        uses: ./.github/actions/setup-godot
+        with:
+          global-json-file: ./sandbox/GodotApp/global.json
+          template-platforms: iOS, Android
+          cached: true
+
+      - name: 🏗️ Build Project
+        uses: ./.github/actions/build-godot
+        with:
+          project: ./sandbox/GodotApplication
+          version: 0.0.1
+          platform: Android
+          preset: Android
+          artifact: godot-artifact
+
+      - name: 🗑️ Remove Local Artifacts
+        run: rm -r ./artifacts
+
+      - name: 📥 Download Nuget Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: godot-artifact
+          path: ./artifacts
+
+      - name: ✅ Validate Android Build
+        run: |
+          if [ ! -f ./artifacts/godot-artifact.apk ]; then
+            echo Android build not found!
+            exit 1
+          fi
+          echo Android build downloaded successfully: ./artifacts/godot-artifact.apk
