@@ -9,11 +9,18 @@ inputs:
     description: The build version to use for the output (e.g., 1.0.0).
     required: true
   platform:
-    description: The target platform for the build (e.g., Android, iOS, MacOS).
+    description: The target platform for the build (e.g., Android, iOS).
     required: true
   preset:
     description: The export preset name to use from the Godot project settings.
     required: true
+  artifact:
+    description: Desired name for the uploaded NuGet package artifact.
+    required: true
+  duration:
+    description: Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period.
+    required: false
+    default: "1"
 
 runs:
   using: composite
@@ -34,29 +41,33 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/install_android_template.sh"
         "${{ github.action_path }}/scripts/install_android_template.sh" "${{ inputs.project }}" "${{ steps.get_templates_dir.outputs.templates_dir }}"
 
-    - name: 📂 Get Options
-      id: get_options
+    - name: 📂 Get Export Options
+      id: get_export_options
       shell: bash
       run: |
-        case "${{ inputs.platform }}" in
-          Android)
-            chmod +x "${{ github.action_path }}/scripts/get_android_options.sh"
-            options=$("${{ github.action_path }}/scripts/get_android_options.sh" "${{ inputs.version }}")
-            ;;
-          iOS)
-            chmod +x "${{ github.action_path }}/scripts/get_ios_options.sh"
-            options=$("${{ github.action_path }}/scripts/get_ios_options.sh" "${{ inputs.version }}")
-            ;;
-          *)
-            echo "Unsupported platform: ${{ inputs.platform }}"
-            exit 1
-            ;;
-        esac
-
-        echo options=${options} >> "$GITHUB_OUTPUT"
+        chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
+        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ runner.os }}")
+        echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
     - name: 📂 Update Export Presets
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/update_export_presets.sh"
-        "${{ github.action_path }}/scripts/update_export_presets.sh" "${{ inputs.project }}/export_presets.cfg" "${{ inputs.preset }}" ${{ steps.get_options.outputs.options }}
+        "${{ github.action_path }}/scripts/update_export_presets.sh" "${{ inputs.project }}/export_presets.cfg" "${{ inputs.preset }}" ${{ steps.get_export_options.outputs.export_options }}
+
+    - name: 📂 Export Project
+      shell: bash
+      run: |
+        if ! mkdir -p "./artifacts"; then
+          echo "Error: Failed to create directory at ${editor_dir}."
+          exit 1
+        fi
+
+        godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" "./artficats/${{ inputs.artifact }}.apk"
+
+    - name: 📤 Upload Android Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: ./artifacts/${{ inputs.artifact }}.apk
+        retention-days: 1
