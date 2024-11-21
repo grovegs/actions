@@ -69,14 +69,14 @@ runs:
     - name: 📂 Export Project
       shell: bash
       run: |
-        if ! mkdir -p "./artifacts"; then
+        if ! mkdir -p ./artifacts; then
           echo "Error: Failed to create directory at ./artifacts."
           exit 1
         fi
 
         ls -la ./artifacts
 
-        godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" "./artifacts/${{ inputs.artifact }}.apk"
+        godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ./artifacts/${{ inputs.artifact }}.apk
 
     - name: 📤 Upload Android Artifact
       uses: actions/upload-artifact@v4
