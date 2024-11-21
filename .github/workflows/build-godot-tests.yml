@@ -4,8 +4,11 @@ on:
   workflow_call:
 
 jobs:
-  build_dotnet_tests:
-    runs-on: ubuntu-latest
+  build_godot_tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: 📥 Checkout Code
