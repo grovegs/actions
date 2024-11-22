@@ -10,11 +10,6 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
-    env:
-      GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PATH }}
-      GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}
-      GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}
-
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -39,6 +34,10 @@ jobs:
 
       - name: 🏗️ Build Project
         uses: ./.github/actions/build-godot
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}
         with:
           project: ./sandbox/GodotApplication
           global-json-file: ./sandbox/GodotApplication/global.json

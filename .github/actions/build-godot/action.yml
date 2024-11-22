@@ -60,28 +60,41 @@ runs:
         export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ inputs.version }}")
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
-    - name: 📂 Update Export Presets
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/update_export_presets.sh"
-        "${{ github.action_path }}/scripts/update_export_presets.sh" "${{ inputs.project }}/export_presets.cfg" "${{ inputs.preset }}" ${{ steps.get_export_options.outputs.export_options }}
-
     - name: 📂 Export Project
       shell: bash
       run: |
+        # Ensure the artifacts directory exists
         if ! mkdir -p ~/.artifacts; then
-          echo "Error: Failed to create directory at ~/.artifacts."
+          echo "Error: Failed to create directory ~/.artifacts."
           exit 1
         fi
 
-        if [ ! -d ~/.artifacts ]; then
-          echo "Error: Directory ~/.artifacts does not exist after creation."
-          exit 1
-        fi
-
+        echo "Artifacts directory contents:"
         ls -la ~/.artifacts
 
-        godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk
+        # Ensure the Android directory exists
+        if ! mkdir -p ~/.android; then
+          echo "Error: Failed to create directory ~/.android."
+          exit 1
+        fi
+
+        # Decode and save the Android keystore
+        if ! echo "$GODOT_ANDROID_KEYSTORE_RELEASE" | base64 -d > ~/.android/release.keystore; then
+          echo "Error: Failed to decode and save the Android keystore."
+          exit 1
+        fi
+
+        echo "Android directory contents:"
+        ls -la ~/.android
+
+        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore" >> "$GITHUB_ENV"
+
+        if ! godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk; then
+          echo "Error: Godot export failed."
+          exit 1
+        fi
+
+        echo "Export completed successfully. Artifact is located in ~/.artifacts."
 
     - name: 📤 Upload Android Artifact
       uses: actions/upload-artifact@v4
