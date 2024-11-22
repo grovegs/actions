@@ -69,12 +69,6 @@ runs:
         export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ inputs.version }}")
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
-    - name: Debug Keystore Input
-      shell: bash
-      run: |
-        echo "Keystore content: ${#inputs.keystore} characters"
-        echo "Keystore preview: ${inputs.keystore:0:30}..."
-
     - name: 📂 Export Project
       shell: bash
       run: |
