@@ -32,8 +32,6 @@ export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore_file}
 export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
 export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
 
-# shellcheck disable=SC2086
-godot --path ${project_dir} --headless --export-release "${preset}" ${exported_file}
+godot --path "${project_dir}" --headless --export-release "${preset}" "${exported_file}" >/dev/null 2>&1
 
-# shellcheck disable=SC2086
-echo ${exported_file}
+echo "${exported_file}"
