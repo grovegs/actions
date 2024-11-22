@@ -87,6 +87,9 @@ runs:
           exit 1
         fi
 
+        echo Keystore:
+        echo "${{ inputs.keystore }}"
+
         if ! openssl base64 -d <<< "${{ inputs.keystore }}" > ~/.android/release.keystore; then
           echo "Error: Failed to decode and save the Android keystore."
           exit 1
