@@ -95,9 +95,12 @@ runs:
         echo "Android directory contents after saving keystore:"
         ls -la ~/.android
 
-        # Verify the keystore file
-        if [ ! -s ~/.android/release.keystore ]; then
-          echo "Error: Keystore file is empty or invalid."
+        keytool -list -keystore ~/.android/release.keystore -storepass ${{ inputs.keystore-password }}
+
+        if [ $? -eq 0 ]; then
+          echo "Keystore file is valid."
+        else
+          echo "Error: Keystore file is invalid or cannot be accessed."
           exit 1
         fi
 
