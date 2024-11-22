@@ -80,8 +80,8 @@ runs:
       id: export_project
       shell: bash
       run: |
-        if ! mkdir -p ./artifacts; then
-           echo "Error: Failed to create directory ./artifacts."
+        if ! mkdir -p ~/.artifacts; then
+           echo "Error: Failed to create directory ~/.artifacts."
            exit 1
         fi
 

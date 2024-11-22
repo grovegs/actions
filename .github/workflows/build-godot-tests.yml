@@ -68,17 +68,17 @@ jobs:
           android-format: apk
 
       - name: 🗑️ Remove Local Artifacts
-        run: rm -r ./artifacts
+        run: rm -r ~/.artifacts
 
       - name: 📥 Download Android Artifact
         uses: actions/download-artifact@v4
         with:
           name: godot-android
-          path: ./artifacts
+          path: ~/.artifacts
 
       - name: ✅ Validate Android Build
         run: |
-          if [ ! -f ./artifacts/godot-android.apk ]; then
+          if [ ! -f ~/.artifacts/godot-android.apk ]; then
             echo Android build not found!
             exit 1
           fi

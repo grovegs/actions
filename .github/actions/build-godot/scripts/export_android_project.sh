@@ -13,7 +13,7 @@ keystore_user="$5"
 keystore_password="$6"
 format="$7"
 
-artifacts_dir=./artifacts
+artifacts_dir=~/.artifacts
 android_dir=~/.android
 keystore_file=${android_dir}/release.keystore
 exported_file=${artifacts_dir}/"${artifact}".${format}
