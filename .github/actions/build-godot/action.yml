@@ -85,18 +85,21 @@ runs:
            exit 1
         fi
 
-        case "${{ inputs.platform }}" in
+        case "Android" in
           "Android")
-            chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
+            chmod +x "/home/runner/work/actions/actions/./.github/actions/build-godot/scripts/export_android_project.sh"
             file=$("${{ github.action_path }}/scripts/export_android_project.sh" "${{ inputs.project }}" "${{ inputs.preset }}" "${{ inputs.artifact }}" "${{ inputs.android-keystore }}" "${{ inputs.android-keystore-user }}" "${{ inputs.android-keystore-password }}" "${{ inputs.android-format }}")
             ;;
           "iOS")
             echo "Exporting for iOS platform..."
             ;;
           *)
-            echo "Error: Unsupported platform ${{ inputs.platform }}"
+            echo "Error: Unsupported platform Android"
+            exit 1
+            ;;
+        esac
 
-          echo file=${file} >> "$GITHUB_OUTPUT"
+        echo file=${file} >> "$GITHUB_OUTPUT"
 
     - name: 📤 Upload Artifact
       uses: actions/upload-artifact@v4
