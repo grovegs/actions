@@ -28,18 +28,18 @@ jobs:
       - name: Generate Keystore
         run: |
           keytool -genkeypair \
-            -alias testkey \
+            -alias testuser \
             -keyalg RSA \
             -keysize 2048 \
             -validity 365 \
             -keystore test.keystore \
-            -storepass test \
-            -keypass test \
+            -storepass testpassword \
+            -keypass testpassword \
             -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
 
       - name: Verify Keystore
         run: |
-          keytool -list -keystore test-release.keystore -storepass testpassword
+          keytool -list -keystore test.keystore -storepass testpassword
 
       - name: 🚀 Setup Godot Action
         uses: ./.github/actions/setup-godot
@@ -58,8 +58,8 @@ jobs:
           preset: Android
           artifact: godot-artifact
           keystore: test.keystore
-          keystore-user: testkey
-          keystore-password: test
+          keystore-user: testuser
+          keystore-password: testpassword
 
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ./artifacts
