@@ -34,13 +34,9 @@ jobs:
 
       - name: Debug Secrets
         run: |
-          echo "Keystore length: ${#KEYSTORE}"
-          echo "Keystore user: $KEYSTORE_USER"
-          echo "Keystore password length: ${#KEYSTORE_PASSWORD}"
-        env:
-          KEYSTORE: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}
-          KEYSTORE_USER: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}
-          KEYSTORE_PASSWORD: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}
+          echo "Keystore: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}
+          echo "Keystore user: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}
+          echo "Keystore password: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}
 
       - name: 🏗️ Build Project
         uses: ./.github/actions/build-godot
