@@ -37,6 +37,7 @@ jobs:
           echo "Keystore: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}"
           echo "Keystore user: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}"
           echo "Keystore password: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}"
+          echo "Nuget api key: ${{ secrets.NUGET_API_KEY }}"
 
       - name: 🏗️ Build Project
         uses: ./.github/actions/build-godot
