@@ -67,6 +67,13 @@ jobs:
           android-keystore-password: testpassword
           android-format: apk
 
+      - name: ✅ Validate Exported File
+        run: |
+          if [ ! -f ~/.artifacts/godot-android.apk ]; then
+            echo Android build not found!
+            exit 1
+          fi
+
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ~/.artifacts
 
