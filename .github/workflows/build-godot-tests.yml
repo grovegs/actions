@@ -53,7 +53,7 @@ jobs:
           target-platforms: iOS, Android
           cached: true
 
-      - name: 🏗️ Build Project
+      - name: 🏗️ Build Android Project
         uses: ./.github/actions/build-godot
         with:
           project: ./sandbox/GodotApplication
@@ -61,23 +61,24 @@ jobs:
           version: 0.0.1
           platform: Android
           preset: Android
-          artifact: godot-artifact
-          keystore: "${{ steps.generate_keystore.outputs.keystore }}"
-          keystore-user: testuser
-          keystore-password: testpassword
+          artifact: godot-android
+          android-keystore: "${{ steps.generate_keystore.outputs.keystore }}"
+          android-keystore-user: testuser
+          android-keystore-password: testpassword
+          android-format: apk
 
       - name: 🗑️ Remove Local Artifacts
-        run: rm -r ~/.artifacts
+        run: rm -r ./artifacts
 
-      - name: 📥 Download Nuget Artifact
+      - name: 📥 Download Android Artifact
         uses: actions/download-artifact@v4
         with:
-          name: godot-artifact
-          path: ~/.artifacts
+          name: godot-android
+          path: ./artifacts
 
       - name: ✅ Validate Android Build
         run: |
-          if [ ! -f ./artifacts/godot-artifact.apk ]; then
+          if [ ! -f ./artifacts/godot-android.apk ]; then
             echo Android build not found!
             exit 1
           fi
