@@ -25,19 +25,28 @@ jobs:
         with:
           packages: platform-tools build-tools;34.0.0 platforms;android-34 cmake;3.10.2.4988404 ndk;23.2.8568313
 
+      - name: Generate Keystore
+        run: |
+          keytool -genkeypair \
+            -alias testkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 365 \
+            -keystore test.keystore \
+            -storepass test \
+            -keypass test \
+            -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
+
+      - name: Verify Keystore
+        run: |
+          keytool -list -keystore test-release.keystore -storepass testpassword
+
       - name: 🚀 Setup Godot Action
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApplication/global.json
           target-platforms: iOS, Android
           cached: true
-
-      - name: Debug Secrets
-        run: |
-          echo "Keystore: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}"
-          echo "Keystore user: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}"
-          echo "Keystore password: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}"
-          echo "Nuget api key: ${{ secrets.NUGET_API_KEY }}"
 
       - name: 🏗️ Build Project
         uses: ./.github/actions/build-godot
@@ -48,9 +57,9 @@ jobs:
           platform: Android
           preset: Android
           artifact: godot-artifact
-          keystore: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}
-          keystore-user: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}
-          keystore-password: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}
+          keystore: test.keystore
+          keystore-user: testkey
+          keystore-password: test
 
       - name: 🗑️ Remove Local Artifacts
         run: rm -r ./artifacts
