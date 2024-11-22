@@ -79,12 +79,12 @@ runs:
         fi
 
         # Decode and save the Android keystore
-        if [ -z "$GODOT_ANDROID_KEYSTORE_RELEASE" ]; then
+        if [ -z "${{ env.GODOT_ANDROID_KEYSTORE_RELEASE }}" ]; then
           echo "Error: GODOT_ANDROID_KEYSTORE_RELEASE is empty or not set."
           exit 1
         fi
 
-        if ! echo "$GODOT_ANDROID_KEYSTORE_RELEASE" | base64 -d > ~/.android/release.keystore; then
+        if ! echo "${{ env.GODOT_ANDROID_KEYSTORE_RELEASE }}" | base64 -d > ~/.android/release.keystore; then
           echo "Error: Failed to decode and save the Android keystore."
           exit 1
         fi
