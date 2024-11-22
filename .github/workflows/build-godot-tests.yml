@@ -32,6 +32,12 @@ jobs:
           target-platforms: iOS, Android
           cached: true
 
+      - name: Debug Secrets
+        run: |
+          echo "Keystore length: ${#{{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE }}}"
+          echo "Keystore user: ${{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_USER }}"
+          echo "Keystore password length: ${#{{ secrets.GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD }}}"
+
       - name: 🏗️ Build Project
         uses: ./.github/actions/build-godot
         with:
