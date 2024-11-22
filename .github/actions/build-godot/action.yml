@@ -85,7 +85,7 @@ runs:
            exit 1
         fi
 
-        case "Android" in
+        case ${{ inputs.platform }} in
           "Android")
             echo "Exporting for Android platform..."
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
@@ -100,7 +100,7 @@ runs:
             ;;
         esac
 
-        echo Project successfully exported: ${file}
+        echo ${{ inputs.platform }} project successfully exported: ${file}
         echo file=${file} >> "$GITHUB_OUTPUT"
 
     - name: 📤 Upload Artifact
