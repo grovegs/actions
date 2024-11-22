@@ -39,7 +39,7 @@ jobs:
             -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
           base64 test.keystore > keystore.b64
           keystore=$(cat keystore.b64)
-          echo keystore="$keystore" >> "$GITHUB_OUTPUT"
+          echo "keystore=$keystore" >> "$GITHUB_OUTPUT"
 
       - name: Verify Keystore
         run: |
