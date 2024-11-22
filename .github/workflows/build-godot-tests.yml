@@ -26,6 +26,7 @@ jobs:
           packages: platform-tools build-tools;34.0.0 platforms;android-34 cmake;3.10.2.4988404 ndk;23.2.8568313
 
       - name: Generate Keystore
+        id: generate_keystore
         run: |
           keytool -genkeypair \
             -alias testuser \
@@ -36,6 +37,9 @@ jobs:
             -storepass testpassword \
             -keypass testpassword \
             -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
+          base64 test.keystore > keystore.b64
+          keystore=$(cat keystore.b64)
+          echo keystore="$keystore" >> "$GITHUB_OUTPUT"
 
       - name: Verify Keystore
         run: |
@@ -57,7 +61,7 @@ jobs:
           platform: Android
           preset: Android
           artifact: godot-artifact
-          keystore: test.keystore
+          keystore: "${{ steps.generate_keystore.outputs.keystore }}"
           keystore-user: testuser
           keystore-password: testpassword
 
