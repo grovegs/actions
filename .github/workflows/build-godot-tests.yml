@@ -85,7 +85,7 @@ jobs:
 
       - name: ✅ Validate Android Build
         run: |
-          if [ ! -f ~/.artifacts/godot-android-${{ runner.os }} ]; then
+          if [ ! -f ~/.artifacts/godot-android-${{ runner.os }}.apk ]; then
             echo Android build not found!
             exit 1
           fi
