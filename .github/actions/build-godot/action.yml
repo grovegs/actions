@@ -87,7 +87,7 @@ runs:
           exit 1
         fi
 
-        if ! echo "${{ inputs.keystore }}" | base64 -d > ~/.android/release.keystore; then
+        if ! openssl base64 -d <<< "${{ inputs.keystore }}" > ~/.android/release.keystore; then
           echo "Error: Failed to decode and save the Android keystore."
           exit 1
         fi
@@ -102,8 +102,8 @@ runs:
         fi
 
         echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore" >> "$GITHUB_ENV"
-        echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER={{ inputs.keystore-user }}" >> "$GITHUB_ENV"
-        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD={{ inputs.keystore-password }}" >> "$GITHUB_ENV"
+        echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=${{ inputs.keystore-user }}" >> "$GITHUB_ENV"
+        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${{ inputs.keystore-password }}" >> "$GITHUB_ENV"
 
         # Run the Godot export command
         if ! godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk; then
