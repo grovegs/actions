@@ -38,7 +38,7 @@ jobs:
             -keypass testpassword \
             -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
 
-          keystore=$(base64 -i debug.keystore | tr -d '\n')
+          keystore=$(base64 -i test.keystore | tr -d '\n')
           echo "keystore=$keystore" >> "$GITHUB_OUTPUT"
 
       - name: Verify Keystore
