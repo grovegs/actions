@@ -33,10 +33,7 @@ export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
 export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
 
 # shellcheck disable=SC2086
-if ! godot --path ${project_dir} --headless --export-release "${preset}" ${exported_file}; then
-    echo "Error: Godot export failed."
-    exit 1
-fi
+godot --path ${project_dir} --headless --export-release "${preset}" ${exported_file}
 
 # shellcheck disable=SC2086
 echo ${exported_file}
