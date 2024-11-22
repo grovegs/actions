@@ -79,16 +79,28 @@ runs:
         fi
 
         # Decode and save the Android keystore
+        if [ -z "$GODOT_ANDROID_KEYSTORE_RELEASE" ]; then
+          echo "Error: GODOT_ANDROID_KEYSTORE_RELEASE is empty or not set."
+          exit 1
+        fi
+
         if ! echo "$GODOT_ANDROID_KEYSTORE_RELEASE" | base64 -d > ~/.android/release.keystore; then
           echo "Error: Failed to decode and save the Android keystore."
           exit 1
         fi
 
-        echo "Android directory contents:"
+        echo "Android directory contents after saving keystore:"
         ls -la ~/.android
+
+        # Verify the keystore file
+        if [ ! -s ~/.android/release.keystore ]; then
+          echo "Error: Keystore file is empty or invalid."
+          exit 1
+        fi
 
         echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore" >> "$GITHUB_ENV"
 
+        # Run the Godot export command
         if ! godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk; then
           echo "Error: Godot export failed."
           exit 1
