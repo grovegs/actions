@@ -87,7 +87,7 @@ runs:
 
         case "Android" in
           "Android")
-            chmod +x "/home/runner/work/actions/actions/./.github/actions/build-godot/scripts/export_android_project.sh"
+            chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
             file=$("${{ github.action_path }}/scripts/export_android_project.sh" "${{ inputs.project }}" "${{ inputs.preset }}" "${{ inputs.artifact }}" "${{ inputs.android-keystore }}" "${{ inputs.android-keystore-user }}" "${{ inputs.android-keystore-password }}" "${{ inputs.android-format }}")
             ;;
           "iOS")
