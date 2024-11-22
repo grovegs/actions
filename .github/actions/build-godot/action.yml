@@ -20,6 +20,15 @@ inputs:
   artifact:
     description: Desired name for the uploaded NuGet package artifact.
     required: true
+  keystore:
+    description: Desired name for the uploaded NuGet package artifact.
+    required: true
+  keystore-user:
+    description: Desired name for the uploaded NuGet package artifact.
+    required: true
+  keystore-password:
+    description: Desired name for the uploaded NuGet package artifact.
+    required: true
   duration:
     description: Retention duration (in days) for the uploaded artifact. A value of 0 uses the default retention period.
     required: false
@@ -78,13 +87,7 @@ runs:
           exit 1
         fi
 
-        # Decode and save the Android keystore
-        if [ -z "${{ env.GODOT_ANDROID_KEYSTORE_RELEASE }}" ]; then
-          echo "Error: GODOT_ANDROID_KEYSTORE_RELEASE is empty or not set."
-          exit 1
-        fi
-
-        if ! echo "${{ env.GODOT_ANDROID_KEYSTORE_RELEASE }}" | base64 -d > ~/.android/release.keystore; then
+        if ! echo "${{ inputs.keystore }}" | base64 -d > ~/.android/release.keystore; then
           echo "Error: Failed to decode and save the Android keystore."
           exit 1
         fi
@@ -99,6 +102,8 @@ runs:
         fi
 
         echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore" >> "$GITHUB_ENV"
+        echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER={{ inputs.keystore-user }}" >> "$GITHUB_ENV"
+        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD={{ inputs.keystore-password }}" >> "$GITHUB_ENV"
 
         # Run the Godot export command
         if ! godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk; then
