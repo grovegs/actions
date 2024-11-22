@@ -37,7 +37,8 @@ jobs:
             -storepass testpassword \
             -keypass testpassword \
             -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"
-          base64 test.keystore > keystore.b64
+
+          base64 test.keystore | tr -d '\n' > keystore.b64
           keystore=$(cat keystore.b64)
           echo "keystore=$keystore" >> "$GITHUB_OUTPUT"
 
