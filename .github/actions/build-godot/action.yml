@@ -104,9 +104,12 @@ runs:
           exit 1
         fi
 
-        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore" >> "$GITHUB_ENV"
-        echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=${{ inputs.keystore-user }}" >> "$GITHUB_ENV"
-        echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${{ inputs.keystore-password }}" >> "$GITHUB_ENV"
+        export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/release.keystore
+        export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${{ inputs.keystore-user }}
+        export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${{ inputs.keystore-password }}
+
+        echo "Environment variables:"
+        env | grep GODOT_ANDROID_KEYSTORE
 
         # Run the Godot export command
         if ! godot --path "${{ inputs.project }}" --headless --export-release "${{ inputs.preset }}" ~/.artifacts/${{ inputs.artifact }}.apk; then
