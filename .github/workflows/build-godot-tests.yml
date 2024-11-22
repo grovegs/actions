@@ -43,7 +43,7 @@ jobs:
 
       - name: Verify Keystore
         run: |
-          echo "${{ steps.generate_keystore.outputs.keystore }}" | base64 --decode > decoded.keystore
+          echo -n "${{ steps.generate_keystore.outputs.keystore }}" | base64 -d > decoded.keystore
           keytool -list -keystore test.keystore -storepass testpassword
 
       - name: 🚀 Setup Godot Action
