@@ -42,11 +42,35 @@ inputs:
   android-format:
     description: Android build format to use. Acceptable values are `apk` for application packages and `aab` for Android app bundles.
     required: false
-    default: "aab"
+    default: ""
 
 runs:
   using: composite
   steps:
+    - name: Validate Platform Inputs
+      shell: bash
+      run: |
+        case ${{ inputs.platform }} in
+          "Android")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "Android" \
+            "${{ inputs.android-keystore }}" \
+            "${{ inputs.android-keystore-user }}" \
+            "${{ inputs.android-keystore-password }}" \
+            "${{ inputs.android-format }}"
+            ;;
+          "iOS")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "iOS" \
+            ;;
+          *)
+            echo "Unsupported platform: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+
     - name: 📖 Get Godot Version
       id: get_godot_version
       shell: bash
@@ -69,15 +93,29 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_android_template.sh"
-        "${{ github.action_path }}/scripts/install_android_template.sh" "${{ inputs.project }}" "${{ steps.get_templates_dir.outputs.templates_dir }}" "${{ steps.get_godot_version.outputs.godot_version }}"
+        "${{ github.action_path }}/scripts/install_android_template.sh" \
+        "${{ inputs.project }}" \
+        "${{ steps.get_templates_dir.outputs.templates_dir }}" \
+        "${{ steps.get_godot_version.outputs.godot_version }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
-        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" "${{ inputs.platform }}" "${{ inputs.version }}")
+        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
+        "${{ inputs.platform }}" \
+        "${{ inputs.version }}")
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Update Export Presets
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/update_export_presets.sh"
+        "${{ github.action_path }}/scripts/update_export_presets.sh" \
+        "${{ inputs.project }}/export_presets.cfg" \
+        "${{ inputs.preset }}" \
+        ${{ steps.get_export_options.outputs.export_options }}
 
     - name: 📂 Export Project
       id: export_project
@@ -90,12 +128,18 @@ runs:
 
         case ${{ inputs.platform }} in
           "Android")
-            echo "Exporting for Android platform..."
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
-            file=$("${{ github.action_path }}/scripts/export_android_project.sh" "${{ inputs.project }}" "${{ inputs.preset }}" "${{ inputs.configuration }}" "${{ inputs.artifact }}" "${{ inputs.android-keystore }}" "${{ inputs.android-keystore-user }}" "${{ inputs.android-keystore-password }}" "${{ inputs.android-format }}")
+            file=$("${{ github.action_path }}/scripts/export_android_project.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.preset }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.artifact }}" \
+            "${{ inputs.android-keystore }}" \
+            "${{ inputs.android-keystore-user }}" \
+            "${{ inputs.android-keystore-password }}" \
+            "${{ inputs.android-format }}")
             ;;
           "iOS")
-            echo "Exporting for iOS platform..."
             ;;
           *)
             echo "Error: Unsupported platform Android"
