@@ -61,6 +61,7 @@ jobs:
           version: 0.0.1
           platform: Android
           preset: Android
+          configuration: Debug
           artifact: godot-android-${{ runner.os }}
           android-keystore: "${{ steps.generate_keystore.outputs.keystore }}"
           android-keystore-user: testuser

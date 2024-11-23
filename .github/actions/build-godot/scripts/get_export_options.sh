@@ -15,7 +15,7 @@ if [[ -z "$major" || -z "$minor" || -z "$patch" ]]; then
     exit 1
 fi
 
-case "${platform}" in
+case ${platform} in
 Android)
     version_number=$(printf "%d%03d%04d" "$major" "$minor" "$patch")
     echo version/code="${version_number}" version/name=\""${version}"\"

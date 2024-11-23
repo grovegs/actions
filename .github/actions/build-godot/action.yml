@@ -17,6 +17,9 @@ inputs:
   preset:
     description: Name of the export preset defined in the Godot project settings.
     required: true
+  configuration:
+    description: The build configuration (e.g., Release or Debug).
+    required: true
   artifact:
     description: Name for the output artifact, which will be uploaded as part of the build process.
     required: true
@@ -89,7 +92,7 @@ runs:
           "Android")
             echo "Exporting for Android platform..."
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
-            file=$("${{ github.action_path }}/scripts/export_android_project.sh" "${{ inputs.project }}" "${{ inputs.preset }}" "${{ inputs.artifact }}" "${{ inputs.android-keystore }}" "${{ inputs.android-keystore-user }}" "${{ inputs.android-keystore-password }}" "${{ inputs.android-format }}")
+            file=$("${{ github.action_path }}/scripts/export_android_project.sh" "${{ inputs.project }}" "${{ inputs.preset }}" "${{ inputs.configuration }}" "${{ inputs.artifact }}" "${{ inputs.android-keystore }}" "${{ inputs.android-keystore-user }}" "${{ inputs.android-keystore-password }}" "${{ inputs.android-format }}")
             ;;
           "iOS")
             echo "Exporting for iOS platform..."
