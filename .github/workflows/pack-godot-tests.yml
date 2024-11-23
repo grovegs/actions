@@ -14,7 +14,7 @@ jobs:
       - name: 📦 Pack Godot Package
         uses: ./.github/actions/pack-godot
         with:
-          addon: ./sandbox/GodotApp/addons/TestAddon
+          addon: ./sandbox/GodotApplication/addons/TestAddon
           version: 0.0.1
           artifact: test-addon
 

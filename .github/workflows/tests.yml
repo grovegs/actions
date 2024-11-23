@@ -20,3 +20,6 @@ jobs:
 
   setup_godot_tests:
     uses: ./.github/workflows/setup-godot-tests.yml
+
+  build_godot_tests:
+    uses: ./.github/workflows/build-godot-tests.yml
