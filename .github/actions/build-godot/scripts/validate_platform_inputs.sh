@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 <platform> <required_input1> <required_input2> ..."
+    echo "Usage: $0 <platform> <key=value> [<key=value> ...]"
     exit 1
 fi
 
@@ -10,9 +10,12 @@ shift
 
 missing_inputs=()
 
-for input in "$@"; do
-    if [[ -z "${!input}" ]]; then
-        missing_inputs+=("$input")
+for pair in "$@"; do
+    key="${pair%%=*}"
+    value="${pair#*=}"
+
+    if [[ -z "$value" || "$value" == "$pair" ]]; then
+        missing_inputs+=("$key=<missing>")
     fi
 done
 

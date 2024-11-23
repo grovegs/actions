@@ -55,10 +55,10 @@ runs:
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
             "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
             "Android" \
-            "${{ inputs.android-keystore }}" \
-            "${{ inputs.android-keystore-user }}" \
-            "${{ inputs.android-keystore-password }}" \
-            "${{ inputs.android-format }}"
+            "android-keystore=${{ inputs.android-keystore }}" \
+            "android-keystore-user=${{ inputs.android-keystore-user }}" \
+            "android-keystore-password=${{ inputs.android-keystore-password }}" \
+            "android-format=${{ inputs.android-format }}"
             ;;
           "iOS")
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
