@@ -22,21 +22,21 @@ runs:
     - name: 🚚 Copy Godot Addon
       shell: bash
       run: |
-        artifact="./artifacts/${{ inputs.artifact }}"
+        artifact=~/.artifacts/${{ inputs.artifact }}
         mkdir -p $artifact
         cp -r ${{ inputs.addon }} $artifact
 
     - name: 📦 Pack Godot Addon
       shell: bash
       run: |
-        addon="./artifacts/${{ inputs.artifact }}/$(basename ${{ inputs.addon }})"
+        addon=~/.artifacts/${{ inputs.artifact }}/$(basename ${{ inputs.addon }})
         cp README.md LICENSE $addon
         sed -i 's/version="[^"]*"/version="'${{ inputs.version }}'"/' $addon/plugin.cfg
-        cd ./artifacts && zip -r ${{ inputs.artifact }}.zip ${{ inputs.artifact }}
+        cd ~/.artifacts && zip -r ${{ inputs.artifact }}.zip ${{ inputs.artifact }}
 
     - name: 📤 Upload Addon Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact }}
-        path: ./artifacts/${{ inputs.artifact }}.zip
+        path: ~/.artifacts/${{ inputs.artifact }}.zip
         retention-days: ${{ inputs.duration }}
