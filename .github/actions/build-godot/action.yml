@@ -1,0 +1,158 @@
+name: Build Godot
+description: Build Godot project for selected platforms.
+
+inputs:
+  project:
+    description: Relative path to the Godot project folder containing the `project.godot` file.
+    required: true
+  global-json-file:
+    description: Path to the `global.json` file used to determine the Godot version for the build.
+    required: true
+  version:
+    description: Version number for the build output (e.g., 1.0.0).
+    required: true
+  platform:
+    description: Target platform for the build. Supported values include `Android`, `iOS`.
+    required: true
+  preset:
+    description: Name of the export preset defined in the Godot project settings.
+    required: true
+  configuration:
+    description: The build configuration (e.g., Release or Debug).
+    required: true
+  artifact:
+    description: Name for the output artifact, which will be uploaded as part of the build process.
+    required: true
+  duration:
+    description: Number of days the uploaded artifact will be retained.
+    required: false
+    default: "1"
+  android-keystore:
+    description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
+    required: false
+    default: ""
+  android-keystore-user:
+    description: Userartifact associated with the Android keystore.
+    required: false
+    default: ""
+  android-keystore-password:
+    description: Password for the Android keystore.
+    required: false
+    default: ""
+  android-format:
+    description: Android build format to use. Acceptable values are `apk` for application packages and `aab` for Android app bundles.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Platform Inputs
+      shell: bash
+      run: |
+        case ${{ inputs.platform }} in
+          "Android")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "Android" \
+            "android-keystore=${{ inputs.android-keystore }}" \
+            "android-keystore-user=${{ inputs.android-keystore-user }}" \
+            "android-keystore-password=${{ inputs.android-keystore-password }}" \
+            "android-format=${{ inputs.android-format }}"
+            ;;
+          "iOS")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "iOS" \
+            ;;
+          *)
+            echo "Unsupported platform: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+
+    - name: 📖 Get Godot Version
+      id: get_godot_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
+        godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
+        echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Get Templates Directory
+      id: get_templates_dir
+      if: inputs.platform == 'Android'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
+        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
+        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Install Android Template
+      if: inputs.platform == 'Android'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_android_template.sh"
+        "${{ github.action_path }}/scripts/install_android_template.sh" \
+        "${{ inputs.project }}" \
+        "${{ steps.get_templates_dir.outputs.templates_dir }}" \
+        "${{ steps.get_godot_version.outputs.godot_version }}"
+
+    - name: 📂 Get Export Options
+      id: get_export_options
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
+        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
+        "${{ inputs.platform }}" \
+        "${{ inputs.version }}")
+        echo export_options=${export_options} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Update Export Presets
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/update_export_presets.sh"
+        "${{ github.action_path }}/scripts/update_export_presets.sh" \
+        "${{ inputs.project }}/export_presets.cfg" \
+        "${{ inputs.preset }}" \
+        ${{ steps.get_export_options.outputs.export_options }}
+
+    - name: 📂 Export Project
+      id: export_project
+      shell: bash
+      run: |
+        if ! mkdir -p ~/.artifacts; then
+           echo "Error: Failed to create directory ~/.artifacts."
+           exit 1
+        fi
+
+        case ${{ inputs.platform }} in
+          "Android")
+            chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
+            file=$("${{ github.action_path }}/scripts/export_android_project.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.preset }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.artifact }}" \
+            "${{ inputs.android-keystore }}" \
+            "${{ inputs.android-keystore-user }}" \
+            "${{ inputs.android-keystore-password }}" \
+            "${{ inputs.android-format }}")
+            ;;
+          "iOS")
+            ;;
+          *)
+            echo "Error: Unsupported platform Android"
+            exit 1
+            ;;
+        esac
+
+        echo ${{ inputs.platform }} project successfully exported: ${file}
+        echo file=${file} >> "$GITHUB_OUTPUT"
+
+    - name: 📤 Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ steps.export_project.outputs.file }}
+        retention-days: ${{ inputs.duration }}
