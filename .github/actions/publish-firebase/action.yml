@@ -8,8 +8,8 @@ inputs:
   firebase-app-id:
     description: The Firebase App ID associated with the app.
     required: true
-  firebase-token:
-    description: The Firebase CLI token used for authentication.
+  firebase-credentials:
+    description: The Firebase credentials as base64 used for authentication.
     required: true
   release-notes:
     description: Notes for this release to be displayed to testers in Firebase App Distribution.
@@ -26,6 +26,10 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: ~/.artifacts
+
+    - name: 🚀 Install Firebase
+      shell: bash
+      run: curl -sL https://firebase.tools | bash
 
     - name: 🚀 Distribute to Firebase
       shell: bash
