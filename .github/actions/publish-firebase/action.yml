@@ -1,0 +1,43 @@
+name: Publish to Firebase
+description: Uploads a build artifact to Firebase App Distribution.
+
+inputs:
+  artifact-name:
+    description: The name of the build artifact to be uploaded to Firebase App Distribution.
+    required: true
+  firebase-app-id:
+    description: The Firebase App ID associated with the app.
+    required: true
+  firebase-credentials:
+    description: The Firebase credentials as base64 used for authentication.
+    required: true
+  release-notes:
+    description: Notes for this release to be displayed to testers in Firebase App Distribution.
+    required: false
+  tester-groups:
+    description: A comma-separated list of tester groups to distribute the build to.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: 📥 Download Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ~/.artifacts
+
+    - name: 🚀 Install Firebase
+      shell: bash
+      run: curl -sL https://firebase.tools | bash
+
+    - name: 🚀 Distribute to Firebase
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/distribute_artifact.sh"
+        "${{ github.action_path }}/scripts/distribute__artifact.sh" \
+        "${{ inputs.artifact-name }}" \
+        "${{ inputs.firebase-app-id }}" \
+        "${{ inputs.firebase-token }}" \
+        "${{ inputs.release-notes }}" \
+        "${{ inputs.tester-groups }}"
