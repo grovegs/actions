@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 if [ $# -ne 8 ]; then
     echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <keystore> <keystore_user> <keystore_password> <format>"
@@ -23,10 +22,8 @@ if ! mkdir -p ${android_dir}; then
     exit 1
 fi
 
-if ! echo -n "${keystore}" | base64 -d >"${keystore_file}"; then
+if ! echo -n "${keystore}" | base64 -d >${keystore_file}; then
     echo "Error: Failed to decode and save the Android keystore."
-    echo -n "${keystore}" >keystore_base64.txt
-    cat keystore_base64.txt
     exit 1
 fi
 
