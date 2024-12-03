@@ -1,23 +1,21 @@
 #!/bin/bash
 
 if [ $# -ne 8 ]; then
-    echo "Usage: $0 <project_dir> <preset> <configuration> <artifact> <keystore> <keystore_user> <keystore_password> <format>"
+    echo "Usage: $0 <project_dir> <preset> <configuration> <file_name> <keystore> <keystore_user> <keystore_password> <format>"
     exit 1
 fi
 
 project_dir="$1"
 preset="$2"
 configuration="$3"
-artifact="$4"
+file_name="$4"
 keystore="$5"
 keystore_user="$6"
 keystore_password="$7"
 format="$8"
 
-artifacts_dir=~/.artifacts
 android_dir=~/.android
 keystore_file=${android_dir}/release.keystore
-exported_file=${artifacts_dir}/"${artifact}".${format}
 
 if ! mkdir -p ${android_dir}; then
     echo "Error: Failed to create directory ${android_dir}."
@@ -28,6 +26,15 @@ if ! echo -n "${keystore}" | base64 -d >${keystore_file}; then
     echo "Error: Failed to decode and save the Android keystore."
     exit 1
 fi
+
+builds_dir=~/.builds/android
+
+if ! mkdir -p ${builds_dir}; then
+    echo "Error: Failed to create directory ${builds_dir}."
+    exit 1
+fi
+
+exported_file=${builds_dir}/"${file_name}".${format}
 
 case ${configuration} in
 Debug)
