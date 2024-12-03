@@ -1,14 +1,14 @@
 #!/bin/bash
 
 if [ $# -ne 8 ]; then
-    echo "Usage: $0 <project_dir> <preset> <configuration> <file_name> <keystore> <keystore_user> <keystore_password> <format>"
+    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <keystore> <keystore_user> <keystore_password> <format>"
     exit 1
 fi
 
 project_dir="$1"
 preset="$2"
 configuration="$3"
-file_name="$4"
+filename="$4"
 keystore="$5"
 keystore_user="$6"
 keystore_password="$7"
@@ -34,7 +34,7 @@ if ! mkdir -p ${builds_dir}; then
     exit 1
 fi
 
-exported_file=${builds_dir}/"${file_name}".${format}
+exported_file=${builds_dir}/"${filename}".${format}
 
 case ${configuration} in
 Debug)

@@ -20,7 +20,7 @@ inputs:
   configuration:
     description: The build configuration (e.g., `Release` or `Debug`).
     required: true
-  file-name:
+  filename:
     description: The name of the output file of the build.
     required: true
   android-keystore:
@@ -129,7 +129,7 @@ runs:
             "${{ inputs.project }}" \
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
-            "${{ inputs.file-name }}" \
+            "${{ inputs.filename }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
