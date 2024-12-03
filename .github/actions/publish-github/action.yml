@@ -9,7 +9,7 @@ inputs:
     description: The version number for the release.
     required: true
   changelog:
-    description: The latest version number for the release.
+    description: The changelog for the release.
     required: true
   github-token:
     description: The GitHub token for authentication.
@@ -21,18 +21,27 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: 🔖 Configure Git
+      shell: bash
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+
     - name: 🔖 Create Tag and Push
       shell: bash
       run: |
-        git config user.name GitHub Actions
-        git config user.email actions@github.com
-        git tag ${{ inputs.version }}
-        git push origin ${{ inputs.version }}
+        git tag -a "${{ inputs.version }}" -m "Release ${{ inputs.version }}"
+        git push origin "${{ inputs.version }}"
 
     - name: 📝 Create GitHub Release
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
-        assets=$(find ${{ inputs.assets-folder }} -type f | xargs)
-        gh release create ${{ inputs.version }} $assets --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+        assets=""
+
+        if [ -n "${{ inputs.assets-folder }}" ]; then
+          assets=$(find "${{ inputs.assets-folder }}" -type f -exec echo {} \;)
+        fi
+
+        gh release create "${{ inputs.version }}" $assets --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
