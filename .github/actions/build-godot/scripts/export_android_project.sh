@@ -23,18 +23,10 @@ if ! mkdir -p ${android_dir}; then
     exit 1
 fi
 
-if [ -z "${keystore}" ]; then
-    echo "Error: Keystore is empty. Ensure the secret is set correctly."
-    exit 1
-fi
-
-if ! echo -n "${keystore}" | base64 -d >/dev/null 2>&1; then
-    echo "Error: Keystore is not valid Base64. Content: ${keystore:0:10}..."
-    exit 1
-fi
-
 if ! echo -n "${keystore}" | base64 -d >"${keystore_file}"; then
     echo "Error: Failed to decode and save the Android keystore."
+    echo -n "${keystore}" >keystore_base64.txt
+    cat keystore_base64.txt
     exit 1
 fi
 
