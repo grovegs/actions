@@ -3,46 +3,47 @@ description: Build Godot project for selected platforms.
 
 inputs:
   project:
-    description: Relative path to the Godot project folder containing the `project.godot` file.
+    description: The relative path to the Godot project folder containing the `project.godot` file.
     required: true
   global-json-file:
-    description: Path to the `global.json` file used to determine the Godot version for the build.
+    description: The file path to `global.json`, which specifies the Godot version for the build.
     required: true
   version:
-    description: Version number for the build output (e.g., 1.0.0).
+    description: The version number for the build output (e.g., `1.0.0`).
     required: true
   platform:
-    description: Target platform for the build. Supported values include `Android`, `iOS`.
+    description: "The target platform for the build. Supported values: `Android`, `iOS`."
     required: true
   preset:
-    description: Name of the export preset defined in the Godot project settings.
+    description: The export preset name defined in the Godot project settings.
     required: true
   configuration:
-    description: The build configuration (e.g., Release or Debug).
+    description: The build configuration (e.g., `Release` or `Debug`).
     required: true
-  artifact:
-    description: Name for the output artifact, which will be uploaded as part of the build process.
+  file-name:
+    description: The name of the output file of the build.
     required: true
-  duration:
-    description: Number of days the uploaded artifact will be retained.
-    required: false
-    default: "1"
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
     default: ""
   android-keystore-user:
-    description: Userartifact associated with the Android keystore.
+    description: The username associated with the Android keystore.
     required: false
     default: ""
   android-keystore-password:
-    description: Password for the Android keystore.
+    description: The password for the Android keystore.
     required: false
     default: ""
   android-format:
-    description: Android build format to use. Acceptable values are `apk` for application packages and `aab` for Android app bundles.
+    description: "The Android build format to use. Supported values: `apk` (application package) or `aab` (Android app bundle)."
     required: false
     default: ""
+
+outputs:
+  file:
+    description: "The path to the exported project file."
+    value: ${{ steps.export_project.outputs.file }}
 
 runs:
   using: composite
@@ -121,11 +122,6 @@ runs:
       id: export_project
       shell: bash
       run: |
-        if ! mkdir -p ~/.artifacts; then
-           echo "Error: Failed to create directory ~/.artifacts."
-           exit 1
-        fi
-
         case ${{ inputs.platform }} in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
@@ -133,7 +129,7 @@ runs:
             "${{ inputs.project }}" \
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
-            "${{ inputs.artifact }}" \
+            "${{ inputs.file-name }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
@@ -149,10 +145,3 @@ runs:
 
         echo ${{ inputs.platform }} project successfully exported: ${file}
         echo file=${file} >> "$GITHUB_OUTPUT"
-
-    - name: 📤 Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ inputs.artifact }}
-        path: ${{ steps.export_project.outputs.file }}
-        retention-days: ${{ inputs.duration }}
