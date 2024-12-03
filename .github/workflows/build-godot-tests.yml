@@ -46,7 +46,7 @@ jobs:
           echo -n "${{ steps.generate_keystore.outputs.keystore }}" | base64 -d > decoded.keystore
           keytool -list -keystore test.keystore -storepass testpassword
 
-      - name: 🚀 Setup Godot Action
+      - name: 🚀 Setup Godot
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: ./sandbox/GodotApplication/global.json
@@ -69,22 +69,6 @@ jobs:
           android-format: apk
 
       - name: ✅ Validate Exported File
-        run: |
-          if [ ! -f ~/.artifacts/godot-android-${{ runner.os }}.apk ]; then
-            echo Android build not found!
-            exit 1
-          fi
-
-      - name: 🗑️ Remove Local Artifacts
-        run: rm -r ~/.artifacts
-
-      - name: 📥 Download Android Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: godot-android-${{ runner.os }}
-          path: ~/.artifacts
-
-      - name: ✅ Validate Android Build
         run: |
           if [ ! -f ~/.artifacts/godot-android-${{ runner.os }}.apk ]; then
             echo Android build not found!
