@@ -26,7 +26,6 @@ if [ -z "$preset_section" ]; then
     exit 1
 fi
 
-escaped_section=$(echo "$preset_section" | sed 's/[][\/.^$*]/\\&/g')
 temp_file=$(mktemp)
 cp "${presets_file}" "${temp_file}"
 
@@ -34,7 +33,7 @@ for pair in "$@"; do
     key="${pair%%=*}"
     value="${pair#*=}"
 
-    awk -v section="$escaped_section" -v key="$key" -v value="$value" '
+    awk -v section="$preset_section" -v key="$key" -v value="$value" '
     BEGIN { in_section = 0 }
     $0 ~ section { in_section = 1 }
     in_section && /^\[/ && $0 != section { in_section = 0 }
