@@ -42,13 +42,10 @@ for pair in "$@"; do
         if ($0 ~ "^[[:space:]]*" key "=") {
             current_value = substr($0, index($0, "=") + 1)
             if (value ~ /^".*"$/) {
-                # Input value is quoted; update with quotes
                 sub(/=.*/, "=" value, $0)
             } else if (current_value ~ /^".*"$/) {
-                # Preserve existing quotes
                 sub(/=.*/, "=" "\"" value "\"", $0)
             } else {
-                # Update without adding quotes
                 sub(/=.*/, "=" value, $0)
             }
         }
