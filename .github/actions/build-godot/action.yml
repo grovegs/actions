@@ -99,18 +99,6 @@ runs:
         "${{ steps.get_templates_dir.outputs.templates_dir }}" \
         "${{ steps.get_godot_version.outputs.godot_version }}"
 
-    - name: Upload Android (Before)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Android-Before-Build
-        path: ${{ inputs.project }}/android
-
-    - name: Upload Presets (Before)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Presets-Before-Build
-        path: ${{ inputs.project }}/export_presets.cfg
-
     - name: 📂 Get Export Options
       id: get_export_options
       shell: bash
@@ -157,15 +145,3 @@ runs:
 
         echo ${{ inputs.platform }} project successfully exported: ${file}
         echo file=${file} >> "$GITHUB_OUTPUT"
-
-    - name: Upload Android (After)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Android-After-Build
-        path: ${{ inputs.project }}/android
-
-    - name: Upload Presets (After)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Presets-After-Build
-        path: ${{ inputs.project }}/export_presets.cfg
