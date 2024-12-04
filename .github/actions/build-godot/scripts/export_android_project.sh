@@ -34,20 +34,20 @@ if ! mkdir -p ${builds_dir}; then
     exit 1
 fi
 
-exported_file=${builds_dir}/"${filename}".${format}
+file=${builds_dir}/"${filename}".${format}
 
 case ${configuration} in
 Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${keystore_file}
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=${keystore_password}
-    godot --path "${project_dir}" --headless --export-debug "${preset}" "${exported_file}" >/dev/null 2>&1
+    godot --path "${project_dir}" --headless --export-debug "${preset}" "${file}" >/dev/null 2>&1
     ;;
 Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore_file}
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
-    godot --path "${project_dir}" --headless --export-release "${preset}" "${exported_file}" >/dev/null 2>&1
+    godot --path "${project_dir}" --headless --export-release "${preset}" "${file}" >/dev/null 2>&1
     ;;
 *)
     echo "Unsupported configuration: ${configuration}"
@@ -55,4 +55,4 @@ Release)
     ;;
 esac
 
-echo "${exported_file}"
+echo "${file}"
