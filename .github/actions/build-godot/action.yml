@@ -143,5 +143,4 @@ runs:
             ;;
         esac
 
-        echo ${{ inputs.platform }} project successfully exported: ${file}
         echo file=${file} >> "$GITHUB_OUTPUT"
