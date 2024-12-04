@@ -144,3 +144,9 @@ runs:
         esac
 
         echo file=${file} >> "$GITHUB_OUTPUT"
+
+    - name: 📂 Upload Android Folder
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-folder
+        path: ${{ inputs.project }}/android
