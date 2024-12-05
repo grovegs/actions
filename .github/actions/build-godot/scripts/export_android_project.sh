@@ -41,13 +41,21 @@ Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${keystore_file}
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=${keystore_password}
-    godot --path "${project_dir}" --headless --export-debug "${preset}" "${file}"
+
+    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}"; then
+        echo "Error: Godot export debug failed."
+        exit 1
+    fi
     ;;
 Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=${keystore_file}
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
-    godot --path "${project_dir}" --headless --export-release "${preset}" "${file}"
+
+    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}"; then
+        echo "Error: Godot export release failed."
+        exit 1
+    fi
     ;;
 *)
     echo "Unsupported configuration: ${configuration}"
