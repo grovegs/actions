@@ -1,0 +1,18 @@
+name: Setup .NET
+description: Setup a .NET project.
+
+inputs:
+  global-json-file:
+    description: The path to the global.json file specifying the .NET SDK version.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 🛠️ Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: true
+        DOTNET_NOLOGO: true
+      with:
+        global-json-file: ${{ inputs.global-json-file }}
