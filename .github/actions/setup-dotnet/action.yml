@@ -20,3 +20,4 @@ runs:
         DOTNET_NOLOGO: true
       with:
         global-json-file: ${{ inputs.global-json-file }}
+        cached: ${{ inputs.cached }}
