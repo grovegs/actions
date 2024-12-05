@@ -80,6 +80,12 @@ runs:
         godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
         echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
 
+    - name: 📖 Build Project
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/build_project.sh"
+        "${{ github.action_path }}/scripts/build_project.sh" "${{ inputs.project }}"
+
     - name: 📂 Get Templates Directory
       id: get_templates_dir
       if: inputs.platform == 'Android'
