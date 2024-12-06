@@ -19,35 +19,35 @@ jobs:
           artifact: test-addon
 
       - name: 🗑️ Remove Local Artifacts
-        run: rm -r ./artifacts
+        run: rm -r ~/.artifacts
 
       - name: 📥 Download Addon Artifact
         uses: actions/download-artifact@v4
         with:
           name: test-addon
-          path: ./artifacts
+          path: ~/.artifacts
 
       - name: ✅ Validate Godot Addon
         run: |
-          if [ ! -f ./artifacts/test-addon.zip ]; then
+          if [ ! -f ~/.artifacts/test-addon.zip ]; then
             echo Godot addon not found!
             exit 1
           fi
-          echo Godot addon downloaded successfully: ./artifacts/test-addon.zip
+          echo Godot addon downloaded successfully: ~/.artifacts/test-addon.zip
 
       - name: 📦 Unpack Godot Addon
         run: |
-          unzip -o ./artifacts/test-addon.zip -d ./artifacts
+          unzip -o ~/.artifacts/test-addon.zip -d ~/.artifacts
 
       - name: 🔍 Validate plugin.cfg Version
         run: |
-          if [ ! -f ./artifacts/test-addon/TestAddon/plugin.cfg ]; then
+          if [ ! -f ~/.artifacts/test-addon/TestAddon/plugin.cfg ]; then
             echo plugin.cfg not found!
             exit 1
           fi
 
           expected_version=0.0.1
-          actual_version=$(grep -oP 'version="\K[^"]*' ./artifacts/test-addon/TestAddon/plugin.cfg)
+          actual_version=$(grep -oP 'version="\K[^"]*' ~/.artifacts/test-addon/TestAddon/plugin.cfg)
 
           if [ "$actual_version" != "$expected_version" ]; then
             echo Version mismatch! Expected: $expected_version, Found: $actual_version

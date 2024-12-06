@@ -16,8 +16,8 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact }}
-        path: ./artifacts
+        path: ~/.artifacts
 
     - name: 🚀 Publish NuGet Package
       shell: bash
-      run: dotnet nuget push ./artifacts/${{ inputs.artifact }}.nupkg --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
+      run: dotnet nuget push ~/.artifacts/${{ inputs.artifact }}.nupkg --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
