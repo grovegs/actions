@@ -10,8 +10,15 @@ configuration="$2"
 version="$3"
 filename="$4"
 
-if [[ ! -f "${project}" ]]; then
-    echo "Error: Project file '${project}' does not exist or is not accessible."
+if [[ ! -d "${project}" ]]; then
+    echo "Error: Project directory '${project}' does not exist."
+    exit 1
+fi
+
+project_file="${project}/$(basename "${project}").csproj"
+
+if [[ ! -f "${project_file}" ]]; then
+    echo "Error: Project file '${project_file}' does not exist."
     exit 1
 fi
 
@@ -23,7 +30,7 @@ if ! mkdir -p ${nupkgs_dir}; then
 fi
 
 file="${nupkgs_dir}"/"${filename}".nupkg
-dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project}"
+dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project_file}"
 
 source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit)
 
