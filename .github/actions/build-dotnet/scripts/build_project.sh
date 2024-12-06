@@ -9,19 +9,22 @@ project="$1"
 configuration="$2"
 version="$3"
 
-if [[ -z "${project}" ]]; then
-    echo "Error: Project input is required."
+if [[ ! -d "${project}" ]]; then
+    echo "Error: Project directory '${project}' does not exist."
     exit 1
 fi
 
-if [[ -z "${configuration}" ]]; then
-    echo "Error: Configuration input is required."
+project_file="${project}/$(basename "${project}").csproj"
+
+if [[ ! -f "${project_file}" ]]; then
+    echo "Error: Project file '${project_file}' does not exist."
     exit 1
 fi
 
 version_flag=""
+
 if [[ -n "${version}" ]]; then
     version_flag="-p:Version=${version}"
 fi
 
-dotnet build --nologo --configuration "${configuration}" "${project}" "${version_flag}"
+dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}"
