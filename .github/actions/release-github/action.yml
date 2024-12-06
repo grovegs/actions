@@ -21,7 +21,7 @@ runs:
     - name: 📥 Download artifacts
       uses: actions/download-artifact@v4
       with:
-        path: ./artifacts
+        path: ~/.artifacts
         merge-multiple: true
 
     - name: 🔖 Create Tag and Push
@@ -37,7 +37,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
-        files=$(find ./artifacts -type f | xargs)
+        files=$(find ~/.artifacts -type f | xargs)
 
         if [[ ${{ inputs.version }} != 0.0.0 ]]; then
           gh release create ${{ inputs.version }} $files \

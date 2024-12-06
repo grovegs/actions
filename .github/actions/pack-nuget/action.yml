@@ -29,12 +29,12 @@ runs:
     - name: 🚚 Move NuGet Package
       shell: bash
       run: |
-        mkdir -p ./artifacts
-        mv $(find . -name "*.nupkg") ./artifacts/${{ inputs.artifact }}.nupkg
+        mkdir -p ~/.artifacts
+        mv $(find . -name "*.nupkg") ~/.artifacts/${{ inputs.artifact }}.nupkg
 
     - name: 📤 Upload NuGet Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact }}
-        path: ./artifacts/${{ inputs.artifact }}.nupkg
+        path: ~/.artifacts/${{ inputs.artifact }}.nupkg
         retention-days: ${{ inputs.duration }}
