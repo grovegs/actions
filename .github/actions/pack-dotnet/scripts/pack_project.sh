@@ -31,7 +31,10 @@ fi
 
 file="${nupkgs_dir}/${filename}.nupkg"
 
-dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project_file}"
+if ! dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project_file}"; then
+    echo "Error: Failed to pack the project."
+    exit 1
+fi
 
 source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit)
 
