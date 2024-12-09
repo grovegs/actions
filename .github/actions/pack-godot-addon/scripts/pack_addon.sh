@@ -45,10 +45,10 @@ if [[ ! -f "$addon_dir/plugin.cfg" ]]; then
     exit 1
 fi
 
-if ! sed -i '' 's/version="[^"]*"/version="'${version}'"/' "$addon_dir/plugin.cfg"; then
-    echo "Error: Failed to update version in 'plugin.cfg'."
-    exit 1
-fi
+case "$OSTYPE" in
+darwin*) sed -i '' 's/version="[^"]*"/version="'${version}'"/' "$addon_dir/plugin.cfg" ;;
+*) sed -i 's/version="[^"]*"/version="'${version}'"/' "$addon_dir/plugin.cfg" ;;
+esac
 
 cd "${addons_dir}" || exit 1
 zip_name="${filename}.zip"
