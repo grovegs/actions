@@ -31,22 +31,14 @@ fi
 
 addon_dir="${addon_path}/$(basename "${addon}")"
 
-if [[ ! -f "README.md" ]]; then
-    echo "Warning: README.md not found."
-else
-    if ! cp README.md "${addon_dir}"; then
-        echo "Error: Failed to copy README.md to '${addon_dir}'."
-        exit 1
-    fi
+if [[ -f "README.md" ]] && ! cp README.md "${addon_dir}"; then
+    echo "Error: Failed to copy README.md to '${addon_dir}'."
+    exit 1
 fi
 
-if [[ ! -f "LICENSE" ]]; then
-    echo "Warning: LICENSE not found."
-else
-    if ! cp LICENSE "${addon_dir}"; then
-        echo "Error: Failed to copy LICENSE to '${addon_dir}'."
-        exit 1
-    fi
+if [[ -f "LICENSE" ]] && ! cp LICENSE "${addon_dir}"; then
+    echo "Error: Failed to copy LICENSE to '${addon_dir}'."
+    exit 1
 fi
 
 if ! sed -i "s/version=\"[^\"]*\"/version=\"${version}\"/" "${addon_dir}/plugin.cfg"; then
@@ -54,7 +46,7 @@ if ! sed -i "s/version=\"[^\"]*\"/version=\"${version}\"/" "${addon_dir}/plugin.
     exit 1
 fi
 
-cd "${addons_dir}" || exit
+cd "${addons_dir}" || exit 1
 zip_file="${filename}.zip"
 file="${addons_dir}/${zip_file}"
 
