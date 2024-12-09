@@ -40,6 +40,11 @@ if [[ -f "LICENSE" ]] && ! cp LICENSE "${addon_dir}"; then
     exit 1
 fi
 
+if [[ ! -f "$addon_dir/plugin.cfg" ]]; then
+    echo "Error: 'plugin.cfg' file not found in '${addon_dir}'."
+    exit 1
+fi
+
 if ! sed -i '' 's/version="[^"]*"/version="'${version}'"/' "$addon_dir/plugin.cfg"; then
     echo "Error: Failed to update version in 'plugin.cfg'."
     exit 1
