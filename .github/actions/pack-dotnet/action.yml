@@ -23,10 +23,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Enable Debugging
-      shell: bash
-      run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
-
     - name: 📦 Pack Project
       id: pack_project
       shell: bash
