@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 <project> <configuration> <version> <filename>"
@@ -32,12 +31,12 @@ fi
 
 file="${nupkgs_dir}/${filename}.nupkg"
 
-if ! dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project_file}"; then
+if ! dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "${configuration}" /p:PackageVersion="${version}" "${project_file}" >/dev/null; then
     echo "Error: Failed to pack the project."
     exit 1
 fi
 
-source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit)
+source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit >/dev/null)
 
 if [[ -z "${source_file}" ]]; then
     echo "Error: No .nupkg file found in ${nupkgs_dir}."
