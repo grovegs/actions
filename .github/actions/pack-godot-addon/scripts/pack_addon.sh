@@ -56,10 +56,11 @@ fi
 
 cd "${addons_dir}" || exit
 zip_file="${filename}.zip"
+file="${addons_dir}/${zip_file}"
 
-if ! zip -r "${zip_file}" "${addon_name}"; then
+if ! zip --recurse-paths --quiet "${zip_file}" "${addon_name}"; then
     echo "Error: Failed to create zip archive '${zip_file}'."
     exit 1
 fi
 
-echo "${addons_dir}/${zip_file}"
+echo "${file}"
