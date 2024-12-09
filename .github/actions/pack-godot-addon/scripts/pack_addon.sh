@@ -50,7 +50,7 @@ cd "${addons_dir}" || exit 1
 zip_file="${filename}.zip"
 file="${addons_dir}/${zip_file}"
 
-if ! zip --recurse-paths --quiet "${zip_file}" "${addon_name}"; then
+if ! zip --recurse-paths --quiet "${zip_file}" "${addon_name}/*"; then
     echo "Error: Failed to create zip archive '${zip_file}'."
     exit 1
 fi
