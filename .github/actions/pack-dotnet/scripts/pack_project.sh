@@ -36,7 +36,7 @@ if ! dotnet pack --no-build --nologo --output "${nupkgs_dir}" --configuration "$
     exit 1
 fi
 
-source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit >/dev/null)
+source_file=$(find "${nupkgs_dir}" -name "*.nupkg" -type f -print -quit)
 
 if [[ -z "${source_file}" ]]; then
     echo "Error: No .nupkg file found in ${nupkgs_dir}."
