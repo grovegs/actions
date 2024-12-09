@@ -37,4 +37,10 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
-      run: gh release create "${{ inputs.version }}" $assets --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+      run: |
+        if [[ -n "${{ inputs.assets }}" ]]; then
+          assets=(${{ inputs.assets }})
+          gh release create "${{ inputs.version }}" "${assets[@]}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+        else
+          gh release create "${{ inputs.version }}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+        fi
