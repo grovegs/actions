@@ -9,14 +9,8 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: 🛠️ Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      env:
-        DOTNET_CLI_TELEMETRY_OPTOUT: true
-        DOTNET_NOLOGO: true
-      with:
-        global-json-file: ${{ inputs.global-json-file }}
-
     - name: 🔍 Format Project
       shell: bash
-      run: dotnet format --verify-no-changes ${{ inputs.project }}
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/format_project.sh"
+        "${{ github.action_path }}/scripts/format_project.sh" "${{ inputs.project }}"
