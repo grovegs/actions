@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
+if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <project>"
     exit 1
 fi
@@ -19,4 +19,4 @@ if [[ ! -f "${project_file}" ]]; then
     exit 1
 fi
 
-dotnet test "${project_file}"
+dotnet format --verify-no-changes "${project_file}"
