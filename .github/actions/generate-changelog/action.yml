@@ -22,4 +22,5 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
-        "${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.latest-version }}" "${{ inputs.next-version }}"
+        changelog=$("${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.latest-version }}" "${{ inputs.next-version }}")
+        echo "changelog=$changelog" >> $GITHUB_OUTPUT
