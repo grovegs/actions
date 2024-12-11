@@ -18,11 +18,9 @@ if ! git rev-parse "${next_version}" >/dev/null 2>&1; then
     exit 1
 fi
 
-# Define categories and their corresponding emojis
 categories=("🚀 Features" "🐞 Bug Fixes" "🧹 Chores" "🔨 Refactors" "🧪 Tests" "🔧 CI/CD" "⏪ Reverts")
 commits_by_category=()
 
-# Initialize commits_by_category with empty strings
 for i in "${!categories[@]}"; do
     commits_by_category[i]=""
 done
@@ -62,12 +60,12 @@ while IFS= read -r commit; do
     commits_by_category[category_index]+="- ${formatted_commit}"$'\n'
 done <<<"${commits}"
 
-# Generate Markdown changelog
-changelog=""
+title="# 📝 Changelog: ${latest_version} → ${next_version}"
+changelog="${title}"$'\n\n'
 for i in "${!categories[@]}"; do
-    if [ -n "${commits_by_category[${i}]}" ]; then
-        category_name=${categories[${i}]}
-        changelog+="# ${category_name}"$'\n\n'"${commits_by_category[${i}]}"$'\n'
+    if [ -n "${commits_by_category[i]}" ]; then
+        category_name=${categories[i]}
+        changelog+="## ${category_name}"$'\n\n'"${commits_by_category[i]}"$'\n'
     fi
 done
 
