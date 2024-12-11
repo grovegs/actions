@@ -7,7 +7,7 @@ inputs:
     required: true
   target-platforms:
     description: Comma-separated list of target platforms for extracting specific Godot export templates (e.g., "iOS, Android, macOS, Linux, Windows").
-    required: true
+    required: false
   cached:
     description: Whether to use the cache for Godot.
     required: false
@@ -41,6 +41,7 @@ runs:
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
+      if: inputs.target-platforms != ''
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
@@ -49,7 +50,7 @@ runs:
 
     - name: 💾 Get Templates Id
       id: get_templates_id
-      if: inputs.cached == 'true'
+      if: inputs.cached == 'true' && inputs.target-platforms != ''
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_templates_id.sh"
@@ -58,14 +59,14 @@ runs:
 
     - name: 💾 Cache Templates
       id: cache_templates
-      if: inputs.cached == 'true'
+      if: inputs.cached == 'true' && inputs.target-platforms != ''
       uses: actions/cache@v4
       with:
         key: godot-templates-${{ steps.get_templates_id.outputs.templates_id }}-${{ steps.get_godot_version.outputs.godot_version }}-${{ runner.os }}
         path: ${{ steps.get_templates_dir.outputs.templates_dir }}
 
     - name: ⬇️ Download Templates
-      if: steps.cache_templates.outputs.cache-hit != 'true' || inputs.cached != 'true'
+      if: (steps.cache_templates.outputs.cache-hit != 'true' || inputs.cached != 'true') && inputs.target-platforms != ''
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
