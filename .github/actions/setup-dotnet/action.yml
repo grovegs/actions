@@ -5,7 +5,7 @@ inputs:
   global-json-file:
     description: The path to the global.json file specifying the .NET SDK version.
     required: true
-  cached:
+  cache:
     description: Whether to use a cached .NET SDK installation (true/false).
     required: false
     default: "false"
@@ -20,4 +20,4 @@ runs:
         DOTNET_NOLOGO: true
       with:
         global-json-file: ${{ inputs.global-json-file }}
-        cached: ${{ inputs.cached }}
+        cache: ${{ inputs.cache }}
