@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <runner_os>"
     exit 1

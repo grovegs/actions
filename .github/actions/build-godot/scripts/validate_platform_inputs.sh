@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <platform> <key=value> [<key=value> ...]"
     exit 1

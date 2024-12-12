@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <project> <configuration> <version>"
     exit 1

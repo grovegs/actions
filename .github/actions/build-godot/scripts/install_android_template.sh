@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ $# -ne 3 ]; then
     echo "Usage: $0 <project_dir> <templates_dir> <godot_version>"
     exit 1
