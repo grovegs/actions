@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 <project> <configuration> <version> <filename>"
     exit 1
