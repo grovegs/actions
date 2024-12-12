@@ -6,7 +6,7 @@ inputs:
     description: The path to the global.json file specifying the .NET SDK version.
     required: true
   cache:
-    description: Whether to use a cached .NET SDK installation (true/false).
+    description: Whether to use a cache .NET SDK installation (true/false).
     required: false
     default: "false"
 
