@@ -51,7 +51,7 @@ jobs:
         with:
           global-json-file: ./sandbox/GodotApplication/global.json
           target-platforms: iOS, Android
-          cached: true
+          cache: true
 
       - name: 🏗️ Build Android Project
         uses: ./.github/actions/build-godot
