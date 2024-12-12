@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -ne 3 ]; then
     echo "Usage: $0 <version> <templates_dir> <platforms>"
     exit 1

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <latest_version> <next_version>"
     exit 1

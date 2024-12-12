@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <global_json_file>"
     exit 1

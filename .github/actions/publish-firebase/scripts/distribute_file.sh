@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ "$#" -lt 3 ]; then
     echo "Usage: $0 <file> <app_id> <credentials> [release_notes] [tester_groups]"
     exit 1

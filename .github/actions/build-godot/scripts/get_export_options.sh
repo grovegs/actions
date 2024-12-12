@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <platform> <version>"
     exit 1
