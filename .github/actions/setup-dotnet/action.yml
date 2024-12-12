@@ -29,6 +29,10 @@ runs:
         installed=$("${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}")
         echo installed="$installed" >> "$GITHUB_OUTPUT"
 
+    - name: 🔍 Where is .NET
+      shell: bash
+      run: whereis dotnet
+
     - name: 📦 Cache .NET SDK
       if: ${{ inputs.cache == 'true' }} && ${{ steps.check_dotnet_sdk.installed != 'true' }}
       uses: actions/cache@v4
