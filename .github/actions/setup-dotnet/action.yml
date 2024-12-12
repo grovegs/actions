@@ -33,7 +33,7 @@ runs:
       if: ${{ inputs.cache == 'true' }} && ${{ steps.check_dotnet_sdk.installed != 'true' }}
       uses: actions/cache@v4
       with:
-        path: ~/.dotnet
+        path: /usr/local/share/dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
         key: dotnet-sdk-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
 
     - name: 🛠️ Setup .NET SDK
