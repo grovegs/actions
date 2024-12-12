@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -lt 3 ]; then
     echo "Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
     echo "Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -ne 8 ]; then
     echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <keystore> <keystore_user> <keystore_password> <format>"
     exit 1
