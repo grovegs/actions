@@ -23,4 +23,4 @@ runs:
       run: |
         chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
         changelog=$("${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.latest-version }}" "${{ inputs.next-version }}")
-        echo "changelog=$(echo "$changelog" | sed 's/%/%25/g; s/\n/%0A/g; s/\r/%0D/g')" >> $GITHUB_OUTPUT
+        echo changelog=${changelog} >> "$GITHUB_OUTPUT"
