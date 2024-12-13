@@ -11,7 +11,7 @@ inputs:
 
 outputs:
   changelog:
-    description: The generated changelog for the provided version range.
+    description: The generated changelog between the latest tag and the latest commit.
     value: ${{ steps.generate_changelog.outputs.changelog }}
 
 runs:
