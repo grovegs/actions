@@ -26,8 +26,6 @@ if [ -z "$preset_section" ]; then
     exit 1
 fi
 
-escaped_section="${preset_section//[/\\[}"
-escaped_section="${escaped_section//]/\\]}"
 temp_file=$(mktemp)
 cp "${presets_file}" "${temp_file}"
 
@@ -35,18 +33,24 @@ for pair in "$@"; do
     key="${pair%%=*}"
     value="${pair#*=}"
 
-    if grep -q "^\s*${key}=" "$temp_file"; then
-        awk -v section="$escaped_section" -v key="$key" -v value="$value" '
-        BEGIN { in_section = 0 }
-        $0 ~ section { in_section = 1 }
-        in_section && $0 ~ /^\[/ && !($0 ~ section) { in_section = 0 }
-        in_section && $0 ~ "^\s*" key "=" { sub("=.*", "=" value, $0) }
-        { print }
-        ' "$temp_file" >"${temp_file}.tmp" && mv "${temp_file}.tmp" "$temp_file"
-        echo "Updated ${key} to ${value} in ${preset_section}."
-    else
-        echo "Warning: Key ${key} does not exist in ${preset_section}. Skipping."
-    fi
+    awk -v section="$preset_section" -v key="$key" -v value="$value" '
+    BEGIN { in_section = 0 }
+    $0 ~ section { in_section = 1 }
+    in_section && /^\[/ && $0 != section { in_section = 0 }
+    in_section {
+        if ($0 ~ "^[[:space:]]*" key "=") {
+            current_value = substr($0, index($0, "=") + 1)
+            if (value ~ /^".*"$/) {
+                sub(/=.*/, "=" value, $0)
+            } else if (current_value ~ /^".*"$/) {
+                sub(/=.*/, "=" "\"" value "\"", $0)
+            } else {
+                sub(/=.*/, "=" value, $0)
+            }
+        }
+    }
+    { print }
+    ' "$temp_file" >"${temp_file}.tmp" && mv "${temp_file}.tmp" "$temp_file"
 done
 
 mv "${temp_file}" "${presets_file}"

@@ -1,0 +1,49 @@
+name: Setup .NET
+description: Setup a .NET project.
+
+inputs:
+  global-json-file:
+    description: The path to the global.json file specifying the .NET SDK version.
+    required: true
+  cache:
+    description: Whether to use a cache .NET SDK installation (true/false).
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: 📖 Get .Net Version
+      id: get_dotnet_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_dotnet_version.sh"
+        dotnet_version=$("${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}")
+        echo dotnet_version="$dotnet_version" >> "$GITHUB_OUTPUT"
+
+    - name: 🔍 Check .NET SDK Installed
+      id: check_dotnet_sdk
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/check_dotnet_sdk.sh"
+        is_installed=$("${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}")
+        echo is_installed="$is_installed" >> "$GITHUB_OUTPUT"
+
+    - name: 📦 Cache .NET SDK
+      if: ${{ inputs.cache == 'true' && steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
+          /usr/local/share/dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
+          /usr/share/dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
+        key: dotnet-sdk-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
+
+    - name: 🛠️ Setup .NET SDK
+      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      uses: actions/setup-dotnet@v4
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: true
+        DOTNET_NOLOGO: true
+      with:
+        dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}

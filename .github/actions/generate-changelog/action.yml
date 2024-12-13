@@ -1,0 +1,26 @@
+name: Generate Changelog
+description: Generate a changelog between two Git tags.
+
+inputs:
+  latest-version:
+    description: The latest version tag to compare (e.g., 1.0.0).
+    required: true
+  next-version:
+    description: The next version tag to compare (e.g., 1.1.0).
+    required: true
+
+outputs:
+  changelog:
+    description: The generated changelog for the provided version range.
+    value: ${{ steps.generate_changelog.outputs.changelog }}
+
+runs:
+  using: composite
+  steps:
+    - name: ⚙️ Generate Changelog
+      id: generate_changelog
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
+        changelog=$("${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.latest-version }}" "${{ inputs.next-version }}")
+        echo "changelog=$changelog" >> $GITHUB_OUTPUT
