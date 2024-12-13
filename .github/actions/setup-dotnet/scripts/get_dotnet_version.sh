@@ -14,10 +14,4 @@ if [ -z "${dotnet_version}" ]; then
     exit 1
 fi
 
-IFS='.' read -r major minor patch <<<"${dotnet_version}"
-
-if [ "${patch}" -eq 0 ]; then
-    dotnet_version=${major}.${minor}
-fi
-
 echo "${dotnet_version}"
