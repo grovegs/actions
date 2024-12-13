@@ -64,4 +64,6 @@ for i in "${!categories[@]}"; do
     fi
 done
 
-echo -e "${changelog}"
+changelog=$(echo -e "${changelog}" | sed 's/%/%25/g; s/\n/%0A/g; s/\r/%0D/g')
+
+echo "${changelog}"
