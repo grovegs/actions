@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/grovegs/actions/actions/workflows/tests.yml/badge.svg)](https://github.com/grovegs/actions/actions/workflows/tests.yml)
 
-Reusable GitHub Actions by Grove Games.
+Composite GitHub Actions by Grove Games.
 
 ## License
 
