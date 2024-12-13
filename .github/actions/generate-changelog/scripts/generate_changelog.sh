@@ -13,11 +13,6 @@ if ! git rev-parse "${latest_version}" >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! git rev-parse "${next_version}" >/dev/null 2>&1; then
-    echo "Error: Tag '${next_version}' does not exist."
-    exit 1
-fi
-
 categories=("🚀 Features" "🐞 Bug Fixes" "🧹 Chores" "🔨 Refactors" "🧪 Tests" "🔧 CI/CD" "⏪ Reverts")
 commits_by_category=()
 
