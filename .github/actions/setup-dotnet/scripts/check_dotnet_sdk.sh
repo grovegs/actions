@@ -12,7 +12,14 @@ if [ -z "${sdk_version}" ]; then
     exit 1
 fi
 
-if dotnet --list-sdks | grep -q "^${sdk_version}"; then
+IFS='.' read -r major minor patch <<<"${sdk_version}"
+
+if [ -z "${major}" ] || [ -z "${minor}" ] || [ -z "${patch}" ]; then
+    echo "Error: Invalid SDK version format. Expected format: <major>.<minor>.<patch>"
+    exit 1
+fi
+
+if dotnet --list-sdks | grep -q "^${major}.${minor}.${patch}"; then
     echo "true"
 else
     echo "false"
