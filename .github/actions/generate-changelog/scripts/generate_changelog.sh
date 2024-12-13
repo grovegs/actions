@@ -25,7 +25,7 @@ for i in "${!categories[@]}"; do
     commits_by_category[i]=""
 done
 
-commits=$(git log "${latest_version}..${next_version}" --pretty=format:"%s")
+commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
 
 while IFS= read -r commit; do
     commit=$(echo "${commit}" | sed -E 's/ \(#[0-9]+\)$//')
