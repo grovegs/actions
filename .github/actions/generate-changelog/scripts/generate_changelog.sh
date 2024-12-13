@@ -1,18 +1,13 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <latest_version> <next_version>"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <next_version>"
     exit 1
 fi
 
-latest_version=$1
-next_version=$2
+next_version=$1
 
-if ! git rev-parse "${latest_version}" >/dev/null 2>&1; then
-    echo "Error: Tag '${latest_version}' does not exist."
-    exit 1
-fi
-
+latest_version=$(git describe --tags --abbrev=0)
 categories=("🚀 Features" "🐞 Bug Fixes" "🧹 Chores" "🔨 Refactors" "🧪 Tests" "🔧 CI/CD" "⏪ Reverts")
 commits_by_category=()
 
