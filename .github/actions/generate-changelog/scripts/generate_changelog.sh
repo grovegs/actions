@@ -24,15 +24,15 @@ commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
 
 while IFS= read -r commit; do
     commit=$(echo "${commit}" | sed -E 's/ \(#[0-9]+\)$//')
-    branch_type=$(echo "${commit}" | grep -oE '^(feat|fix|fixes|hotfix|chore|docs|refactor|style|perf|test|build|ci|revert)(\([^)]+\))?:' | sed -E 's/\(.*\):$|:$//')
+    commit_type=$(echo "${commit}" | grep -oE '^(feat|fix|fixes|hotfix|chore|docs|refactor|style|perf|test|build|ci|revert)(\([^)]+\))?:' | sed -E 's/\(.*\):$|:$//')
 
-    if [ -n "${branch_type}" ]; then
-        branch_type=${branch_type%:}
+    if [ -n "${commit_type}" ]; then
+        commit_type=${commit_type%:}
     else
         continue
     fi
 
-    case ${branch_type} in
+    case ${commit_type} in
     feat) category_index=0 ;;
     fix) category_index=1 ;;
     chore) category_index=2 ;;
@@ -63,5 +63,7 @@ for i in "${!categories[@]}"; do
         changelog+="## ${category_name}"$'\n\n'"${commits_by_category[i]}"$'\n'
     fi
 done
+
+changelog=$(echo "${changelog}" | sed 's/%/%25/g; s/$/%0A/g; s/\r/%0D/g')
 
 echo "${changelog}"
