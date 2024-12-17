@@ -12,7 +12,13 @@ if [ ! -d "${project_dir}" ]; then
     exit 1
 fi
 
-csproj_file="${project_dir}/$(basename "${project_dir}").csproj"
+if [[ "${project_dir}" == "." ]]; then
+    file_name="$(basename "$(pwd)")"
+else
+    file_name="$(basename "${project_dir}")"
+fi
+
+csproj_file="${project_dir}/${file_name}.csproj"
 
 if [ ! -f "${csproj_file}" ]; then
     echo "Error: .csproj file '${csproj_file}' not found."

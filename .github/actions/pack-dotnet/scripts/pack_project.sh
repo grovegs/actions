@@ -15,7 +15,13 @@ if [[ ! -d "${project}" ]]; then
     exit 1
 fi
 
-project_file="${project}/$(basename "${project}").csproj"
+if [[ "${project}" == "." ]]; then
+    file_name="$(basename "$(pwd)")"
+else
+    file_name="$(basename "${project}")"
+fi
+
+project_file="${project}/${file_name}.csproj"
 
 if [[ ! -f "${project_file}" ]]; then
     echo "Error: Project file '${project_file}' does not exist."
