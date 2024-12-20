@@ -13,8 +13,8 @@ certificate="$5"
 provisioning_profile="$6"
 
 builds_dir=~/.builds/ios
-certificate_file=${builds_dir}/apple.cer
-provisioning_profile_file=${builds_dir}/apple.mobileprovision
+certificate_file=${builds_dir}/ios.cer
+provisioning_profile_file=${builds_dir}/ios.mobileprovision
 
 if ! mkdir -p ${builds_dir}; then
     echo "Error: Failed to create directory ${builds_dir}."
