@@ -39,6 +39,22 @@ inputs:
     description: "The Android build format to use. Supported values: `apk` (application package) or `aab` (Android app bundle)."
     required: false
     default: ""
+  ios-team-id:
+    description: "The Apple Developer Team ID associated with your Apple Developer account."
+    required: false
+    default: ""
+  ios-certificate:
+    description: "The Base64-encoded iOS distribution certificate (.cer file) used for signing the application."
+    required: false
+    default: ""
+  ios-provisioning-profile:
+    description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
+    required: false
+    default: ""
+  ios-provisioning-profile-uuid:
+    description: "The UUID of the iOS provisioning profile to be used during the build process."
+    required: false
+    default: ""
 
 outputs:
   file:
@@ -65,6 +81,10 @@ runs:
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
             "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
             "iOS" \
+            "ios-team-id=${{ inputs.ios-team-id }}" \
+            "ios-certificate=${{ inputs.ios-certificate }}" \
+            "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "Unsupported platform: ${{ inputs.platform }}"
@@ -112,7 +132,9 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
         export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
         "${{ inputs.platform }}" \
-        "${{ inputs.version }}")
+        "${{ inputs.version }}") \
+        "${{ inputs.ios-team-id }}" \
+        "${{ inputs.ios-provisioning-profile-uuid }}"
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
     - name: 📂 Update Export Presets
@@ -142,6 +164,14 @@ runs:
             "${{ inputs.android-format }}")
             ;;
           "iOS")
+            chmod +x "${{ github.action_path }}/scripts/export_ios_project.sh"
+            file=$("${{ github.action_path }}/scripts/export_ios_project.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.preset }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.ios-certificate }}" \
+            "${{ inputs.ios-provisioning-profile }}")
             ;;
           *)
             echo "Error: Unsupported platform Android"
