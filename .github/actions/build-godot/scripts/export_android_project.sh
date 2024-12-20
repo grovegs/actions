@@ -15,7 +15,7 @@ keystore_password="$7"
 format="$8"
 
 android_dir=~/.android
-keystore_file=${android_dir}/release.keystore
+keystore_file=${android_dir}/android.keystore
 
 if ! mkdir -p ${android_dir}; then
     echo "Error: Failed to create directory ${android_dir}."
