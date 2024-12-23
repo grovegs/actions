@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 6 ]; then
-    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <certificate> <provisioning_profile>"
+if [ $# -ne 7 ]; then
+    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
     exit 1
 fi
 
@@ -11,6 +11,7 @@ configuration="$3"
 filename="$4"
 certificate="$5"
 provisioning_profile="$6"
+provisioning_profile_uuid="$7"
 
 builds_dir=~/.builds/ios
 certificate_file=${builds_dir}/ios.cer
@@ -52,12 +53,16 @@ file=${builds_dir}/"${filename}".ipa
 
 case ${configuration} in
 Debug)
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG=${provisioning_profile_uuid}
+
     if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}"; then
         echo "Error: Godot export debug failed."
         exit 1
     fi
     ;;
 Release)
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE=${provisioning_profile_uuid}
+
     if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}"; then
         echo "Error: Godot export release failed."
         exit 1

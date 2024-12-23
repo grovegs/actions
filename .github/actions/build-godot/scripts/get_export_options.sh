@@ -1,14 +1,13 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]; then
-    echo "Usage: $0 <platform> <version> <ios_team_id> <ios_provisioning_profile_uuid>"
+if [ $# -ne 3 ]; then
+    echo "Usage: $0 <platform> <version> <ios_team_id>"
     exit 1
 fi
 
 platform="$1"
 version="$2"
 ios_team_id="$3"
-ios_provisioning_profile_uuid="$4"
 
 IFS='.' read -r major minor patch <<<"$version"
 
@@ -23,7 +22,7 @@ Android)
     echo version/code="${version_number}" version/name=\""${version}"\"
     ;;
 iOS)
-    echo application/short_version="\"${version}\"" application/version="\"${version}\"" application/app_store_team_id="\"${ios_team_id}\"" application/provisioning_profile_uuid_release="\"${ios_provisioning_profile_uuid}\""
+    echo application/short_version="\"${version}\"" application/version="\"${version}\"" application/app_store_team_id="\"${ios_team_id}\""
     ;;
 *)
     echo "Unsupported platform: ${platform}"
