@@ -133,8 +133,7 @@ runs:
         export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
         "${{ inputs.platform }}" \
         "${{ inputs.version }}") \
-        "${{ inputs.ios-team-id }}" \
-        "${{ inputs.ios-provisioning-profile-uuid }}"
+        "${{ inputs.ios-team-id }}"
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
     - name: 📂 Update Export Presets
@@ -171,7 +170,8 @@ runs:
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
             "${{ inputs.ios-certificate }}" \
-            "${{ inputs.ios-provisioning-profile }}")
+            "${{ inputs.ios-provisioning-profile }}" \
+            "${{ inputs.ios-provisioning-profile-uuid }}")
             ;;
           *)
             echo "Error: Unsupported platform Android"
