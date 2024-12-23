@@ -132,8 +132,8 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
         export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
         "${{ inputs.platform }}" \
-        "${{ inputs.version }}") \
-        "${{ inputs.ios-team-id }}"
+        "${{ inputs.version }}" \
+        "${{ inputs.ios-team-id }}")
         echo export_options=${export_options} >> "$GITHUB_OUTPUT"
 
     - name: 📂 Update Export Presets
