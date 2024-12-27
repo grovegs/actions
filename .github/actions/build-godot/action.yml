@@ -23,6 +23,9 @@ inputs:
   filename:
     description: The name of the output file of the build.
     required: true
+  define-constants:
+    description: A comma-separated list of compilation constants to define during the build process.
+    required: false
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
@@ -64,7 +67,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Validate Platform Inputs
+    - name: ✅ Validate Platform Inputs
       shell: bash
       run: |
         case ${{ inputs.platform }} in
@@ -92,7 +95,7 @@ runs:
             ;;
         esac
 
-    - name: 📖 Get Godot Version
+    - name: 🔍 Get Godot Version
       id: get_godot_version
       shell: bash
       run: |
@@ -100,11 +103,19 @@ runs:
         godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
         echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
 
-    - name: 📖 Build Project
+    - name: 🛠️ Build Dotnet
+      uses: ./.github/actions/build-dotnet
+      with:
+        project: ${{ inputs.project }}
+        configuration: ${{ inputs.configuration }}
+        version: ${{ inputs.version }}
+        define-constants: ${{ inputs.define-constants }}
+
+    - name: 📥 Import Project
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/build_project.sh"
-        "${{ github.action_path }}/scripts/build_project.sh" "${{ inputs.project }}"
+        chmod +x "${{ github.action_path }}/scripts/import_project.sh"
+        "${{ github.action_path }}/scripts/import_project.sh" "${{ inputs.project }}"
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
