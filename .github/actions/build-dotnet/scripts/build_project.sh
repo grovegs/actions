@@ -1,13 +1,14 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <project> <configuration> <version>"
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <project> <configuration> <version> <define_constants>"
     exit 1
 fi
 
 project="$1"
 configuration="$2"
 version="$3"
+define_constants="$4"
 
 if [[ ! -d "${project}" ]]; then
     echo "Error: Project directory '${project}' does not exist."
@@ -28,9 +29,14 @@ if [[ ! -f "${project_file}" ]]; then
 fi
 
 version_flag=""
+define_constants_flag=""
 
 if [[ -n "${version}" ]]; then
     version_flag="-p:Version=${version}"
 fi
 
-dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}"
+if [[ -n "${define_constants}" ]]; then
+    define_constants_flag="-p:DefineConstants=$(DefineConstants);${define_constants}"
+fi
+
+dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}" "${define_constants_flag}"
