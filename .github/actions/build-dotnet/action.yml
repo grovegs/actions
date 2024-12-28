@@ -11,8 +11,8 @@ inputs:
   version:
     description: The version number to set for the build.
     required: false
-  define-constants:
-    description: Optional constants to define during the build.
+  define-symbols:
+    description: Optional symbols to define during the build.
     required: false
 
 runs:
@@ -22,4 +22,4 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/build_project.sh"
-        "${{ github.action_path }}/scripts/build_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.define-constants }}"
+        "${{ github.action_path }}/scripts/build_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.define-symbols }}"
