@@ -103,14 +103,6 @@ runs:
         godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
         echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
 
-    - name: 🛠️ Build Dotnet
-      uses: ./.github/actions/build-dotnet
-      with:
-        project: ${{ inputs.project }}
-        configuration: ${{ inputs.configuration }}
-        version: ${{ inputs.version }}
-        define-constants: ${{ inputs.define-constants }}
-
     - name: 📥 Import Project
       shell: bash
       run: |
