@@ -28,5 +28,4 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/pack_project.sh"
-        file=$("${{ github.action_path }}/scripts/pack_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.filename }}")
-        echo file="$file" >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/pack_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.filename }}"

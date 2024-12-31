@@ -54,4 +54,4 @@ if ! mv "${source_file}" "${file}"; then
     exit 1
 fi
 
-echo "${file}"
+echo file="$file" >>"$GITHUB_OUTPUT"
