@@ -56,4 +56,4 @@ if ! zip --recurse-paths --quiet "${zip_name}" "${filename}"; then
     exit 1
 fi
 
-echo "${file}"
+echo file="$file" >>"$GITHUB_OUTPUT"
