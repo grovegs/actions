@@ -59,4 +59,8 @@ for i in "${!categories[@]}"; do
     fi
 done
 
-echo "${changelog}"
+{
+    echo "changelog<<EOF"
+    echo "$changelog"
+    echo "EOF"
+} >>"$GITHUB_OUTPUT"
