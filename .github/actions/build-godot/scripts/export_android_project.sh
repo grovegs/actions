@@ -63,4 +63,4 @@ Release)
     ;;
 esac
 
-echo "${file}"
+echo file="${file}" >>"$GITHUB_OUTPUT"

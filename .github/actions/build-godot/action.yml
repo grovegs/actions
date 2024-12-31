@@ -100,8 +100,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
-        godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
-        echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}"
 
     - name: 📥 Import Project
       shell: bash
@@ -115,8 +114,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
-        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
-        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}"
 
     - name: 📂 Install Android Template
       if: inputs.platform == 'Android'
@@ -133,11 +131,10 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
-        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
+        "${{ github.action_path }}/scripts/get_export_options.sh" \
         "${{ inputs.platform }}" \
         "${{ inputs.version }}" \
-        "${{ inputs.ios-team-id }}")
-        echo export_options=${export_options} >> "$GITHUB_OUTPUT"
+        "${{ inputs.ios-team-id }}"
 
     - name: 📂 Update Export Presets
       shell: bash
@@ -155,7 +152,7 @@ runs:
         case ${{ inputs.platform }} in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
-            file=$("${{ github.action_path }}/scripts/export_android_project.sh" \
+            "${{ github.action_path }}/scripts/export_android_project.sh" \
             "${{ inputs.project }}" \
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
@@ -163,23 +160,21 @@ runs:
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
-            "${{ inputs.android-format }}")
+            "${{ inputs.android-format }}"
             ;;
           "iOS")
             chmod +x "${{ github.action_path }}/scripts/export_ios_project.sh"
-            file=$("${{ github.action_path }}/scripts/export_ios_project.sh" \
+            "${{ github.action_path }}/scripts/export_ios_project.sh" \
             "${{ inputs.project }}" \
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-provisioning-profile }}" \
-            "${{ inputs.ios-provisioning-profile-uuid }}")
+            "${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "Error: Unsupported platform Android"
             exit 1
             ;;
         esac
-
-        echo file=${file} >> "$GITHUB_OUTPUT"

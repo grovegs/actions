@@ -19,13 +19,22 @@ fi
 case ${platform} in
 Android)
     version_number=$(printf "%d%03d%04d" "$major" "$minor" "$patch")
-    echo version/code="${version_number}" version/name=\""${version}"\"
+    export_options=(
+        "version/code=${version_number}"
+        "version/name=${version}"
+    )
     ;;
 iOS)
-    echo application/short_version="\"${version}\"" application/version="\"${version}\"" application/app_store_team_id="\"${ios_team_id}\""
+    export_options=(
+        "application/short_version=${version}"
+        "application/version=${version}"
+        "application/app_store_team_id=${ios_team_id}"
+    )
     ;;
 *)
     echo "Unsupported platform: ${platform}"
     exit 1
     ;;
 esac
+
+echo export_options="${export_options[*]}" >>"$GITHUB_OUTPUT"

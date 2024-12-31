@@ -20,4 +20,4 @@ case ${runner_os} in
     ;;
 esac
 
-echo "${templates_dir}"
+echo templates_dir="${templates_dir}" >>"$GITHUB_OUTPUT"

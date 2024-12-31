@@ -19,4 +19,4 @@ if [ "${patch}" -eq 0 ]; then
     godot_version=${major}.${minor}
 fi
 
-echo "${godot_version}"
+echo godot_version="$godot_version" >>"$GITHUB_OUTPUT"
