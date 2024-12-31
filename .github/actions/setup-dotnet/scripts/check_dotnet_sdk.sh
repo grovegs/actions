@@ -20,7 +20,9 @@ if [ -z "${major}" ] || [ -z "${minor}" ] || [ -z "${patch}" ]; then
 fi
 
 if dotnet --list-sdks | grep -q "^${major}.${minor}.${patch}"; then
-    echo "true"
+    is_installed="true"
 else
-    echo "false"
+    is_installed="false"
 fi
+
+echo is_installed="${is_installed}" >>"$GITHUB_OUTPUT"

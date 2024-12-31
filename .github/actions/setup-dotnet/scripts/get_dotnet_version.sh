@@ -14,4 +14,4 @@ if [ -z "${dotnet_version}" ]; then
     exit 1
 fi
 
-echo "${dotnet_version}"
+echo dotnet_version="$dotnet_version" >>"$GITHUB_OUTPUT"

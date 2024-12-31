@@ -18,16 +18,14 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_dotnet_version.sh"
-        dotnet_version=$("${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}")
-        echo dotnet_version="$dotnet_version" >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}"
 
     - name: 🔍 Check .NET SDK Installed
       id: check_dotnet_sdk
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/check_dotnet_sdk.sh"
-        is_installed=$("${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}")
-        echo is_installed="$is_installed" >> "$GITHUB_OUTPUT"
+        ${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}"
 
     - name: 📦 Cache .NET SDK
       if: ${{ inputs.cache == 'true' && steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
