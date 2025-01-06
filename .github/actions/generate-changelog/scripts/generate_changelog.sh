@@ -1,13 +1,20 @@
 #!/bin/bash
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <next_version>"
+    echo "::error::Usage: $0 <next_version>"
     exit 1
 fi
 
 next_version=$1
 
 latest_version=$(git describe --tags --abbrev=0)
+if [ $? -ne 0 ]; then
+    echo "::error::Failed to get latest version tag"
+    exit 1
+fi
+
+echo "::notice::Generating changelog from ${latest_version} to ${next_version}"
+
 categories=("🚀 Features" "🐞 Bug Fixes" "🧹 Chores" "🔨 Refactors" "🧪 Tests" "🔧 CI/CD" "⏪ Reverts")
 commits_by_category=()
 
@@ -16,6 +23,9 @@ for i in "${!categories[@]}"; do
 done
 
 commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
+if [ -z "$commits" ]; then
+    echo "::warning::No commits found between ${latest_version} and HEAD"
+fi
 
 while IFS= read -r commit; do
     commit=$(echo "${commit}" | sed -E 's/ \(#[0-9]+\)$//')
@@ -24,6 +34,7 @@ while IFS= read -r commit; do
     if [ -n "${commit_type}" ]; then
         commit_type=${commit_type%:}
     else
+        echo "::warning::Skipping commit with invalid format: ${commit}"
         continue
     fi
 
@@ -35,7 +46,10 @@ while IFS= read -r commit; do
     test) category_index=4 ;;
     ci | build) category_index=5 ;;
     revert) category_index=6 ;;
-    *) continue ;;
+    *)
+        echo "::warning::Unknown commit type: ${commit_type}"
+        continue
+        ;;
     esac
 
     context=$(echo "${commit}" | grep -oE '\(.*\)' | tr -d '()')
@@ -59,4 +73,10 @@ for i in "${!categories[@]}"; do
     fi
 done
 
-echo "${changelog}"
+{
+    echo "changelog<<EOF"
+    echo "$changelog"
+    echo "EOF"
+} >>"$GITHUB_OUTPUT"
+
+echo "::notice::Changelog generated successfully"

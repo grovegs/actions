@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <project> <configuration> [<version>] [<define_symbols>]"
+    echo "::error::Usage: $0 <project> <configuration> [<version>] [<define_symbols>]"
     exit 1
 fi
 
@@ -11,7 +11,7 @@ version="${3:-}"
 define_symbols="${4:-}"
 
 if [[ ! -d "${project}" ]]; then
-    echo "Error: Project directory '${project}' does not exist."
+    echo "::error::Project directory '${project}' does not exist."
     exit 1
 fi
 
@@ -24,7 +24,7 @@ fi
 project_file="${project}/${file_name}.csproj"
 
 if [[ ! -f "${project_file}" ]]; then
-    echo "Error: Project file '${project_file}' does not exist."
+    echo "::error::Project file '${project_file}' does not exist."
     exit 1
 fi
 
@@ -39,4 +39,16 @@ if [[ -n "${define_symbols}" ]]; then
     define_symbols_flag="-p:DefineSymbols=\"${define_symbols}\""
 fi
 
+echo "::group::Building ${project_file}"
+echo "::notice::Configuration: ${configuration}"
+echo "::notice::Version Flag: ${version_flag}"
+echo "::notice::Define Symbols Flag: ${define_symbols_flag}"
+
 dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}" "${define_symbols_flag}"
+build_exit_code=$?
+echo "::endgroup::"
+
+if [ $build_exit_code -ne 0 ]; then
+    echo "::error::Build failed with exit code ${build_exit_code}"
+    exit $build_exit_code
+fi

@@ -19,7 +19,4 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
-        changelog=$("${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.next-version }}")
-        echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$changelog" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.next-version }}"

@@ -25,5 +25,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
-        file=$("${{ github.action_path }}/scripts/pack_addon.sh" "${{ inputs.addon }}" "${{ inputs.version }}" "${{ inputs.filename }}")
-        echo file="$file" >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/pack_addon.sh" \
+        "${{ inputs.addon }}" \
+        "${{ inputs.version }}" \
+        "${{ inputs.filename }}"
