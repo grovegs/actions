@@ -1,6 +1,7 @@
 #!/bin/bash
 
 if [ $# -ne 8 ]; then
+    echo "::error::Invalid number of arguments. Expected 8, got $#"
     echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <keystore> <keystore_user> <keystore_password> <format>"
     exit 1
 fi
@@ -18,23 +19,24 @@ android_dir=~/.android
 keystore_file=${android_dir}/android.keystore
 
 if ! mkdir -p ${android_dir}; then
-    echo "Error: Failed to create directory ${android_dir}."
+    echo "::error::Failed to create directory ${android_dir}"
     exit 1
 fi
 
 if ! echo -n "${keystore}" | base64 -d >${keystore_file}; then
-    echo "Error: Failed to decode and save the Android keystore."
+    echo "::error::Failed to decode and save the Android keystore"
     exit 1
 fi
 
 builds_dir=~/.builds/android
 
 if ! mkdir -p ${builds_dir}; then
-    echo "Error: Failed to create directory ${builds_dir}."
+    echo "::error::Failed to create directory ${builds_dir}"
     exit 1
 fi
 
 file=${builds_dir}/"${filename}".${format}
+echo "::notice::Build output will be saved to: ${file}"
 
 case ${configuration} in
 Debug)
@@ -43,7 +45,7 @@ Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=${keystore_password}
 
     if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}"; then
-        echo "Error: Godot export debug failed."
+        echo "::error::Godot export debug failed"
         exit 1
     fi
     ;;
@@ -53,14 +55,15 @@ Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
 
     if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}"; then
-        echo "Error: Godot export release failed."
+        echo "::error::Godot export release failed"
         exit 1
     fi
     ;;
 *)
-    echo "Unsupported configuration: ${configuration}"
+    echo "::error::Unsupported configuration: ${configuration}"
     exit 1
     ;;
 esac
 
+echo "::notice::Build artifact created at: ${file}"
 echo file="${file}" >>"$GITHUB_OUTPUT"

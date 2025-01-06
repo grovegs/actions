@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ $# -lt 3 ]; then
-    echo "Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
-    echo "Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"
+    echo "::error::Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
+    echo "::notice::Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"
     exit 1
 fi
 
@@ -11,7 +11,7 @@ preset_name="$2"
 shift 2
 
 if [ ! -f "${presets_file}" ]; then
-    echo "Error: File ${presets_file} does not exist."
+    echo "::error::File ${presets_file} does not exist."
     exit 1
 fi
 
@@ -22,7 +22,7 @@ preset_section=$(awk -v preset_name="$preset_name" '
 ' "$presets_file")
 
 if [ -z "$preset_section" ]; then
-    echo "Error: Preset with name '${preset_name}' not found in ${presets_file}."
+    echo "::error::Preset with name '${preset_name}' not found in ${presets_file}."
     exit 1
 fi
 
@@ -54,3 +54,4 @@ for pair in "$@"; do
 done
 
 mv "${temp_file}" "${presets_file}"
+echo "::notice::Successfully updated ${presets_file} for preset '${preset_name}'"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 <version> <runner_os>"
+    echo "::error::Usage: $0 <version> <runner_os>"
     exit 1
 fi
 
@@ -18,28 +18,28 @@ macOS)
     godot_sharp=~/.godot/Godot_v${version}.app/Contents/Resources/GodotSharp
     ;;
 *)
-    echo "Error: Unsupported platform ${runner_os}."
+    echo "::error::Unsupported platform ${runner_os}."
     exit 1
     ;;
 esac
 
 if [ ! -f "${godot_executable}" ]; then
-    echo "Error: File ${godot_executable} not found!"
+    echo "::error::File ${godot_executable} not found!"
     exit 1
 fi
 
 if [ ! -d "${godot_sharp}" ]; then
-    echo "Error: Directory ${godot_sharp} not found!"
+    echo "::error::Directory ${godot_sharp} not found!"
     exit 1
 fi
 
 if [ -L "/usr/local/bin/godot" ]; then
-    echo "Removing existing Godot symlink..."
+    echo "::notice::Removing existing Godot symlink..."
     sudo rm -f /usr/local/bin/godot
 fi
 
 if [ -L "/usr/local/bin/GodotSharp" ]; then
-    echo "Removing existing GodotSharp symlink..."
+    echo "::notice::Removing existing GodotSharp symlink..."
     sudo rm -f /usr/local/bin/GodotSharp
 fi
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -ne 7 ]; then
-    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
+    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
     exit 1
 fi
 
@@ -18,34 +18,34 @@ certificate_file=${builds_dir}/ios.cer
 provisioning_profile_file=${builds_dir}/ios.mobileprovision
 
 if ! mkdir -p ${builds_dir}; then
-    echo "Error: Failed to create directory ${builds_dir}."
+    echo "::error::Failed to create directory ${builds_dir}."
     exit 1
 fi
 
 if ! echo -n "${certificate}" | base64 -d >${certificate_file}; then
-    echo "Error: Failed to decode and save the iOS distribution certificate."
+    echo "::error::Failed to decode and save the iOS distribution certificate."
     exit 1
 fi
 
 if ! echo -n "${provisioning_profile}" | base64 -d >${provisioning_profile_file}; then
-    echo "Error: Failed to decode and save the provisioning profile."
+    echo "::error::Failed to decode and save the provisioning profile."
     exit 1
 fi
 
 if ! sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${certificate_file}; then
-    echo "Error: Failed to add the certificate to the keychain."
+    echo "::error::Failed to add the certificate to the keychain."
     exit 1
 fi
 
 provisioning_dir=~/Library/MobileDevice/Provisioning\ Profiles
 
 if ! mkdir -p "${provisioning_dir}"; then
-    echo "Error: Failed to create provisioning profiles directory."
+    echo "::error::Failed to create provisioning profiles directory."
     exit 1
 fi
 
 if ! cp "${provisioning_profile_file}" "${provisioning_dir}"; then
-    echo "Error: Failed to copy the provisioning profile."
+    echo "::error::Failed to copy the provisioning profile."
     exit 1
 fi
 
@@ -53,25 +53,28 @@ file=${builds_dir}/"${filename}".ipa
 
 case ${configuration} in
 Debug)
+    echo "::notice::Exporting debug build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG=${provisioning_profile_uuid}
 
     if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}"; then
-        echo "Error: Godot export debug failed."
+        echo "::error::Godot export debug failed."
         exit 1
     fi
     ;;
 Release)
+    echo "::notice::Exporting release build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE=${provisioning_profile_uuid}
 
     if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}"; then
-        echo "Error: Godot export release failed."
+        echo "::error::Godot export release failed."
         exit 1
     fi
     ;;
 *)
-    echo "Unsupported configuration: ${configuration}"
+    echo "::warning::Unsupported configuration: ${configuration}"
     exit 1
     ;;
 esac
 
+echo "::notice::Build completed successfully: ${file}"
 echo file="${file}" >>"$GITHUB_OUTPUT"

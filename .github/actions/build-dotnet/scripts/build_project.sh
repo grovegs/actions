@@ -40,9 +40,9 @@ if [[ -n "${define_symbols}" ]]; then
 fi
 
 echo "::group::Building ${project_file}"
-echo "::debug::Configuration: ${configuration}"
-echo "::debug::Version Flag: ${version_flag}"
-echo "::debug::Define Symbols Flag: ${define_symbols_flag}"
+echo "::notice::Configuration: ${configuration}"
+echo "::notice::Version Flag: ${version_flag}"
+echo "::notice::Define Symbols Flag: ${define_symbols_flag}"
 
 dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}" "${define_symbols_flag}"
 build_exit_code=$?
