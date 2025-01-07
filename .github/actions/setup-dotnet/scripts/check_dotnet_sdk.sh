@@ -29,4 +29,4 @@ else
     echo "::warning::.NET SDK ${sdk_version} is not installed"
 fi
 
-echo is_installed="${is_installed}" >>"$GITHUB_OUTPUT"
+echo "is_installed=${is_installed}" >>"$GITHUB_OUTPUT"
