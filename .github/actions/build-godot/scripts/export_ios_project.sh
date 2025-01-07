@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 7 ]; then
-    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
+if [ $# -ne 8 ]; then
+    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
     exit 1
 fi
 
@@ -9,9 +9,10 @@ project_dir="$1"
 preset="$2"
 configuration="$3"
 filename="$4"
-certificate="$5"
-provisioning_profile="$6"
-provisioning_profile_uuid="$7"
+extra_arguments="$5"
+certificate="$6"
+provisioning_profile="$7"
+provisioning_profile_uuid="$8"
 
 builds_dir=~/.builds/ios
 certificate_file=${builds_dir}/ios.cer
@@ -56,7 +57,7 @@ Debug)
     echo "::notice::Exporting debug build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG=${provisioning_profile_uuid}
 
-    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}"; then
+    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}" "${extra_arguments}"; then
         echo "::error::Godot export debug failed."
         exit 1
     fi
@@ -65,7 +66,7 @@ Release)
     echo "::notice::Exporting release build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE=${provisioning_profile_uuid}
 
-    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}"; then
+    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}" "${extra_arguments}"; then
         echo "::error::Godot export release failed."
         exit 1
     fi

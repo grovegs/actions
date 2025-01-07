@@ -23,9 +23,10 @@ inputs:
   filename:
     description: The name of the output file of the build.
     required: true
-  define-constants:
-    description: A comma-separated list of compilation constants to define during the build process.
+  extra-arguments:
+    description: A space-separated list of additional arguments to pass during the build process.
     required: false
+    default: ""
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
@@ -157,6 +158,7 @@ runs:
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
+            "${{ inputs.extra-arguments }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
@@ -169,6 +171,7 @@ runs:
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
+            "${{ inputs.extra-arguments }}" \
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-provisioning-profile }}" \
             "${{ inputs.ios-provisioning-profile-uuid }}"
