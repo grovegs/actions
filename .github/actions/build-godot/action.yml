@@ -103,12 +103,6 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
         "${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}"
 
-    - name: 📥 Import Project
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/import_project.sh"
-        "${{ github.action_path }}/scripts/import_project.sh" "${{ inputs.project }}"
-
     - name: 📂 Get Templates Directory
       id: get_templates_dir
       if: inputs.platform == 'Android'
