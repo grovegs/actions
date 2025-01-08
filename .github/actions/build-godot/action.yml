@@ -51,6 +51,10 @@ inputs:
     description: "The Base64-encoded iOS distribution certificate (.cer file) used for signing the application."
     required: false
     default: ""
+  ios-certificate-password:
+    description: "The password used to import the password-protected iOS distribution certificate (.p12) for signing the application."
+    required: false
+    default: ""
   ios-provisioning-profile:
     description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
     required: false
@@ -87,6 +91,7 @@ runs:
             "iOS" \
             "ios-team-id=${{ inputs.ios-team-id }}" \
             "ios-certificate=${{ inputs.ios-certificate }}" \
+            "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
             "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
@@ -102,12 +107,6 @@ runs:
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
         "${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}"
-
-    - name: 📥 Import Project
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/import_project.sh"
-        "${{ github.action_path }}/scripts/import_project.sh" "${{ inputs.project }}"
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
@@ -173,6 +172,7 @@ runs:
             "${{ inputs.filename }}" \
             "${{ inputs.extra-arguments }}" \
             "${{ inputs.ios-certificate }}" \
+            "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
             "${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
