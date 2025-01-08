@@ -136,7 +136,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/create_macos_keychain.sh"
-        "${{ github.action_path }}/scripts/create_macos_keychain" "${{ inputs.ios-keychain-password }}"
+        "${{ github.action_path }}/scripts/create_macos_keychain.sh" "${{ inputs.ios-keychain-password }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
