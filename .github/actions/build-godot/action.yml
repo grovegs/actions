@@ -97,7 +97,7 @@ runs:
             "ios-certificate=${{ inputs.ios-certificate }}" \
             "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }} \
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}" \
             "ios-keychain-password=${{ inputs.ios-keychain-password }}"
             ;;
           *)
