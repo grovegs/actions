@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 8 ]; then
-    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <provisioning_profile> <provisioning_profile_uuid>"
+if [ $# -ne 9 ]; then
+    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
     exit 1
 fi
 
@@ -11,35 +11,35 @@ configuration="$3"
 filename="$4"
 extra_arguments="$5"
 certificate="$6"
-provisioning_profile="$7"
-provisioning_profile_uuid="$8"
+certificate_password="$7"
+provisioning_profile="$8"
+provisioning_profile_uuid="$9"
 
 builds_dir=~/.builds/ios
-certificate_file=${builds_dir}/ios.cer
-provisioning_profile_file=${builds_dir}/ios.mobileprovision
+certificate_file="${builds_dir}/ios.p12"
+provisioning_profile_file="${builds_dir}/${provisioning_profile_uuid}.mobileprovision"
 
-if ! mkdir -p ${builds_dir}; then
+if ! mkdir -p "${builds_dir}"; then
     echo "::error::Failed to create directory ${builds_dir}."
     exit 1
 fi
 
-if ! echo -n "${certificate}" | base64 -d >${certificate_file}; then
-    echo "::error::Failed to decode and save the iOS distribution certificate."
+if ! echo -n "${certificate}" | base64 -d >"${certificate_file}"; then
+    echo "::error::Failed to decode and save the iOS .p12 certificate."
     exit 1
 fi
 
-if ! echo -n "${provisioning_profile}" | base64 -d >${provisioning_profile_file}; then
+if ! echo -n "${provisioning_profile}" | base64 -d >"${provisioning_profile_file}"; then
     echo "::error::Failed to decode and save the provisioning profile."
     exit 1
 fi
 
-if ! sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${certificate_file}; then
-    echo "::error::Failed to add the certificate to the keychain."
+if ! security import "${certificate_file}" -k ~/Library/Keychains/login.keychain-db -P "${certificate_password}" -T /usr/bin/codesign; then
+    echo "::error::Failed to import the .p12 certificate into the login keychain."
     exit 1
 fi
 
 provisioning_dir=~/Library/MobileDevice/Provisioning\ Profiles
-
 if ! mkdir -p "${provisioning_dir}"; then
     echo "::error::Failed to create provisioning profiles directory."
     exit 1
@@ -50,23 +50,21 @@ if ! cp "${provisioning_profile_file}" "${provisioning_dir}"; then
     exit 1
 fi
 
-file=${builds_dir}/"${filename}".ipa
+ipa_file="${builds_dir}/${filename}.ipa"
 
-case ${configuration} in
+case "${configuration}" in
 Debug)
     echo "::notice::Exporting debug build for iOS"
-    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG=${provisioning_profile_uuid}
-
-    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}" "${extra_arguments}"; then
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
+    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${ipa_file}" "${extra_arguments}"; then
         echo "::error::Godot export debug failed."
         exit 1
     fi
     ;;
 Release)
     echo "::notice::Exporting release build for iOS"
-    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE=${provisioning_profile_uuid}
-
-    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}" "${extra_arguments}"; then
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
+    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${ipa_file}" "${extra_arguments}"; then
         echo "::error::Godot export release failed."
         exit 1
     fi
@@ -77,5 +75,5 @@ Release)
     ;;
 esac
 
-echo "::notice::Build completed successfully: ${file}"
-echo file="${file}" >>"$GITHUB_OUTPUT"
+echo "::notice::Build completed successfully: ${ipa_file}"
+echo "file=${ipa_file}" >>"$GITHUB_OUTPUT"
