@@ -63,6 +63,10 @@ inputs:
     description: "The UUID of the iOS provisioning profile to be used during the build process."
     required: false
     default: ""
+  ios-keychain-password:
+    description: "The password used to unlock the temporary iOS keychain during the build process."
+    required: false
+    default: ""
 
 outputs:
   file:
@@ -93,7 +97,8 @@ runs:
             "ios-certificate=${{ inputs.ios-certificate }}" \
             "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }} \
+            "ios-keychain-password=${{ inputs.ios-keychain-password }}"
             ;;
           *)
             echo "Unsupported platform: ${{ inputs.platform }}"
@@ -125,6 +130,13 @@ runs:
         "${{ inputs.project }}" \
         "${{ steps.get_templates_dir.outputs.templates_dir }}" \
         "${{ steps.get_godot_version.outputs.godot_version }}"
+
+    - name: 📂 Create Macos Keychain
+      if: inputs.platform == 'iOS'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/create_macos_keychain.sh"
+        "${{ github.action_path }}/scripts/create_macos_keychain" "${{ inputs.ios-keychain-password }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
