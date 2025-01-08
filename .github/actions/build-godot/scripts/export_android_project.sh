@@ -45,7 +45,7 @@ Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=${keystore_password}
 
-    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-debug "${preset}" "${file}" "${extra_arguments}"; then
         echo "::error::Godot export debug failed"
         exit 1
     fi
@@ -55,7 +55,7 @@ Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
 
-    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-release "${preset}" "${file}" "${extra_arguments}"; then
         echo "::error::Godot export release failed"
         exit 1
     fi

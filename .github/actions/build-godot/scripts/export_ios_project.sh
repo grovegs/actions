@@ -56,7 +56,7 @@ case "${configuration}" in
 Debug)
     echo "::notice::Exporting debug build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    if ! godot --path "${project_dir}" --headless --quiet --export-debug "${preset}" "${ipa_file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-debug "${preset}" "${ipa_file}" "${extra_arguments}"; then
         echo "::error::Godot export debug failed."
         exit 1
     fi
@@ -64,7 +64,7 @@ Debug)
 Release)
     echo "::notice::Exporting release build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    if ! godot --path "${project_dir}" --headless --quiet --export-release "${preset}" "${ipa_file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-release "${preset}" "${ipa_file}" "${extra_arguments}"; then
         echo "::error::Godot export release failed."
         exit 1
     fi
