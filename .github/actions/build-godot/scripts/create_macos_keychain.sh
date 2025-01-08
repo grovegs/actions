@@ -7,8 +7,7 @@ fi
 
 keychain_password="$1"
 
-TEMP_DIR=$(mktemp -d)
-KEYCHAIN_PATH="$TEMP_DIR/app-signing.keychain-db"
+KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
 echo "::notice::Creating temporary keychain..."
 security create-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
