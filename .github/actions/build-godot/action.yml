@@ -131,13 +131,6 @@ runs:
         "${{ steps.get_templates_dir.outputs.templates_dir }}" \
         "${{ steps.get_godot_version.outputs.godot_version }}"
 
-    - name: 📂 Create Macos Keychain
-      if: inputs.platform == 'iOS'
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/create_macos_keychain.sh"
-        "${{ github.action_path }}/scripts/create_macos_keychain.sh" "${{ inputs.ios-keychain-password }}"
-
     - name: 📂 Get Export Options
       id: get_export_options
       shell: bash
