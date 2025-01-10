@@ -1,8 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 9 ]; then
-    echo "::error::Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
+set -e
+
+log_error() {
+    echo "::error::$1"
     exit 1
+}
+
+log_notice() {
+    echo "::notice::$1"
+}
+
+if [ $# -ne 9 ]; then
+    log_error "Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
 fi
 
 project_dir="$1"
@@ -15,65 +25,62 @@ certificate_password="$7"
 provisioning_profile="$8"
 provisioning_profile_uuid="$9"
 
-builds_dir=~/.builds/ios
-certificate_file="${builds_dir}/ios.p12"
-provisioning_profile_file="${builds_dir}/${provisioning_profile_uuid}.mobileprovision"
+builds_dir="${HOME}/.builds/ios"
+keychains_dir="${RUNNER_TEMP}/Keychains"
+keychain_file="${keychains_dir}/ios.keychain-db"
+certificate_file="${RUNNER_TEMP}/ios.p12"
+provisioning_profile_file="${RUNNER_TEMP}/${provisioning_profile_uuid}.mobileprovision"
+provisioning_dir="${HOME}/Library/MobileDevice/Provisioning Profiles"
 
-if ! mkdir -p "${builds_dir}"; then
-    echo "::error::Failed to create directory ${builds_dir}."
-    exit 1
-fi
+keychain_password=$(openssl rand -base64 32)
 
-if ! echo -n "${certificate}" | base64 -d >"${certificate_file}"; then
-    echo "::error::Failed to decode and save the iOS .p12 certificate."
-    exit 1
-fi
+mkdir -p "${builds_dir}" || log_error "Failed to create directory ${builds_dir}"
+mkdir -p "${keychains_dir}" || log_error "Failed to create directory ${keychains_dir}"
+mkdir -p "${provisioning_dir}" || log_error "Failed to create provisioning profiles directory"
 
-if ! echo -n "${provisioning_profile}" | base64 -d >"${provisioning_profile_file}"; then
-    echo "::error::Failed to decode and save the provisioning profile."
-    exit 1
-fi
+echo -n "${certificate}" | base64 -d >"${certificate_file}" || log_error "Failed to decode and save the iOS .p12 certificate"
+echo -n "${provisioning_profile}" | base64 -d >"${provisioning_profile_file}" || log_error "Failed to decode and save the provisioning profile"
 
-if ! security import "${certificate_file}" -k ~/Library/Keychains/login.keychain-db -P "${certificate_password}" -T /usr/bin/codesign; then
-    echo "::error::Failed to import the .p12 certificate into the login keychain."
-    exit 1
-fi
+log_notice "Creating temporary keychain..."
+security create-keychain -p "${keychain_password}" "${keychain_file}" || log_error "Failed to create keychain"
 
-provisioning_dir=~/Library/MobileDevice/Provisioning\ Profiles
-if ! mkdir -p "${provisioning_dir}"; then
-    echo "::error::Failed to create provisioning profiles directory."
-    exit 1
-fi
+log_notice "Configuring temporary keychain..."
+security set-keychain-settings -lut 3600 "${keychain_file}"
+security unlock-keychain -p "${keychain_password}" "${keychain_file}"
+security list-keychain -d user -s "${keychain_file}"
 
-if ! cp "${provisioning_profile_file}" "${provisioning_dir}"; then
-    echo "::error::Failed to copy the provisioning profile."
-    exit 1
-fi
+security import "${certificate_file}" -k "${keychain_file}" -P "${certificate_password}" -T /usr/bin/codesign ||
+    log_error "Failed to import the .p12 certificate into the keychain"
 
-ipa_file="${builds_dir}/${filename}.ipa"
+cp "${provisioning_profile_file}" "${provisioning_dir}/" || log_error "Failed to copy the provisioning profile"
+
+export_file="${builds_dir}/${filename}.ipa"
 
 case "${configuration}" in
 Debug)
-    echo "::notice::Exporting debug build for iOS"
+    log_notice "Exporting debug build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    if ! godot --path "${project_dir}" --headless --export-debug "${preset}" "${ipa_file}" "${extra_arguments}"; then
-        echo "::error::Godot export debug failed."
-        exit 1
-    fi
+    godot --path "${project_dir}" --headless --export-debug "${preset}" "${export_file}" "${extra_arguments}" ||
+        log_error "Godot export debug failed"
     ;;
 Release)
-    echo "::notice::Exporting release build for iOS"
+    log_notice "Exporting release build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    if ! godot --path "${project_dir}" --headless --export-release "${preset}" "${ipa_file}" "${extra_arguments}"; then
-        echo "::error::Godot export release failed."
-        exit 1
-    fi
+    godot --path "${project_dir}" --headless --export-release "${preset}" "${export_file}" "${extra_arguments}" ||
+        log_error "Godot export release failed"
     ;;
 *)
-    echo "::warning::Unsupported configuration: ${configuration}"
-    exit 1
+    log_error "Unsupported configuration: ${configuration}"
     ;;
 esac
 
-echo "::notice::Build completed successfully: ${ipa_file}"
-echo "file=${ipa_file}" >>"$GITHUB_OUTPUT"
+cleanup() {
+    log_notice "Cleaning up sensitive files..."
+    security delete-keychain "${keychain_file}" || true
+    rm -f "${certificate_file}" || true
+    rm -f "${provisioning_profile_file}" || true
+}
+trap cleanup EXIT
+
+log_notice "Build completed successfully: ${export_file}"
+echo "file=${export_file}" >>"$GITHUB_OUTPUT"
