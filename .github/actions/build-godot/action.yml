@@ -63,10 +63,6 @@ inputs:
     description: "The UUID of the iOS provisioning profile to be used during the build process."
     required: false
     default: ""
-  ios-keychain-password:
-    description: "The password used to unlock the temporary iOS keychain during the build process."
-    required: false
-    default: ""
 
 outputs:
   file:
@@ -97,8 +93,7 @@ runs:
             "ios-certificate=${{ inputs.ios-certificate }}" \
             "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}" \
-            "ios-keychain-password=${{ inputs.ios-keychain-password }}"
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "Unsupported platform: ${{ inputs.platform }}"
