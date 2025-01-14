@@ -2,7 +2,7 @@
 
 if [ $# -ne 9 ]; then
     echo "::error::Invalid number of arguments. Expected 8, got $#"
-    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <keystore> <keystore_user> <keystore_password> <format>"
+    echo "Usage: $0 <project_dir> <preset> <configuration> <filename> <define_symbols> <keystore> <keystore_user> <keystore_password> <format>"
     exit 1
 fi
 
@@ -10,7 +10,7 @@ project_dir="$1"
 preset="$2"
 configuration="$3"
 filename="$4"
-extra_arguments="$5"
+define_symbols="$5"
 keystore="$6"
 keystore_user="$7"
 keystore_password="$8"
@@ -39,13 +39,15 @@ fi
 file=${builds_dir}/"${filename}".${format}
 echo "::notice::Build output will be saved to: ${file}"
 
+export DefineSymbols=${define_symbols}
+
 case ${configuration} in
 Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=${keystore_file}
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=${keystore_password}
 
-    if ! godot --path "${project_dir}" --headless --export-debug "${preset}" "${file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-debug "${preset}" "${file}"; then
         echo "::error::Godot export debug failed"
         exit 1
     fi
@@ -55,7 +57,7 @@ Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER=${keystore_user}
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${keystore_password}
 
-    if ! godot --path "${project_dir}" --headless --export-release "${preset}" "${file}" "${extra_arguments}"; then
+    if ! godot --path "${project_dir}" --headless --export-release "${preset}" "${file}"; then
         echo "::error::Godot export release failed"
         exit 1
     fi

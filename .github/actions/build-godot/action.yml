@@ -23,46 +23,36 @@ inputs:
   filename:
     description: The name of the output file of the build.
     required: true
-  extra-arguments:
-    description: A space-separated list of additional arguments to pass during the build process.
+  define-symbols:
+    description: A semicolon-separated list of optional symbols to define during the build.
     required: false
-    default: ""
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
-    default: ""
   android-keystore-user:
     description: The username associated with the Android keystore.
     required: false
-    default: ""
   android-keystore-password:
     description: The password for the Android keystore.
     required: false
-    default: ""
   android-format:
     description: "The Android build format to use. Supported values: `apk` (application package) or `aab` (Android app bundle)."
     required: false
-    default: ""
   ios-team-id:
     description: "The Apple Developer Team ID associated with your Apple Developer account."
     required: false
-    default: ""
   ios-certificate:
     description: "The Base64-encoded iOS distribution certificate (.cer file) used for signing the application."
     required: false
-    default: ""
   ios-certificate-password:
     description: "The password used to import the password-protected iOS distribution certificate (.p12) for signing the application."
     required: false
-    default: ""
   ios-provisioning-profile:
     description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
     required: false
-    default: ""
   ios-provisioning-profile-uuid:
     description: "The UUID of the iOS provisioning profile to be used during the build process."
     required: false
-    default: ""
 
 outputs:
   file:
@@ -157,7 +147,7 @@ runs:
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
-            "${{ inputs.extra-arguments }}" \
+            "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
@@ -170,7 +160,7 @@ runs:
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
-            "${{ inputs.extra-arguments }}" \
+            "${{ inputs.define-symbols }}" \
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
