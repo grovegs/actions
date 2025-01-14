@@ -12,14 +12,14 @@ log_notice() {
 }
 
 if [ $# -ne 9 ]; then
-    log_error "Usage: $0 <project_dir> <preset> <configuration> <filename> <extra_arguments> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
+    log_error "Usage: $0 <project_dir> <preset> <configuration> <filename> <define_symbols> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
 fi
 
 project_dir="$1"
 preset="$2"
 configuration="$3"
 filename="$4"
-extra_arguments="$5"
+define_symbols="$5"
 certificate="$6"
 certificate_password="$7"
 provisioning_profile="$8"
@@ -56,17 +56,19 @@ cp "${provisioning_profile_file}" "${provisioning_dir}/" || log_error "Failed to
 
 export_file="${builds_dir}/${filename}.ipa"
 
+export DefineSymbols=${define_symbols}
+
 case "${configuration}" in
 Debug)
     log_notice "Exporting debug build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --headless --export-debug "${preset}" "${export_file}" "${extra_arguments}" ||
+    godot --path "${project_dir}" --headless --export-debug "${preset}" "${export_file}" "${define_symbols}" ||
         log_error "Godot export debug failed"
     ;;
 Release)
     log_notice "Exporting release build for iOS"
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --headless --export-release "${preset}" "${export_file}" "${extra_arguments}" ||
+    godot --path "${project_dir}" --headless --export-release "${preset}" "${export_file}" "${define_symbols}" ||
         log_error "Godot export release failed"
     ;;
 *)
