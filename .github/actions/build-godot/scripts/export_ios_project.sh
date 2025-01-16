@@ -108,13 +108,13 @@ case "${configuration}" in
 Debug)
     log_notice "Exporting debug build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --export-debug "${preset}" "${export_file}" "${define_symbols}" ||
+    godot --path "${project_dir}" --export-debug "${preset}" "${export_file}" ||
         log_error "Godot export debug failed"
     ;;
 Release)
     log_notice "Exporting release build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --export-release "${preset}" "${export_file}" "${define_symbols}" ||
+    godot --path "${project_dir}" --export-release "${preset}" "${export_file}" ||
         log_error "Godot export release failed"
     ;;
 *)
@@ -127,7 +127,6 @@ log_notice "Godot export succeeded. xcodeproj file exported to: ${xcodeproj_file
 #######################################
 # Xcode Archive & Export
 #######################################
-project_name="$(basename "${project_dir}")"
 archive_path="${builds_dir}/${project_name}.xcarchive"
 launch_screen_file="${builds_dir}/${project_name}/Launch Screen.storyboard"
 splash_image_file="${builds_dir}/${project_name}/Images.xcassets/SplashImage.imageset"
