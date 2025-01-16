@@ -159,16 +159,32 @@ if ! mv "${launch_screen_file}.tmp" "${launch_screen_file}"; then
     log_error "Failed to update Launch Screen.storyboard"
 fi
 
+xcodebuild -list -project "${xcodeproj_file}"
+
+default_scheme="$(
+  xcodebuild -list -project "${xcodeproj_file}" |
+    awk '
+      /Schemes:/ { flag = 1; next }
+      /^$/       { flag = 0 }
+      flag {
+        # Remove leading (and optionally trailing) whitespace
+        gsub(/^[ \t]+|[ \t]+$/, "", $0)
+        print
+      }
+    ' |
+    head -n 1
+)"
+
 log_notice "Running xcodebuild clean..."
 xcodebuild clean \
     -project "${xcodeproj_file}" \
-    -scheme "${project_name}" \
+    -scheme "${default_scheme}" \
     -configuration "${configuration}"
 
 log_notice "Creating an archive (.xcarchive)..."
 xcodebuild archive \
     -project "${xcodeproj_file}" \
-    -scheme "${project_name}" \
+    -scheme "${default_scheme}" \
     -configuration "${configuration}" \
     -archivePath "${archive_path}"
 
