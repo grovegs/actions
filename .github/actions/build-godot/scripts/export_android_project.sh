@@ -66,7 +66,6 @@ Debug)
     export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${keystore_file}"
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER="${keystore_user}"
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="${keystore_password}"
-
     godot --path "${project_dir}" --export-debug "${preset}" "${output_file}" ||
         log_error "Godot export debug failed"
     ;;
@@ -75,7 +74,6 @@ Release)
     export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="${keystore_file}"
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER="${keystore_user}"
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="${keystore_password}"
-
     godot --path "${project_dir}" --export-release "${preset}" "${output_file}" ||
         log_error "Godot export release failed"
     ;;
