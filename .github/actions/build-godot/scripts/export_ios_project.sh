@@ -57,6 +57,8 @@ certificate_file="${RUNNER_TEMP}/ios.p12"
 provisioning_profile_file="${RUNNER_TEMP}/${provisioning_profile_uuid}.mobileprovision"
 provisioning_dir="${HOME}/Library/MobileDevice/Provisioning Profiles"
 keychain_password=$(openssl rand -base64 32)
+project_name="$(basename "${project_dir}")"
+xcodeproj_file="${builds_dir}/${project_name}.xcodeproj"
 export_file="${builds_dir}/${filename}.ipa"
 
 # Godot build environment variable
@@ -103,24 +105,24 @@ cp "${provisioning_profile_file}" "${provisioning_dir}/" ||
 # Godot Export (Debug/Release)
 #######################################
 case "${configuration}" in
-    Debug)
-        log_notice "Exporting debug build for iOS..."
-        export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-        godot --path "${project_dir}" --export-debug "${preset}" "${export_file}" "${define_symbols}" ||
-            log_error "Godot export debug failed"
-        ;;
-    Release)
-        log_notice "Exporting release build for iOS..."
-        export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-        godot --path "${project_dir}" --export-release "${preset}" "${export_file}" "${define_symbols}" ||
-            log_error "Godot export release failed"
-        ;;
-    *)
-        log_error "Unsupported configuration: ${configuration}"
-        ;;
+Debug)
+    log_notice "Exporting debug build for iOS..."
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
+    godot --path "${project_dir}" --export-debug "${preset}" "${export_file}" "${define_symbols}" ||
+        log_error "Godot export debug failed"
+    ;;
+Release)
+    log_notice "Exporting release build for iOS..."
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
+    godot --path "${project_dir}" --export-release "${preset}" "${export_file}" "${define_symbols}" ||
+        log_error "Godot export release failed"
+    ;;
+*)
+    log_error "Unsupported configuration: ${configuration}"
+    ;;
 esac
 
-log_notice "Godot export succeeded. IPA exported to: ${export_file}"
+log_notice "Godot export succeeded. xcodeproj file exported to: ${xcodeproj_file}"
 
 #######################################
 # Xcode Archive & Export
@@ -128,29 +130,49 @@ log_notice "Godot export succeeded. IPA exported to: ${export_file}"
 project_name="$(basename "${project_dir}")"
 archive_path="${builds_dir}/${project_name}.xcarchive"
 launch_screen_file="${builds_dir}/${project_name}/Launch Screen.storyboard"
+splash_image_file="${builds_dir}/${project_name}/Images.xcassets/SplashImage.imageset"
 export_options_plist="${builds_dir}/${project_name}/export_options.plist"
 
-# Remove any splash-related assets
+# Remove splash-related assets
 log_notice "Removing SplashImage and <imageView> from Launch Screen.storyboard..."
-rm -rf "${builds_dir}/${project_name}/Images.xcassets/SplashImage.imageset"
-sed -i '/<imageView[^>]*id="tjZ-vn-Lsv"/,/<\/imageView>/d' "${launch_screen_file}" ||
-    log_error "Failed to remove <imageView> with id='tjZ-vn-Lsv' from Launch Screen.storyboard"
+
+# Remove splash image directory if it exists
+if [ -d "${launch_screen_file}" ]; then
+    rm -rf "${splash_image_file}"
+fi
+
+# Remove any imageView using awk
+if [ ! -f "${launch_screen_file}" ]; then
+    log_error "Launch Screen.storyboard not found at ${launch_screen_file}"
+fi
+
+if ! awk '
+    BEGIN { found=0; printing=1 }
+    /<imageView/ { found=1; printing=0; next }
+    printing { print }
+    /<\/imageView>/ { if (found) { found=0; printing=1; next } else print }
+' "${launch_screen_file}" >"${launch_screen_file}.tmp"; then
+    log_error "Failed to process Launch Screen.storyboard with awk"
+fi
+
+if ! mv "${launch_screen_file}.tmp" "${launch_screen_file}"; then
+    log_error "Failed to update Launch Screen.storyboard"
+fi
 
 log_notice "Running xcodebuild clean..."
 xcodebuild clean \
-    -project "${builds_dir}/${project_name}.xcodeproj" \
+    -project "${xcodeproj_file}" \
     -scheme "${project_name}" \
     -configuration "${configuration}"
 
 log_notice "Creating an archive (.xcarchive)..."
 xcodebuild archive \
-    -project "${builds_dir}/${project_name}.xcodeproj" \
+    -project "${xcodeproj_file}" \
     -scheme "${project_name}" \
     -configuration "${configuration}" \
     -archivePath "${archive_path}"
 
 log_notice "Exporting .ipa from archive..."
-# IMPORTANT: Fixed the path by removing the extra '}' bracket
 xcodebuild -exportArchive \
     -archivePath "${archive_path}" \
     -exportPath "${builds_dir}" \
