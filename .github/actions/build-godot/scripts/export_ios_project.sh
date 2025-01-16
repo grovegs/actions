@@ -76,6 +76,9 @@ Release)
     ;;
 esac
 
+rm -rf "${builds_dir}/${filename}/Images.xcassets/SplashImage.imageset"
+sed -i '/<imageView[^>]*id="tjZ-vn-Lsv"/,/<\/imageView>/d' "${builds_dir}/${filename}/Launch Screen.storyboard"
+
 cleanup() {
     log_notice "Cleaning up sensitive files..."
     security delete-keychain "${keychain_file}" || true
