@@ -185,6 +185,7 @@ xcodebuild archive \
     -project "${xcodeproj_file}" \
     -scheme "${default_scheme}" \
     -configuration "${configuration}" \
+    -destination 'generic/platform=iOS' \
     -archivePath "${archive_path}"
 
 log_notice "Exporting .ipa from archive..."
