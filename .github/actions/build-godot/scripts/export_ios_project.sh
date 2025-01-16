@@ -127,7 +127,6 @@ log_notice "Godot export succeeded. xcodeproj file exported to: ${xcodeproj_file
 #######################################
 # Xcode Archive & Export
 #######################################
-project_name="$(basename "${project_dir}")"
 archive_path="${builds_dir}/${project_name}.xcarchive"
 launch_screen_file="${builds_dir}/${project_name}/Launch Screen.storyboard"
 splash_image_file="${builds_dir}/${project_name}/Images.xcassets/SplashImage.imageset"
