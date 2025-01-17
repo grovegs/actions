@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status (-e),
-# treat unset variables as an error (-u),
-# print each command before executing it (-x), and
-# make pipelines fail if any command fails (not just the last one) (-o pipefail).
-set -euxo pipefail
-
 #######################################
 # Utility functions
 #######################################
@@ -161,8 +155,8 @@ fi
 xcodebuild -list -project "${xcodeproj_file}"
 
 default_scheme="$(
-  xcodebuild -list -project "${xcodeproj_file}" |
-    awk '
+    xcodebuild -list -project "${xcodeproj_file}" |
+        awk '
       /Schemes:/ { flag = 1; next }
       /^$/       { flag = 0 }
       flag {
@@ -171,7 +165,7 @@ default_scheme="$(
         print
       }
     ' |
-    head -n 1
+        head -n 1
 )"
 
 log_notice "Running xcodebuild clean..."

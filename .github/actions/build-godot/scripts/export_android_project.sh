@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Exit immediately on errors (-e), unset variables (-u), print commands (-x), and fail pipelines (-o pipefail).
-set -euxo pipefail
-
 #######################################
 # Utility functions
 #######################################
@@ -14,6 +11,16 @@ log_error() {
 log_notice() {
     echo "::notice::$1"
 }
+
+#######################################
+# Cleanup function to remove sensitive files
+#######################################
+cleanup() {
+    log_notice "Cleaning up sensitive files..."
+    rm -f "${keystore_file}" || true
+}
+# Ensure cleanup is always called on script exit
+trap cleanup EXIT
 
 #######################################
 # Argument Parsing
@@ -36,7 +43,7 @@ format="$9"
 # Paths & Variables
 #######################################
 android_dir="${HOME}/.android"
-keystore_file="${android_dir}/android.keystore"
+keystore_file="${RUNNER_TEMP}/android.keystore"
 builds_dir="${HOME}/.builds/android"
 output_file="${builds_dir}/${filename}.${format}"
 
