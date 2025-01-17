@@ -13,7 +13,7 @@ log_notice "Setting up display server..."
 
 # Update and install dependencies
 sudo apt-get update -y || log_error "Failed to update package list"
-sudo apt-get install -y xvfb libnss3 libglu1-mesa || log_error "Failed to install dependencies"
+sudo apt-get install -y xvfb libnss3 libglu1-mesa vulkan-tools mesa-vulkan-drivers || log_error "Failed to install dependencies"
 
 # Start Xvfb
 log_notice "Starting Xvfb..."
