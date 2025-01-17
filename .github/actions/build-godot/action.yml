@@ -135,13 +135,6 @@ runs:
         "${{ inputs.preset }}" \
         ${{ steps.get_export_options.outputs.export_options }}
 
-    - name: 📂 Run Linux Display Server
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/run_linux_display_server.sh"
-        "${{ github.action_path }}/scripts/run_linux_display_server.sh"
-
     - name: 📂 Export Project
       id: export_project
       shell: bash
