@@ -9,15 +9,11 @@ log_notice() {
     echo "::notice::$1"
 }
 
-log_notice "Setting up Vulkan-compatible display server..."
+log_notice "Setting up OpenGL 3-compatible display server..."
 
-# Install Vulkan and Xvfb dependencies
+# Install OpenGL and Xvfb dependencies
 sudo apt-get update -y || log_error "Failed to update package list"
-sudo apt-get install -y xvfb vulkan-tools mesa-vulkan-drivers || log_error "Failed to install dependencies"
-
-# Set Vulkan ICD and Layer paths for lavapipe
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+sudo apt-get install -y xvfb libnss3 libglu1-mesa || log_error "Failed to install dependencies"
 
 # Start Xvfb
 log_notice "Starting Xvfb..."
@@ -31,6 +27,3 @@ if ! pgrep -f "Xvfb :99" >/dev/null; then
 fi
 
 log_notice "Xvfb started successfully."
-
-# Verify Vulkan support
-vulkaninfo | grep -i lavapipe || log_error "Vulkan is not supported on this runner."
