@@ -1,16 +1,17 @@
 #!/bin/bash
 
 if [ $# -ne 2 ]; then
-    echo "::error::Usage: $0 <version> <runner_os>"
+    echo "::error::Usage: $0 <version> <stage> <runner_os>"
     exit 1
 fi
 
 version="$1"
-runner_os="$2"
+stage="$2"
+runner_os="$3"
 
 case ${runner_os} in
 Linux)
-    godot_executable=~/.godot/Godot_v${version}/Godot_v${version}-stable_mono_linux.x86_64
+    godot_executable=~/.godot/Godot_v${version}/Godot_v${version}-${stage}_mono_linux.x86_64
     godot_sharp=~/.godot/Godot_v${version}/GodotSharp
     ;;
 macOS)

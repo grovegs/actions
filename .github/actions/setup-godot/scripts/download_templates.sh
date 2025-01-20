@@ -1,13 +1,14 @@
 #!/bin/bash
 
 if [ $# -ne 3 ]; then
-    echo "::error::Usage: $0 <version> <templates_dir> <platforms>"
+    echo "::error::Usage: $0 <version> <stage> <templates_dir> <platforms>"
     exit 1
 fi
 
 version="$1"
-templates_dir="$2"
-platforms="$3"
+stage="$2"
+templates_dir="$3"
+platforms="$4"
 
 echo "::notice::Processing platforms: $platforms"
 platform_patterns=$(echo "$platforms" | tr ',' '\n' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | awk '{print "templates/" tolower($0) "*"}' | paste -sd ' ' -)
@@ -17,8 +18,8 @@ if ! mkdir -p "${templates_dir}"; then
     exit 1
 fi
 
-file_name=${version}.stable.mono
-url=https://github.com/godotengine/godot/releases/download/${version}-stable/Godot_v${version}-stable_mono_export_templates.tpz
+file_name=${version}.${stage}.mono
+url=https://github.com/godotengine/godot/releases/download/${version}-${stage}/Godot_v${version}-${stage}_mono_export_templates.tpz
 downloaded_file=${templates_dir}/${file_name}.tpz
 
 echo "::notice::Downloading templates from $url"
