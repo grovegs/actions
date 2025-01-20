@@ -1,12 +1,14 @@
 #!/bin/bash
 
 if [ $# -ne 2 ]; then
-    echo "::error::Usage: $0 <version> <runner_os>"
+    echo "::error::Usage: $0 <version> <stage> <runner_os>"
     exit 1
 fi
 
 version="$1"
-runner_os="$2"
+stage="$2"
+runner_os="$3"
+
 editor_dir=~/.godot
 
 echo "::notice::Creating Godot directory at ${editor_dir}"
@@ -28,8 +30,8 @@ case ${runner_os} in
     ;;
 esac
 
-file_name=Godot_v${version}-stable_mono_${platform}
-url=https://github.com/godotengine/godot/releases/download/${version}-stable/${file_name}.zip
+file_name=Godot_v${version}-${stage}_mono_${platform}
+url=https://github.com/godotengine/godot/releases/download/${version}-${stage}/${file_name}.zip
 downloaded_file=${editor_dir}/${file_name}.zip
 
 echo "::notice::Downloading Godot from ${url}"
@@ -54,7 +56,7 @@ rm "${downloaded_file}"
 echo "::notice::Moving Godot to final location"
 case "${runner_os}" in
 "Linux")
-    mv "${editor_dir}/Godot_v${version}-stable_mono_linux_x86_64" "${editor_dir}/Godot_v${version}"
+    mv "${editor_dir}/Godot_v${version}-${stage}_mono_linux_x86_64" "${editor_dir}/Godot_v${version}"
     ;;
 "macOS")
     mv "${editor_dir}/Godot_mono.app" "${editor_dir}/Godot_v${version}.app"
