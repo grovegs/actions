@@ -102,13 +102,13 @@ case "${configuration}" in
 Debug)
     log_notice "Exporting debug build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --export-debug "${preset}" "${export_file}" ||
+    godot --nologo --path "${project_dir}" --rendering-driver vulkan --export-debug "${preset}" "${export_file}" ||
         log_error "Godot export debug failed"
     ;;
 Release)
     log_notice "Exporting release build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    godot --path "${project_dir}" --export-release "${preset}" "${export_file}" ||
+    godot --nologo --path "${project_dir}" --rendering-driver vulkan --export-release "${preset}" "${export_file}" ||
         log_error "Godot export release failed"
     ;;
 *)
