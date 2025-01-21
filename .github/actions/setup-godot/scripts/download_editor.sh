@@ -30,8 +30,14 @@ case ${runner_os} in
     ;;
 esac
 
+source_name="godot"
+
+if [[ "${stage}" != "stable" ]]; then
+    source_name+="-builds"
+fi
+
 file_name=Godot_v${version}-${stage}_mono_${platform}
-url=https://github.com/godotengine/godot/releases/download/${version}-${stage}/${file_name}.zip
+url=https://github.com/godotengine/${source_name}/releases/download/${version}-${stage}/${file_name}.zip
 downloaded_file=${editor_dir}/${file_name}.zip
 
 echo "::notice::Downloading Godot from ${url}"

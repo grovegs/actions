@@ -18,8 +18,14 @@ if ! mkdir -p "${templates_dir}"; then
     exit 1
 fi
 
+source_name="godot"
+
+if [[ "${stage}" != "stable" ]]; then
+    source_name+="-builds"
+fi
+
 file_name=${version}.${stage}.mono
-url=https://github.com/godotengine/godot/releases/download/${version}-${stage}/Godot_v${version}-${stage}_mono_export_templates.tpz
+url=https://github.com/godotengine/${source_name}/releases/download/${version}-${stage}/Godot_v${version}-${stage}_mono_export_templates.tpz
 downloaded_file=${templates_dir}/${file_name}.tpz
 
 echo "::notice::Downloading templates from $url"
