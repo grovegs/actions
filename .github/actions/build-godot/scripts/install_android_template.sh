@@ -8,7 +8,7 @@ fi
 project_dir="$1"
 templates_dir="$2"
 version="$3"
-stage="$3"
+stage="$4"
 
 echo "::notice::Installing Android template for Godot ${version}-${stage}..."
 
