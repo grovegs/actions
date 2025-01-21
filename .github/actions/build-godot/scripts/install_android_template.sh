@@ -1,17 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
-    echo "::error::Usage: $0 <project_dir> <templates_dir> <godot_version>"
+if [ $# -ne 4 ]; then
+    echo "::error::Usage: $0 <project_dir> <templates_dir> <version> <stage>"
     exit 1
 fi
 
 project_dir="$1"
 templates_dir="$2"
-godot_version="$3"
+version="$3"
+stage="$3"
 
-echo "::notice::Installing Android template for Godot ${godot_version}"
+echo "::notice::Installing Android template for Godot ${version}-${stage}..."
 
-template_dir=${templates_dir}/${godot_version}.stable.mono
+template_dir=${templates_dir}/${version}.${stage}.mono
 android_source="${template_dir}/android_source.zip"
 android_dir="${project_dir}/android"
 build_dir="${android_dir}/build"

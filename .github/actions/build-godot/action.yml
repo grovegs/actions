@@ -91,12 +91,12 @@ runs:
             ;;
         esac
 
-    - name: 🔍 Get Godot Version
-      id: get_godot_version
+    - name: 🔍 Get Godot Info
+      id: get_godot_info
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
-        "${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}"
+        chmod +x "${{ github.action_path }}/scripts/get_godot_info.sh"
+        "${{ github.action_path }}/scripts/get_godot_info.sh" "${{ inputs.global-json-file }}"
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
@@ -114,7 +114,8 @@ runs:
         "${{ github.action_path }}/scripts/install_android_template.sh" \
         "${{ inputs.project }}" \
         "${{ steps.get_templates_dir.outputs.templates_dir }}" \
-        "${{ steps.get_godot_version.outputs.godot_version }}"
+        "${{ steps.get_godot_info.outputs.version }}" \
+        "${{ steps.get_godot_info.outputs.stage }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
