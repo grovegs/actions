@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 4 ]; then
     echo "::error::Usage: $0 <version> <stage> <templates_dir> <platforms>"
     exit 1
 fi

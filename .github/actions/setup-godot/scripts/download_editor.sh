@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 3 ]; then
     echo "::error::Usage: $0 <version> <stage> <runner_os>"
     exit 1
 fi
