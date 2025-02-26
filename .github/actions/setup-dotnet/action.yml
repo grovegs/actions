@@ -45,3 +45,11 @@ runs:
         DOTNET_NOLOGO: true
       with:
         dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+
+    - name: 🔎 Verify .NET SDK Installation
+      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      shell: bash
+      run: |
+        echo "::notice::Verifying .NET SDK installation"
+        dotnet --list-sdks
+        dotnet --version

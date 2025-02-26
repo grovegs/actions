@@ -17,15 +17,13 @@ if [ ! -r "${global_json_file}" ]; then
     exit 1
 fi
 
-dotnet_version=$(grep -o '"version": "[^"]*"' "${global_json_file}" | sed 's/"version": "\(.*\)"/\1/')
+echo "::notice::global.json contents:"
+cat "${global_json_file}"
+
+dotnet_version=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${global_json_file}" | head -1 | sed 's/"version"[[:space:]]*:[[:space:]]*"\(.*\)"/\1/')
 
 if [ -z "${dotnet_version}" ]; then
     echo "::error::Failed to find .NET SDK version in ${global_json_file}"
-    exit 1
-fi
-
-if ! [[ "${dotnet_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "::error::Invalid version format found in ${global_json_file}: ${dotnet_version}"
     exit 1
 fi
 
