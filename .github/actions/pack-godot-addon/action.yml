@@ -1,0 +1,31 @@
+name: Pack Godot Addon
+description: Packages the Godot addon.
+
+inputs:
+  addon:
+    description: Path to the Godot addon, relative to the repository root.
+    required: true
+  version:
+    description: Version number to apply to the addon.
+    required: true
+  filename:
+    description: The name of the output file of the addon.
+    required: true
+
+outputs:
+  file:
+    description: "The path to the packed addon file."
+    value: ${{ steps.pack_addon.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    - name: 📦 Pack Godot Addon
+      id: pack_addon
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
+        "${{ github.action_path }}/scripts/pack_addon.sh" \
+        "${{ inputs.addon }}" \
+        "${{ inputs.version }}" \
+        "${{ inputs.filename }}"

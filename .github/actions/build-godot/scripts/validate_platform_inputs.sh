@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 <platform> <key=value> [<key=value> ...]"
+    echo "::error::Usage: $0 <platform> <key=value> [<key=value> ...]"
     exit 1
 fi
 
@@ -20,6 +20,8 @@ for pair in "$@"; do
 done
 
 if [[ ${#missing_inputs[@]} -gt 0 ]]; then
-    echo "Error: Missing inputs for platform ${platform}: ${missing_inputs[*]}"
+    echo "::error::Missing inputs for platform ${platform}: ${missing_inputs[*]}"
     exit 1
 fi
+
+echo "::notice::All required inputs are present for platform ${platform}"

@@ -3,51 +3,66 @@ description: Build Godot project for selected platforms.
 
 inputs:
   project:
-    description: Relative path to the Godot project folder containing the `project.godot` file.
+    description: The relative path to the Godot project folder containing the `project.godot` file.
     required: true
   global-json-file:
-    description: Path to the `global.json` file used to determine the Godot version for the build.
+    description: The file path to `global.json`, which specifies the Godot version for the build.
     required: true
   version:
-    description: Version number for the build output (e.g., 1.0.0).
+    description: The version number for the build output (e.g., `1.0.0`).
     required: true
   platform:
-    description: Target platform for the build. Supported values include `Android`, `iOS`.
+    description: "The target platform for the build. Supported values: `Android`, `iOS`."
     required: true
   preset:
-    description: Name of the export preset defined in the Godot project settings.
+    description: The export preset name defined in the Godot project settings.
     required: true
   configuration:
-    description: The build configuration (e.g., Release or Debug).
+    description: The build configuration (e.g., `Release` or `Debug`).
     required: true
-  artifact:
-    description: Name for the output artifact, which will be uploaded as part of the build process.
+  filename:
+    description: The name of the output file of the build.
     required: true
-  duration:
-    description: Number of days the uploaded artifact will be retained.
+  define-symbols:
+    description: A semicolon-separated list of optional symbols to define during the build.
     required: false
-    default: "1"
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
-    default: ""
   android-keystore-user:
-    description: Userartifact associated with the Android keystore.
+    description: The username associated with the Android keystore.
     required: false
-    default: ""
   android-keystore-password:
-    description: Password for the Android keystore.
+    description: The password for the Android keystore.
     required: false
-    default: ""
   android-format:
-    description: Android build format to use. Acceptable values are `apk` for application packages and `aab` for Android app bundles.
+    description: "The Android build format to use. Supported values: `apk` (application package) or `aab` (Android app bundle)."
     required: false
-    default: ""
+  ios-team-id:
+    description: "The Apple Developer Team ID associated with your Apple Developer account."
+    required: false
+  ios-certificate:
+    description: "The Base64-encoded iOS distribution certificate (.cer file) used for signing the application."
+    required: false
+  ios-certificate-password:
+    description: "The password used to import the password-protected iOS distribution certificate (.p12) for signing the application."
+    required: false
+  ios-provisioning-profile:
+    description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
+    required: false
+  ios-provisioning-profile-uuid:
+    description: "The UUID of the iOS provisioning profile to be used during the build process."
+    required: false
+
+outputs:
+  file:
+    description: "The path to the exported project file."
+    value: ${{ steps.export_project.outputs.file }}
 
 runs:
   using: composite
   steps:
-    - name: Validate Platform Inputs
+    - name: ✅ Validate Platform Inputs
       shell: bash
       run: |
         case ${{ inputs.platform }} in
@@ -64,6 +79,11 @@ runs:
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
             "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
             "iOS" \
+            "ios-team-id=${{ inputs.ios-team-id }}" \
+            "ios-certificate=${{ inputs.ios-certificate }}" \
+            "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
+            "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "Unsupported platform: ${{ inputs.platform }}"
@@ -71,13 +91,12 @@ runs:
             ;;
         esac
 
-    - name: 📖 Get Godot Version
-      id: get_godot_version
+    - name: 🔍 Get Godot Info
+      id: get_godot_info
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/get_godot_version.sh"
-        godot_version=$("${{ github.action_path }}/scripts/get_godot_version.sh" "${{ inputs.global-json-file }}")
-        echo godot_version="$godot_version" >> "$GITHUB_OUTPUT"
+        chmod +x "${{ github.action_path }}/scripts/get_godot_info.sh"
+        "${{ github.action_path }}/scripts/get_godot_info.sh" "${{ inputs.global-json-file }}"
 
     - name: 📂 Get Templates Directory
       id: get_templates_dir
@@ -85,8 +104,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
-        templates_dir=$("${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}")
-        echo templates_dir=${templates_dir} >> "$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/get_templates_dir.sh" "${{ runner.os }}"
 
     - name: 📂 Install Android Template
       if: inputs.platform == 'Android'
@@ -96,17 +114,18 @@ runs:
         "${{ github.action_path }}/scripts/install_android_template.sh" \
         "${{ inputs.project }}" \
         "${{ steps.get_templates_dir.outputs.templates_dir }}" \
-        "${{ steps.get_godot_version.outputs.godot_version }}"
+        "${{ steps.get_godot_info.outputs.version }}" \
+        "${{ steps.get_godot_info.outputs.stage }}"
 
     - name: 📂 Get Export Options
       id: get_export_options
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_export_options.sh"
-        export_options=$("${{ github.action_path }}/scripts/get_export_options.sh" \
+        "${{ github.action_path }}/scripts/get_export_options.sh" \
         "${{ inputs.platform }}" \
-        "${{ inputs.version }}")
-        echo export_options=${export_options} >> "$GITHUB_OUTPUT"
+        "${{ inputs.version }}" \
+        "${{ inputs.ios-team-id }}"
 
     - name: 📂 Update Export Presets
       shell: bash
@@ -121,38 +140,35 @@ runs:
       id: export_project
       shell: bash
       run: |
-        if ! mkdir -p ~/.artifacts; then
-           echo "Error: Failed to create directory ~/.artifacts."
-           exit 1
-        fi
-
         case ${{ inputs.platform }} in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/export_android_project.sh"
-            file=$("${{ github.action_path }}/scripts/export_android_project.sh" \
+            "${{ github.action_path }}/scripts/export_android_project.sh" \
             "${{ inputs.project }}" \
             "${{ inputs.preset }}" \
             "${{ inputs.configuration }}" \
-            "${{ inputs.artifact }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
-            "${{ inputs.android-format }}")
+            "${{ inputs.android-format }}"
             ;;
           "iOS")
+            chmod +x "${{ github.action_path }}/scripts/export_ios_project.sh"
+            "${{ github.action_path }}/scripts/export_ios_project.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.preset }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
+            "${{ inputs.ios-certificate }}" \
+            "${{ inputs.ios-certificate-password }}" \
+            "${{ inputs.ios-provisioning-profile }}" \
+            "${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "Error: Unsupported platform Android"
             exit 1
             ;;
         esac
-
-        echo ${{ inputs.platform }} project successfully exported: ${file}
-        echo file=${file} >> "$GITHUB_OUTPUT"
-
-    - name: 📤 Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ inputs.artifact }}
-        path: ${{ steps.export_project.outputs.file }}
-        retention-days: ${{ inputs.duration }}

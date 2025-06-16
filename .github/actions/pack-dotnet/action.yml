@@ -1,0 +1,31 @@
+name: Pack Dotnet
+description: Packages a .NET project.
+
+inputs:
+  project:
+    description: The relative path to .NET project directory containing the `csproj` file.
+    required: true
+  configuration:
+    description: Build configuration (e.g., Release or Debug) for the package.
+    required: true
+  version:
+    description: Version number to apply to the package.
+    required: true
+  filename:
+    description: The name of the output file of the package.
+    required: true
+
+outputs:
+  file:
+    description: "The path to the packed nuget file."
+    value: ${{ steps.pack_project.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    - name: 📦 Pack Project
+      id: pack_project
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/pack_project.sh"
+        "${{ github.action_path }}/scripts/pack_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.filename }}"

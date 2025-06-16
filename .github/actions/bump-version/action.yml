@@ -21,20 +21,20 @@ runs:
       shell: bash
       id: fetch_version
       run: |
-        git fetch --tags
-        latest_version=$(git tag --sort=-v:refname | head -n 1)
+        git fetch --tags 2>/dev/null || true
+        latest_version=$(git tag --sort=-v:refname | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+$" | head -n 1 | sed 's/^v//') || true
 
         if [ -z "$latest_version" ]; then
           latest_version="0.0.0"
         fi
 
-        echo latest_version=$latest_version >> $GITHUB_OUTPUT
+        echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
 
     - name: 🧮 Bump Version
       shell: bash
       id: bump_version
       run: |
-        IFS=. read -r major minor patch <<< "${{ steps.fetch_version.outputs.latest_version }}"
+        IFS='.' read -r major minor patch <<< "${{ steps.fetch_version.outputs.latest_version }}"
 
         case "${{ inputs.version-type }}" in
           major) major=$((major + 1)); minor=0; patch=0 ;;
@@ -42,5 +42,5 @@ runs:
           patch) patch=$((patch + 1)) ;;
         esac
 
-        next_version="$major.$minor.$patch"
-        echo next_version=$next_version >> $GITHUB_OUTPUT
+        next_version="${major}.${minor}.${patch}"
+        echo "next_version=$next_version" >> $GITHUB_OUTPUT

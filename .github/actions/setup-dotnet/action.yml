@@ -1,0 +1,65 @@
+name: Setup .NET
+description: Setup a .NET project.
+
+inputs:
+  global-json-file:
+    description: The path to the global.json file specifying the .NET SDK version.
+    required: true
+  cache:
+    description: Whether to use a cache .NET SDK installation (true/false).
+    required: false
+    default: "false"
+
+outputs:
+  dotnet-version:
+    description: The .NET SDK version that was set up.
+    value: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+
+runs:
+  using: composite
+  steps:
+    - name: 📖 Get .Net Version
+      id: get_dotnet_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_dotnet_version.sh"
+        "${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}"
+
+    - name: 🔍 Check .NET SDK Installed
+      id: check_dotnet_sdk
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/check_dotnet_sdk.sh"
+        "${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}"
+
+    - name: 📦 Cache .NET SDK
+      if: ${{ inputs.cache == 'true' && steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.dotnet
+          /usr/local/share/dotnet
+          /usr/share/dotnet
+          /opt/hostedtoolcache/dotnet
+        key: dotnet-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
+
+    - name: 🛠️ Setup .NET SDK
+      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      uses: actions/setup-dotnet@v4
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: true
+        DOTNET_NOLOGO: true
+      with:
+        dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+
+    - name: 🔎 Verify .NET SDK Installation
+      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      shell: bash
+      run: |
+        echo "::notice::Verifying .NET SDK installation"
+        if ! command -v dotnet &> /dev/null; then
+            echo "::error::dotnet command not found after installation"
+            exit 1
+        fi
+        dotnet --list-sdks
+        dotnet --version
