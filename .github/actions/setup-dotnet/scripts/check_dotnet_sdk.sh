@@ -12,6 +12,12 @@ if [ -z "${sdk_version}" ]; then
     exit 1
 fi
 
+if ! command -v dotnet &>/dev/null; then
+    echo "::notice::dotnet command not found. .NET SDK is not installed."
+    echo "is_installed=false" >>"$GITHUB_OUTPUT"
+    exit 0
+fi
+
 IFS='.' read -r major minor patch <<<"${sdk_version}"
 
 if [ -z "${major}" ] || [ -z "${minor}" ] || [ -z "${patch}" ]; then
@@ -21,21 +27,20 @@ fi
 
 echo "::notice::Checking for .NET SDK version ${sdk_version}"
 
-dotnet --list-sdks >/tmp/installed_sdks
 echo "::notice::Installed SDKs:"
-cat /tmp/installed_sdks
+dotnet --list-sdks
 echo ""
 
-if grep -q "^${major}.${minor}.${patch}" /tmp/installed_sdks; then
+is_installed="false"
+
+if dotnet --list-sdks | grep -q "^${sdk_version} "; then
     is_installed="true"
     echo "::notice::Exact match - .NET SDK ${sdk_version} is installed"
-
-elif grep -q "^${major}.${minor}" /tmp/installed_sdks; then
+elif dotnet --list-sdks | grep -q "^${major}\.${minor}\."; then
     is_installed="true"
-    installed_version=$(grep "^${major}.${minor}" /tmp/installed_sdks | head -1 | awk '{print $1}')
+    installed_version=$(dotnet --list-sdks | grep "^${major}\.${minor}\." | head -1 | awk '{print $1}')
     echo "::notice::Compatible version found - .NET SDK ${installed_version} (compatible with requested ${sdk_version})"
 else
-    is_installed="false"
     echo "::warning::.NET SDK ${sdk_version} or compatible version is not installed"
 fi
 
