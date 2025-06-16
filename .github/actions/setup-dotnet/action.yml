@@ -10,6 +10,11 @@ inputs:
     required: false
     default: "false"
 
+outputs:
+  dotnet-version:
+    description: The .NET SDK version that was set up.
+    value: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+
 runs:
   using: composite
   steps:
@@ -32,10 +37,11 @@ runs:
       uses: actions/cache@v4
       with:
         path: |
-          ~/.dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
-          /usr/local/share/dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
-          /usr/share/dotnet/sdk/${{ steps.get_dotnet_version.outputs.dotnet_version }}
-        key: dotnet-sdk-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
+          ~/.dotnet
+          /usr/local/share/dotnet
+          /usr/share/dotnet
+          /opt/hostedtoolcache/dotnet
+        key: dotnet-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
 
     - name: 🛠️ Setup .NET SDK
       if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
@@ -45,3 +51,15 @@ runs:
         DOTNET_NOLOGO: true
       with:
         dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+
+    - name: 🔎 Verify .NET SDK Installation
+      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+      shell: bash
+      run: |
+        echo "::notice::Verifying .NET SDK installation"
+        if ! command -v dotnet &> /dev/null; then
+            echo "::error::dotnet command not found after installation"
+            exit 1
+        fi
+        dotnet --list-sdks
+        dotnet --version

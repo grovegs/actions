@@ -17,15 +17,24 @@ if [ ! -r "${global_json_file}" ]; then
     exit 1
 fi
 
-dotnet_version=$(grep -o '"version": "[^"]*"' "${global_json_file}" | sed 's/"version": "\(.*\)"/\1/')
+echo "::notice::global.json contents:"
+cat "${global_json_file}"
+
+sdk_section=$(awk '/"sdk"[[:space:]]*:/ {p=1} p && /^[[:space:]]*}/ {print; exit} p' "${global_json_file}")
+if [ -z "${sdk_section}" ]; then
+    echo "::error::No 'sdk' section found in ${global_json_file}"
+    exit 1
+fi
+
+dotnet_version=$(echo "${sdk_section}" | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
 
 if [ -z "${dotnet_version}" ]; then
     echo "::error::Failed to find .NET SDK version in ${global_json_file}"
     exit 1
 fi
 
-if ! [[ "${dotnet_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "::error::Invalid version format found in ${global_json_file}: ${dotnet_version}"
+if ! echo "${dotnet_version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+    echo "::error::Invalid .NET SDK version format: ${dotnet_version}"
     exit 1
 fi
 
