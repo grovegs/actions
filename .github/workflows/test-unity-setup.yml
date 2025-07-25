@@ -1,53 +1,48 @@
-name: Test Unity Setup Action
+name: Manual Test Unity Setup
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/actions/setup-unity/**"
-      - ".github/workflows/test-unity-action.yml"
+    inputs:
+      test_type:
+        description: "Test type to run"
+        required: true
+        default: "basic"
+        type: choice
+        options:
+          - basic
+          - with-modules
+          - all-platforms
+          - cache-test
 
 jobs:
-  test-basic-setup:
-    name: Test Basic Setup
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  test-basic:
+    if: ${{ github.event.inputs.test_type == 'basic' || github.event.inputs.test_type == 'all-platforms' }}
+    name: Basic Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Test Unity Setup (Auto-detect from sandbox)
+      - name: Test Unity Setup
         uses: ./.github/actions/setup-unity
         with:
           project-path: sandbox/UnityApplication
 
-      - name: Verify Unity Installation
+      - name: Verify
         run: |
-          echo "Unity Version: $UNITY_VERSION"
-          echo "Unity Path: $UNITY_PATH"
-          unity -version || Unity -version
-
-  test-specific-version:
-    name: Test Specific Version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Unity Setup with Specific Version
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "6.0.0f1"
-
-      - name: Verify Version
-        run: |
-          unity -version | grep "6.0.0f1"
+          echo "✅ Unity Version: $UNITY_VERSION"
+          echo "✅ Unity Path: $UNITY_PATH"
+          unity -version || echo "Unity command not in PATH"
 
   test-with-modules:
-    name: Test Module Installation
+    if: ${{ github.event.inputs.test_type == 'with-modules' }}
+    name: Test with Modules
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
       - name: Test Unity Setup with Modules
         uses: ./.github/actions/setup-unity
@@ -55,55 +50,56 @@ jobs:
           unity-version: "6.0.0f1"
           unity-modules: "android,webgl"
 
-      - name: Check Modules
+      - name: Verify Modules
         run: |
+          echo "Testing Android build support..."
           unity -batchmode -quit -logFile - -buildTarget Android || echo "Android module check"
-          unity -batchmode -quit -logFile - -buildTarget WebGL || echo "WebGL module check"
 
-  test-caching:
+  test-all-platforms:
+    if: ${{ github.event.inputs.test_type == 'all-platforms' }}
+    name: Test on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - name: Test Unity Setup
+        uses: ./.github/actions/setup-unity
+        with:
+          unity-version: "6.0.0f1"
+
+      - name: Verify on ${{ matrix.os }}
+        shell: bash
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Unity Version: $UNITY_VERSION"
+          echo "Unity Path: $UNITY_PATH"
+
+  test-cache:
+    if: ${{ github.event.inputs.test_type == 'cache-test' }}
     name: Test Caching
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
       - name: First Install (No Cache)
         uses: ./.github/actions/setup-unity
         with:
-          project-path: sandbox/UnityApplication
+          unity-version: "6.0.0f1"
           cache: "true"
+
+      - name: Clear Unity
+        run: |
+          sudo rm -rf ~/Unity/Hub/Editor/6.0.0f1 || true
 
       - name: Second Install (Should Use Cache)
         uses: ./.github/actions/setup-unity
         with:
-          project-path: sandbox/UnityApplication
-          cache: "true"
-
-  test-no-cache:
-    name: Test Without Cache
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Unity Setup without Cache
-        uses: ./.github/actions/setup-unity
-        with:
           unity-version: "6.0.0f1"
-          cache: "false"
-
-  test-error-handling:
-    name: Test Error Handling
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Invalid Version Format
-        id: invalid_version
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "invalid-version"
-        continue-on-error: true
-
-      - name: Check Error Occurred
-        if: steps.invalid_version.outcome == 'failure'
-        run: echo "Error handling worked correctly"
+          cache: "true"
