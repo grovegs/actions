@@ -1,0 +1,104 @@
+name: Setup Unity
+description: Setup Unity for CI/CD workflows.
+
+inputs:
+  unity-version:
+    description: The Unity version to install (e.g., "6.0.0f1", "6.1.0b5"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
+    required: false
+  unity-modules:
+    description: Additional Unity modules to install (comma-separated list, e.g., "android,ios,webgl").
+    required: false
+    default: ""
+  cache:
+    description: Whether to cache the Unity installation (true/false).
+    required: false
+    default: "true"
+  project-path:
+    description: Path to the Unity project directory.
+    required: false
+    default: "."
+  unity-hub-version:
+    description: Unity Hub version to use for installation.
+    required: false
+    default: "3.8.0"
+
+outputs:
+  unity-version:
+    description: The Unity version that was set up.
+    value: ${{ steps.get_unity_version.outputs.unity_version }}
+  unity-path:
+    description: The path to the Unity installation.
+    value: ${{ steps.get_unity_path.outputs.unity_path }}
+  unity-hub-path:
+    description: The path to Unity Hub.
+    value: ${{ steps.install_unity_hub.outputs.hub_path }}
+
+runs:
+  using: composite
+  steps:
+    - name: 📖 Get Unity Version
+      id: get_unity_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_unity_version.sh"
+        "${{ github.action_path }}/scripts/get_unity_version.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
+
+    - name: 🔍 Check Unity Installation
+      id: check_unity
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/check_unity.sh"
+        "${{ github.action_path }}/scripts/check_unity.sh" "${{ steps.get_unity_version.outputs.unity_version }}"
+
+    - name: 📦 Cache Unity Installation
+      if: ${{ inputs.cache == 'true' && steps.check_unity.outputs.is_installed == 'false' }}
+      id: cache_unity
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/Unity/Hub/Editor/${{ steps.get_unity_version.outputs.unity_version }}
+          /Applications/Unity/Hub/Editor/${{ steps.get_unity_version.outputs.unity_version }}
+          C:\Program Files\Unity\Hub\Editor\${{ steps.get_unity_version.outputs.unity_version }}
+        key: unity-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-${{ inputs.unity-modules }}
+        restore-keys: |
+          unity-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-
+
+    - name: 🛠️ Install Unity Hub
+      if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}
+      id: install_unity_hub
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_unity_hub.sh"
+        "${{ github.action_path }}/scripts/install_unity_hub.sh" "${{ inputs.unity-hub-version }}"
+
+    - name: 🎮 Install Unity
+      if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
+        "${{ github.action_path }}/scripts/install_unity.sh" "${{ steps.get_unity_version.outputs.unity_version }}" "${{ inputs.unity-modules }}"
+
+    - name: 📍 Get Unity Path
+      id: get_unity_path
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/get_unity_path.sh"
+        "${{ github.action_path }}/scripts/get_unity_path.sh" "${{ steps.get_unity_version.outputs.unity_version }}"
+
+    - name: 🔎 Verify Unity Installation
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/verify_unity.sh"
+        "${{ github.action_path }}/scripts/verify_unity.sh" "${{ steps.get_unity_path.outputs.unity_path }}"
+
+    - name: 📝 Set Unity Environment Variables
+      shell: bash
+      run: |
+        echo "UNITY_PATH=${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_ENV
+        echo "UNITY_VERSION=${{ steps.get_unity_version.outputs.unity_version }}" >> $GITHUB_ENV
+
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_PATH
+        else
+          echo "${{ steps.get_unity_path.outputs.unity_path }}/Contents/MacOS" >> $GITHUB_PATH
+        fi
