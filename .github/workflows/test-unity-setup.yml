@@ -1,6 +1,8 @@
 name: Manual Test Unity Setup
 
 on:
+  pull_request:
+  push:
   workflow_dispatch:
     inputs:
       test_type:
