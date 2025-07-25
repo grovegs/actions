@@ -8,12 +8,14 @@ fi
 project_path="$1"
 unity_version="${2:-}"
 
+valid_version_regex='^(6\.[0-9]+\.[0-9]+|6000\.[0-9]+\.[0-9]+)[a-z][0-9]+$'
+
 if [ -n "${unity_version}" ]; then
-    if ! echo "${unity_version}" | grep -qE '^6\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
-        echo "::error::Invalid Unity version format: ${unity_version}. Expected format: 6.x.x[a-z]x (e.g., 6.0.0f1, 6.1.0b5)"
+    if ! echo "${unity_version}" | grep -qE "${valid_version_regex}"; then
+        echo "::error::Invalid Unity version format: ${unity_version}. Expected format: 6.x.x[a-z]x or 6000.x.x[a-z]x (e.g., 6.0.0f1, 6000.1.9f1)"
         exit 1
     fi
-    
+
     echo "::notice::Using Unity version from input: ${unity_version}"
     echo "unity_version=${unity_version}" >> "$GITHUB_OUTPUT"
     exit 0
@@ -23,7 +25,8 @@ project_version_file="${project_path}/ProjectSettings/ProjectVersion.txt"
 
 if [ ! -f "${project_version_file}" ]; then
     echo "::error::ProjectVersion.txt not found at: ${project_version_file}"
-    echo "::error::Please specify unity-version input or ensure project-path is correct"
+    echo "::error::No Unity project detected. The unity-version input is required."
+    echo "::notice::Example: unity-version: '6.0.0f1'"
     exit 1
 fi
 
@@ -42,9 +45,8 @@ if [ -z "${unity_version}" ]; then
     exit 1
 fi
 
-if ! echo "${unity_version}" | grep -qE '^6\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
-    echo "::error::This action is for Unity 6 only. Found version: ${unity_version}"
-    echo "::error::Unity 6 versions start with '6.' (e.g., 6.0.0f1)"
+if ! echo "${unity_version}" | grep -qE "${valid_version_regex}"; then
+    echo "::error::Invalid Unity version format: ${unity_version}. Expected format: 6.x.x[a-z]x or 6000.x.x[a-z]x (e.g., 6.0.0f1, 6000.1.9f1)"
     exit 1
 fi
 
