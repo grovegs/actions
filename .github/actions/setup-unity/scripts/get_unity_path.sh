@@ -9,22 +9,18 @@ unity_version="$1"
 
 echo "::notice::Getting Unity ${unity_version} installation path"
 
-if [[ "$RUNNER_OS" == "Linux" ]]; then
-    unity_paths=(
-        "$HOME/Unity/Hub/Editor/${unity_version}/Editor/Unity"
-        "/opt/Unity/Hub/Editor/${unity_version}/Editor/Unity"
-    )
-elif [[ "$RUNNER_OS" == "macOS" ]]; then
+if [[ "$RUNNER_OS" == "macOS" ]]; then
     unity_paths=(
         "/Applications/Unity/Hub/Editor/${unity_version}/Unity.app"
-        "$HOME/Unity/Hub/Editor/${unity_version}/Unity.app"
-        "/Applications/Unity ${unity_version}/Unity.app"
+        "/Applications/Unity-${unity_version}/Unity.app"
+        "/Applications/Unity/Unity.app"
+        "$HOME/Applications/Unity/Unity.app"
     )
 elif [[ "$RUNNER_OS" == "Windows" ]]; then
     unity_paths=(
         "C:/Program Files/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
-        "C:/Program Files (x86)/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
-        "$HOME/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
+        "C:/Program Files/Unity/Editor/Unity.exe"
+        "C:/Program Files (x86)/Unity/Editor/Unity.exe"
     )
 else
     echo "::error::Unsupported OS: $RUNNER_OS"

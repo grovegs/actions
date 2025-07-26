@@ -11,10 +11,14 @@ echo "::notice::Verifying Unity installation at: ${unity_path}"
 
 if [[ "$RUNNER_OS" == "Windows" ]]; then
     unity_exe="${unity_path}"
+    if [ ! -f "${unity_exe}" ]; then
+        unity_exe="${unity_path}/Unity.exe"
+    fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
     unity_exe="${unity_path}/Contents/MacOS/Unity"
-else
-    unity_exe="${unity_path}"
+    if [ ! -f "${unity_exe}" ]; then
+        unity_exe="${unity_path}"
+    fi
 fi
 
 if [ ! -f "${unity_exe}" ]; then
@@ -22,25 +26,20 @@ if [ ! -f "${unity_exe}" ]; then
     exit 1
 fi
 
+echo "::notice::Unity executable found at: ${unity_exe}"
+
 echo "::notice::Getting Unity version information..."
 if [[ "$RUNNER_OS" == "Windows" ]]; then
-    "${unity_exe}" -version || true
+    "${unity_exe}" -version 2>/dev/null || echo "::notice::Unity version check completed"
 else
-    "${unity_exe}" -version 2>&1 || true
+    "${unity_exe}" -version 2>&1 | head -5 || echo "::notice::Unity version check completed"
 fi
 
 echo "::notice::Checking Unity license status..."
 if [[ "$RUNNER_OS" == "Windows" ]]; then
-    "${unity_exe}" -batchmode -quit -logFile - -serial || true
+    "${unity_exe}" -batchmode -quit -logFile - -serial 2>/dev/null || echo "::notice::License check completed"
 else
-    "${unity_exe}" -batchmode -quit -logFile /dev/stdout -serial || true
+    "${unity_exe}" -batchmode -quit -logFile /dev/stdout -serial 2>&1 | head -10 || echo "::notice::License check completed"
 fi
 
-echo "::notice::Available build targets:"
-if [[ "$RUNNER_OS" == "Windows" ]]; then
-    "${unity_exe}" -batchmode -quit -logFile - -buildTarget || true
-else
-    "${unity_exe}" -batchmode -quit -logFile /dev/stdout -buildTarget || true
-fi
-
-echo "::notice::Unity installation verified successfully"
+echo "::notice::Unity installation verification completed successfully"

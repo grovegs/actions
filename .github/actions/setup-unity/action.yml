@@ -1,9 +1,9 @@
 name: Setup Unity
-description: Downloads, installs, and caches Unity for Windows and macOS platforms. Linux is not supported as Unity Hub does not provide official Linux support.
+description: Downloads and installs Unity Editor directly for Windows and macOS platforms. This action bypasses Unity Hub to ensure compatibility with CI/CD environments.
 
 inputs:
   unity-version:
-    description: The Unity version to install (e.g., "6.0.0f1", "6.1.0b5"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
+    description: The Unity version to install (e.g., "6000.1.9f1", "2023.3.40f1"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
     required: false
   unity-modules:
     description: Additional Unity modules to install (comma-separated list, e.g., "android,ios,webgl").
@@ -17,10 +17,6 @@ inputs:
     description: Path to the Unity project directory.
     required: false
     default: "."
-  unity-hub-version:
-    description: Unity Hub version to use for installation.
-    required: false
-    default: "3.8.0"
 
 outputs:
   unity-version:
@@ -29,9 +25,6 @@ outputs:
   unity-path:
     description: The path to the Unity installation.
     value: ${{ steps.get_unity_path.outputs.unity_path }}
-  unity-hub-path:
-    description: The path to Unity Hub.
-    value: ${{ steps.install_unity_hub.outputs.hub_path }}
 
 runs:
   using: composite
@@ -40,7 +33,7 @@ runs:
       shell: bash
       run: |
         if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
-          echo "::error::Unity Hub is only supported on Windows and macOS platforms"
+          echo "::error::Unity is only supported on Windows and macOS platforms"
           echo "::error::Current platform: $RUNNER_OS"
           echo "::error::Please use a Windows or macOS runner for Unity development"
           exit 1
@@ -75,21 +68,11 @@ runs:
       uses: actions/cache@v4
       with:
         path: |
-          /Applications/Unity/Hub/Editor/${{ steps.get_unity_version.outputs.unity_version }}
-          C:\Program Files\Unity\Hub\Editor\${{ steps.get_unity_version.outputs.unity_version }}
-          ~/Library/Application Support/UnityHub
-          C:\Users\runneradmin\AppData\Roaming\UnityHub
-        key: unity-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}
+          /Applications/Unity
+          C:\Program Files\Unity
+        key: unity-direct-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}
         restore-keys: |
-          unity-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-
-
-    - name: 🛠️ Install Unity Hub
-      if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}
-      id: install_unity_hub
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/install_unity_hub.sh"
-        "${{ github.action_path }}/scripts/install_unity_hub.sh" "${{ inputs.unity-hub-version }}"
+          unity-direct-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-
 
     - name: 🎮 Install Unity
       if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}

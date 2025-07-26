@@ -24,14 +24,15 @@ echo "::notice::Checking for Unity ${unity_version} installation"
 if [[ "$RUNNER_OS" == "macOS" ]]; then
     unity_paths=(
         "/Applications/Unity/Hub/Editor/${unity_version}"
-        "$HOME/Unity/Hub/Editor/${unity_version}"
-        "/Applications/Unity ${unity_version}"
+        "/Applications/Unity-${unity_version}"
+        "/Applications/Unity"
+        "$HOME/Applications/Unity"
     )
 elif [[ "$RUNNER_OS" == "Windows" ]]; then
     unity_paths=(
         "C:/Program Files/Unity/Hub/Editor/${unity_version}"
-        "C:/Program Files (x86)/Unity/Hub/Editor/${unity_version}"
-        "$HOME/Unity/Hub/Editor/${unity_version}"
+        "C:/Program Files/Unity"
+        "C:/Program Files (x86)/Unity"
     )
 fi
 
@@ -42,9 +43,19 @@ for path in "${unity_paths[@]}"; do
     echo "::debug::Checking path: ${path}"
     
     if [[ "$RUNNER_OS" == "Windows" ]]; then
-        unity_exe="${path}/Editor/Unity.exe"
+        if [ -d "${path}" ]; then
+            unity_exe="${path}/Editor/Unity.exe"
+            if [ ! -f "${unity_exe}" ]; then
+                unity_exe="${path}/Unity.exe"
+            fi
+        fi
     elif [[ "$RUNNER_OS" == "macOS" ]]; then
-        unity_exe="${path}/Unity.app/Contents/MacOS/Unity"
+        if [ -d "${path}" ]; then
+            unity_exe="${path}/Unity.app/Contents/MacOS/Unity"
+            if [ ! -f "${unity_exe}" ]; then
+                unity_exe="${path}/Contents/MacOS/Unity"
+            fi
+        fi
     fi
     
     if [ -f "${unity_exe}" ]; then
@@ -57,12 +68,7 @@ done
 
 if [ "${is_installed}" == "false" ]; then
     echo "::warning::Unity ${unity_version} is not installed"
-    
-    if command -v unity-hub &>/dev/null; then
-        echo "::notice::Unity Hub is available, can proceed with installation"
-    else
-        echo "::notice::Unity Hub is not installed, will need to install it first"
-    fi
+    echo "::notice::Will proceed with direct Unity installation"
 fi
 
 echo "is_installed=${is_installed}" >> "$GITHUB_OUTPUT"
