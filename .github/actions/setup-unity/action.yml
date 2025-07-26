@@ -1,5 +1,5 @@
 name: Setup Unity
-description: Setup Unity for CI/CD workflows.
+description: Downloads, installs, and caches Unity for Windows and macOS platforms. Linux is not supported as Unity Hub does not provide official Linux support.
 
 inputs:
   unity-version:
@@ -36,6 +36,17 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: ✅ Validate Platform Support
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
+          echo "::error::Unity Hub is only supported on Windows and macOS platforms"
+          echo "::error::Current platform: $RUNNER_OS"
+          echo "::error::Please use a Windows or macOS runner for Unity development"
+          exit 1
+        fi
+        echo "::notice::Platform validation successful: $RUNNER_OS"
+
     - name: 📖 Get Unity Version
       id: get_unity_version
       shell: bash
@@ -64,10 +75,8 @@ runs:
       uses: actions/cache@v4
       with:
         path: |
-          ~/Unity/Hub/Editor/${{ steps.get_unity_version.outputs.unity_version }}
           /Applications/Unity/Hub/Editor/${{ steps.get_unity_version.outputs.unity_version }}
           C:\Program Files\Unity\Hub\Editor\${{ steps.get_unity_version.outputs.unity_version }}
-          ~/.config/UnityHub
           ~/Library/Application Support/UnityHub
           C:\Users\runneradmin\AppData\Roaming\UnityHub
         key: unity-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}

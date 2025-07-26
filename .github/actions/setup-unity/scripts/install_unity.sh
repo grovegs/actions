@@ -10,16 +10,23 @@ modules="$2"
 
 echo "::notice::Installing Unity ${unity_version}"
 
-if command -v unity-hub &>/dev/null; then
-    UNITY_HUB="unity-hub"
-else
-    if [[ "$RUNNER_OS" == "Windows" ]]; then
-        UNITY_HUB="C:/Program Files/Unity Hub/Unity Hub.exe"
-    elif [[ "$RUNNER_OS" == "macOS" ]]; then
-        UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
-    else
-        UNITY_HUB="unity-hub"
-    fi
+if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
+    echo "::error::Unity is only supported on Windows and macOS platforms"
+    echo "::error::Current platform: $RUNNER_OS"
+    exit 1
+fi
+
+if [[ "$RUNNER_OS" == "Windows" ]]; then
+    UNITY_HUB="C:/Program Files/Unity Hub/Unity Hub.exe"
+elif [[ "$RUNNER_OS" == "macOS" ]]; then
+    UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
+fi
+
+if ! command -v unity-hub &>/dev/null && [ ! -f "${UNITY_HUB}" ]; then
+    echo "::error::Unity Hub not found"
+    echo "::error::Expected location: ${UNITY_HUB}"
+    echo "::error::Please ensure Unity Hub is properly installed"
+    exit 1
 fi
 
 echo "::notice::Installing Unity ${unity_version} via Unity Hub"

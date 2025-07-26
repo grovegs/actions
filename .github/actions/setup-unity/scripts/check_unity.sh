@@ -8,18 +8,20 @@ fi
 unity_version="$1"
 
 if [ -z "${unity_version}" ]; then
-    echo "::error::Unity version not provided."
+    echo "::error::Unity version not provided"
     exit 1
+fi
+
+if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
+    echo "::error::Unity is only supported on Windows and macOS platforms"
+    echo "::error::Current platform: $RUNNER_OS"
+    echo "is_installed=false" >> "$GITHUB_OUTPUT"
+    exit 0
 fi
 
 echo "::notice::Checking for Unity ${unity_version} installation"
 
-if [[ "$RUNNER_OS" == "Linux" ]]; then
-    unity_paths=(
-        "$HOME/Unity/Hub/Editor/${unity_version}"
-        "/opt/Unity/Hub/Editor/${unity_version}"
-    )
-elif [[ "$RUNNER_OS" == "macOS" ]]; then
+if [[ "$RUNNER_OS" == "macOS" ]]; then
     unity_paths=(
         "/Applications/Unity/Hub/Editor/${unity_version}"
         "$HOME/Unity/Hub/Editor/${unity_version}"
@@ -31,9 +33,6 @@ elif [[ "$RUNNER_OS" == "Windows" ]]; then
         "C:/Program Files (x86)/Unity/Hub/Editor/${unity_version}"
         "$HOME/Unity/Hub/Editor/${unity_version}"
     )
-else
-    echo "::error::Unsupported OS: $RUNNER_OS"
-    exit 1
 fi
 
 is_installed="false"
@@ -46,8 +45,6 @@ for path in "${unity_paths[@]}"; do
         unity_exe="${path}/Editor/Unity.exe"
     elif [[ "$RUNNER_OS" == "macOS" ]]; then
         unity_exe="${path}/Unity.app/Contents/MacOS/Unity"
-    else
-        unity_exe="${path}/Editor/Unity"
     fi
     
     if [ -f "${unity_exe}" ]; then
