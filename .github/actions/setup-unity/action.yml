@@ -40,12 +40,12 @@ runs:
         fi
         echo "::notice::Platform validation successful: $RUNNER_OS"
 
-    - name: 📖 Get Unity Version
+    - name: 🧬 Get Unity Version
       id: get_unity_version
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_version.sh"
-        "${{ github.action_path }}/scripts/get_unity_version.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
+        "${{ github.action_path }}/scripts/get_unity_version.sh" "${{ inputs.project-path }}"
 
     - name: 🔍 Check Unity Installation
       id: check_unity
@@ -79,7 +79,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
-        "${{ github.action_path }}/scripts/install_unity.sh" "${{ steps.get_unity_version.outputs.unity_version }}" "${{ inputs.unity-modules }}"
+        "${{ github.action_path }}/scripts/install_unity.sh" "${{ steps.get_unity_version.outputs.version }}" "${{ steps.get_unity_version.outputs.revision }}" "${{ inputs.unity-modules }}"
 
     - name: 📍 Get Unity Path
       id: get_unity_path
