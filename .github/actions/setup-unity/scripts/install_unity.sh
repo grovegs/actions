@@ -43,22 +43,32 @@ fi
 echo "::notice::Using Unity Hub command: ${UNITY_HUB_CMD}"
 
 export DISPLAY=""
-export ELECTRON_RUN_AS_NODE=0
+export ELECTRON_RUN_AS_NODE=""
 
-"${UNITY_HUB_CMD}" -- --headless install \
-    --version "${unity_version}" \
-    --changeset auto \
-    --architecture "arm64" \
-    || {
-        echo "::warning::Installation with arm64 architecture failed, trying without architecture specification"
-        "${UNITY_HUB_CMD}" -- --headless install \
-            --version "${unity_version}" \
-            --changeset auto \
-            || {
-                echo "::error::Failed to install Unity ${unity_version}"
-                exit 1
-            }
-    }
+if [[ "$RUNNER_OS" == "macOS" ]]; then
+    echo "::notice::Installing Unity using macOS Unity Hub CLI"
+    "${UNITY_HUB_CMD}" --headless install \
+        --version "${unity_version}" \
+        --changeset auto \
+        || {
+            echo "::warning::Direct headless installation failed, trying alternative approach"
+            "${UNITY_HUB_CMD}" --headless --installer-args install \
+                --version "${unity_version}" \
+                || {
+                    echo "::error::Failed to install Unity ${unity_version} on macOS"
+                    exit 1
+                }
+        }
+elif [[ "$RUNNER_OS" == "Windows" ]]; then
+    echo "::notice::Installing Unity using Windows Unity Hub CLI"
+    "${UNITY_HUB_CMD}" --headless install \
+        --version "${unity_version}" \
+        --changeset auto \
+        || {
+            echo "::error::Failed to install Unity ${unity_version} on Windows"
+            exit 1
+        }
+fi
 
 if [ -n "${modules}" ]; then
     echo "::notice::Installing additional modules: ${modules}"
@@ -93,7 +103,7 @@ if [ -n "${modules}" ]; then
         esac
         
         echo "::notice::Installing module: ${module_id}"
-        "${UNITY_HUB_CMD}" -- --headless install-modules \
+        "${UNITY_HUB_CMD}" --headless install-modules \
             --version "${unity_version}" \
             --module "${module_id}" \
             || {
@@ -103,9 +113,9 @@ if [ -n "${modules}" ]; then
 fi
 
 echo "::notice::Waiting for Unity installation to complete..."
-sleep 10
+sleep 15
 
 echo "::notice::Verifying Unity installation..."
-"${UNITY_HUB_CMD}" -- --headless editors --installed || true
+"${UNITY_HUB_CMD}" --headless editors || true
 
 echo "::notice::Unity ${unity_version} installation completed"
