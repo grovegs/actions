@@ -11,9 +11,9 @@ echo "::notice::Getting Unity ${unity_version} installation path"
 
 if [[ "$RUNNER_OS" == "macOS" ]]; then
     unity_paths=(
+        "/Applications/Unity/Unity.app"
         "/Applications/Unity/Hub/Editor/${unity_version}/Unity.app"
         "/Applications/Unity-${unity_version}/Unity.app"
-        "/Applications/Unity/Unity.app"
         "$HOME/Applications/Unity/Unity.app"
     )
 elif [[ "$RUNNER_OS" == "Windows" ]]; then
