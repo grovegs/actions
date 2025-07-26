@@ -9,8 +9,8 @@ project_path="$1"
 unity_version="${2:-}"
 
 if [ -n "${unity_version}" ]; then
-    if ! echo "${unity_version}" | grep -qE '^6\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
-        echo "::error::Invalid Unity version format: ${unity_version}. Expected format: 6.x.x[a-z]x (e.g., 6.0.0f1, 6.1.0b5)"
+    if ! echo "${unity_version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
+        echo "::error::Invalid Unity version format: ${unity_version}. Expected format: x.x.x[a-z]x (e.g., 2022.3.10f1, 6.0.0f1, 6000.1.9f1)"
         exit 1
     fi
     
@@ -23,7 +23,8 @@ project_version_file="${project_path}/ProjectSettings/ProjectVersion.txt"
 
 if [ ! -f "${project_version_file}" ]; then
     echo "::error::ProjectVersion.txt not found at: ${project_version_file}"
-    echo "::error::Please specify unity-version input or ensure project-path is correct"
+    echo "::error::No Unity project detected. The unity-version input is required."
+    echo "::notice::Example: unity-version: '2022.3.10f1'"
     exit 1
 fi
 
@@ -42,9 +43,9 @@ if [ -z "${unity_version}" ]; then
     exit 1
 fi
 
-if ! echo "${unity_version}" | grep -qE '^6\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
-    echo "::error::This action is for Unity 6 only. Found version: ${unity_version}"
-    echo "::error::Unity 6 versions start with '6.' (e.g., 6.0.0f1)"
+if ! echo "${unity_version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
+    echo "::error::Invalid Unity version format in ProjectVersion.txt: ${unity_version}"
+    echo "::error::Expected format: x.x.x[a-z]x (e.g., 2022.3.10f1, 6.0.0f1, 6000.1.9f1)"
     exit 1
 fi
 
