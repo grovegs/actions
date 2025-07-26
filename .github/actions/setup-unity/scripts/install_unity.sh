@@ -62,6 +62,12 @@ download_and_install_unity() {
             return 1
         fi
 
+        sleep 5
+
+        echo "::notice::Verifying Unity installation..."
+        echo "::notice::Searching for Unity.app in /Applications..."
+        find /Applications -name "Unity.app" -type d 2>/dev/null | head -10
+
         rm "${installer_name}"
 
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
