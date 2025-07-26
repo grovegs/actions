@@ -27,6 +27,10 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
     
     hub_path="/usr/bin/unity-hub"
     
+    echo "::notice::Setting up Unity Hub directories"
+    mkdir -p ~/.config/UnityHub
+    mkdir -p ~/Unity/Hub/Editor
+    
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
     echo "::notice::Installing Unity Hub on macOS"
     
