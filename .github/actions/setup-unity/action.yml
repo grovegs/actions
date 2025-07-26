@@ -21,7 +21,7 @@ inputs:
 outputs:
   unity-version:
     description: The Unity version that was set up.
-    value: ${{ steps.get_unity_version.outputs.unity_version }}
+    value: ${{ steps.get_unity_version.outputs.version }}
   unity-path:
     description: The path to the Unity installation.
     value: ${{ steps.get_unity_path.outputs.unity_path }}
@@ -52,7 +52,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/check_unity.sh"
-        "${{ github.action_path }}/scripts/check_unity.sh" "${{ steps.get_unity_version.outputs.unity_version }}"
+        "${{ github.action_path }}/scripts/check_unity.sh" "${{ steps.get_unity_version.outputs.version }}"
 
     - name: 🔧 Prepare Cache Key
       id: prepare_cache_key
@@ -70,9 +70,9 @@ runs:
         path: |
           /Applications/Unity
           C:\Program Files\Unity
-        key: unity-direct-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}
+        key: unity-direct-${{ steps.get_unity_version.outputs.version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}
         restore-keys: |
-          unity-direct-${{ steps.get_unity_version.outputs.unity_version }}-${{ runner.os }}-
+          unity-direct-${{ steps.get_unity_version.outputs.version }}-${{ runner.os }}-
 
     - name: 🎮 Install Unity
       if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}
@@ -86,7 +86,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_path.sh"
-        "${{ github.action_path }}/scripts/get_unity_path.sh" "${{ steps.get_unity_version.outputs.unity_version }}"
+        "${{ github.action_path }}/scripts/get_unity_path.sh" "${{ steps.get_unity_version.outputs.version }}"
 
     - name: 🔎 Verify Unity Installation
       shell: bash
@@ -98,7 +98,7 @@ runs:
       shell: bash
       run: |
         echo "UNITY_PATH=${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_ENV
-        echo "UNITY_VERSION=${{ steps.get_unity_version.outputs.unity_version }}" >> $GITHUB_ENV
+        echo "UNITY_VERSION=${{ steps.get_unity_version.outputs.version }}" >> $GITHUB_ENV
 
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           echo "${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_PATH
