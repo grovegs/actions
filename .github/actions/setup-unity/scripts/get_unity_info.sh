@@ -40,8 +40,10 @@ read_from_project_version() {
 
     echo "::notice::Reading Unity version and revision from ${project_version_file}"
 
-    local version=$(grep "^m_EditorVersion:" "${project_version_file}" | sed -E 's/^m_EditorVersion:\s*//' | tr -d '\r\n ')
-    local revision=$(grep "^m_EditorVersionWithRevision:" "${project_version_file}" | sed -E 's/.*\(([a-f0-9]+)\)/\1/' | tr -d '\r\n ')
+    local version
+    local revision
+    version=$(grep "^m_EditorVersion:" "${project_version_file}" | sed -E 's/^m_EditorVersion:\s*//' | tr -d '\r\n ')
+    revision=$(grep "^m_EditorVersionWithRevision:" "${project_version_file}" | sed -E 's/.*\(([a-f0-9]+)\)/\1/' | tr -d '\r\n ')
 
     if [ -z "${version}" ]; then
         echo "::error::Failed to extract version from ${project_version_file}"
@@ -82,13 +84,13 @@ else
     revision=$(echo "$version_info" | cut -d'|' -f2)
 fi
 
-if ! echo "${version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+; then
+if ! echo "${version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
     echo "::error::Invalid Unity version format: ${version}"
     echo "::error::Expected format: major.minor.patch[stage][build] (e.g., 6000.1.9f1)"
     exit 1
 fi
 
-if ! echo "${revision}" | grep -qE '^[a-f0-9]{12}; then
+if ! echo "${revision}" | grep -qE '^[a-f0-9]{12}$'; then
     echo "::error::Invalid Unity revision format: ${revision}"
     echo "::error::Expected format: 12-character hexadecimal string (e.g., ed7b183fd33d)"
     exit 1
