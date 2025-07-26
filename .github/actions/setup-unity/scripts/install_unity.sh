@@ -18,6 +18,9 @@ fi
 
 if [[ "$RUNNER_OS" == "Windows" ]]; then
     UNITY_HUB="C:/Program Files/Unity Hub/Unity Hub.exe"
+    if [ ! -f "${UNITY_HUB}" ] && [ -f "C:/Program Files (x86)/Unity Hub/Unity Hub.exe" ]; then
+        UNITY_HUB="C:/Program Files (x86)/Unity Hub/Unity Hub.exe"
+    fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
     UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
 fi
@@ -30,12 +33,31 @@ if ! command -v unity-hub &>/dev/null && [ ! -f "${UNITY_HUB}" ]; then
 fi
 
 echo "::notice::Installing Unity ${unity_version} via Unity Hub"
-"${UNITY_HUB}" -- --headless install \
+
+if command -v unity-hub &>/dev/null; then
+    UNITY_HUB_CMD="unity-hub"
+else
+    UNITY_HUB_CMD="${UNITY_HUB}"
+fi
+
+echo "::notice::Using Unity Hub command: ${UNITY_HUB_CMD}"
+
+export DISPLAY=""
+export ELECTRON_RUN_AS_NODE=0
+
+"${UNITY_HUB_CMD}" -- --headless install \
     --version "${unity_version}" \
     --changeset auto \
+    --architecture "arm64" \
     || {
-        echo "::error::Failed to install Unity ${unity_version}"
-        exit 1
+        echo "::warning::Installation with arm64 architecture failed, trying without architecture specification"
+        "${UNITY_HUB_CMD}" -- --headless install \
+            --version "${unity_version}" \
+            --changeset auto \
+            || {
+                echo "::error::Failed to install Unity ${unity_version}"
+                exit 1
+            }
     }
 
 if [ -n "${modules}" ]; then
@@ -71,7 +93,7 @@ if [ -n "${modules}" ]; then
         esac
         
         echo "::notice::Installing module: ${module_id}"
-        "${UNITY_HUB}" -- --headless install-modules \
+        "${UNITY_HUB_CMD}" -- --headless install-modules \
             --version "${unity_version}" \
             --module "${module_id}" \
             || {
@@ -84,6 +106,6 @@ echo "::notice::Waiting for Unity installation to complete..."
 sleep 10
 
 echo "::notice::Verifying Unity installation..."
-"${UNITY_HUB}" -- --headless editors --installed || true
+"${UNITY_HUB_CMD}" -- --headless editors --installed || true
 
 echo "::notice::Unity ${unity_version} installation completed"

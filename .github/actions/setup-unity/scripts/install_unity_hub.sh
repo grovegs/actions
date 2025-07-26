@@ -69,27 +69,53 @@ elif [[ "$RUNNER_OS" == "Windows" ]]; then
     hub_url="https://public-cdn.cloud.unity3d.com/hub/prod/UnityHubSetup.exe"
     curl -L -o UnityHubSetup.exe "${hub_url}"
     
-    echo "::notice::Running Unity Hub installer..."
-    ./UnityHubSetup.exe /S
+    echo "::notice::Running Unity Hub installer silently..."
+    ./UnityHubSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- &
+    installer_pid=$!
     
-    echo "::notice::Waiting for installation to complete..."
-    sleep 30
+    echo "::notice::Waiting for installation to complete (timeout: 300 seconds)..."
+    timeout=300
+    elapsed=0
+    
+    while [ $elapsed -lt $timeout ]; do
+        if ! kill -0 $installer_pid 2>/dev/null; then
+            echo "::notice::Installer process completed"
+            break
+        fi
+        sleep 10
+        elapsed=$((elapsed + 10))
+        echo "::notice::Installation in progress... (${elapsed}s elapsed)"
+    done
+    
+    if kill -0 $installer_pid 2>/dev/null; then
+        echo "::warning::Installation timeout reached, terminating installer"
+        kill $installer_pid 2>/dev/null || true
+    fi
     
     hub_path="C:/Program Files/Unity Hub/Unity Hub.exe"
+    
+    echo "::notice::Waiting additional time for file system updates..."
+    sleep 15
 fi
 
 if [ ! -f "${hub_path}" ] && ! command -v unity-hub &>/dev/null; then
     echo "::error::Unity Hub installation failed"
     echo "::error::Expected path: ${hub_path}"
-    exit 1
+    
+    if [[ "$RUNNER_OS" == "Windows" ]]; then
+        echo "::notice::Checking alternative installation paths..."
+        if [ -f "C:/Program Files (x86)/Unity Hub/Unity Hub.exe" ]; then
+            hub_path="C:/Program Files (x86)/Unity Hub/Unity Hub.exe"
+            echo "::notice::Found Unity Hub at alternative path: ${hub_path}"
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
 fi
 
 echo "::notice::Unity Hub installed successfully"
 echo "hub_path=${hub_path}" >> "$GITHUB_OUTPUT"
 
-echo "::notice::Accepting Unity Hub license"
-if command -v unity-hub &>/dev/null; then
-    unity-hub -- --accept-license || true
-else
-    "${hub_path}" -- --accept-license || true
-fi
+echo "::notice::Skipping license acceptance to avoid compatibility issues in CI environment"
