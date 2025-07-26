@@ -37,9 +37,36 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
     hub_url="https://public-cdn.cloud.unity3d.com/hub/prod/UnityHubSetup.dmg"
     curl -L -o UnityHub.dmg "${hub_url}"
     
+    echo "::notice::Attaching DMG..."
     sudo hdiutil attach UnityHub.dmg
-    sudo cp -R "/Volumes/Unity Hub/Unity Hub.app" /Applications/
-    sudo hdiutil detach "/Volumes/Unity Hub"
+    
+    # Find the mounted volume dynamically
+    echo "::notice::Finding mounted Unity Hub volume..."
+    unity_hub_volume=$(find /Volumes -name "*Unity Hub*" -type d | head -1)
+    
+    if [ -z "$unity_hub_volume" ]; then
+        echo "::error::Could not find Unity Hub volume in /Volumes"
+        sudo hdiutil detach /dev/disk* 2>/dev/null || true
+        exit 1
+    fi
+    
+    echo "::notice::Found Unity Hub volume at: ${unity_hub_volume}"
+    
+    # Find Unity Hub.app within the volume
+    unity_hub_app=$(find "$unity_hub_volume" -name "Unity Hub.app" -type d | head -1)
+    
+    if [ -z "$unity_hub_app" ]; then
+        echo "::error::Could not find Unity Hub.app in ${unity_hub_volume}"
+        sudo hdiutil detach "$unity_hub_volume" 2>/dev/null || true
+        exit 1
+    fi
+    
+    echo "::notice::Found Unity Hub.app at: ${unity_hub_app}"
+    echo "::notice::Copying Unity Hub to Applications..."
+    sudo cp -R "$unity_hub_app" /Applications/
+    
+    echo "::notice::Detaching DMG..."
+    sudo hdiutil detach "$unity_hub_volume"
     rm UnityHub.dmg
     
     sudo ln -s "/Applications/Unity Hub.app/Contents/MacOS/Unity Hub" /usr/local/bin/unity-hub
