@@ -25,13 +25,13 @@ if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
     exit 1
 fi
 
-if ! echo "${version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+; then
+if ! echo "${version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+$'; then
     echo "::error::Invalid Unity version format: ${version}"
     echo "::error::Expected format: major.minor.patch[stage][build] (e.g., 6000.1.9f1)"
     exit 1
 fi
 
-if ! echo "${changeset}" | grep -qE '^[a-f0-9]{12}; then
+if ! echo "${changeset}" | grep -qE '^[a-f0-9]{12}$'; then
     echo "::error::Invalid Unity changeset format: ${changeset}"
     echo "::error::Expected format: 12-character hexadecimal string (e.g., ed7b183fd33d)"
     exit 1
