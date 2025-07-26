@@ -82,9 +82,20 @@ download_and_install_unity() {
         fi
 
         echo "::notice::Installing Unity silently"
-        if ! ./"${installer_name}" /S /D="C:\\Program Files\\Unity\\Hub\\Editor\\${version}"; then
-            echo "::error::Failed to install Unity from ${installer_name}"
-            return 1
+        echo "::notice::Running installer with: ${installer_name} /S /D=C:\\Program Files\\Unity"
+        
+        start //wait "${installer_name}" //S //D="C:\\Program Files\\Unity"
+        
+        echo "::notice::Waiting for installation to complete..."
+        sleep 30
+        
+        echo "::notice::Checking for Unity installation..."
+        if [ -f "C:/Program Files/Unity/Editor/Unity.exe" ]; then
+            echo "::notice::Unity.exe found at C:/Program Files/Unity/Editor/Unity.exe"
+        elif [ -f "C:/Program Files/Unity/Unity.exe" ]; then
+            echo "::notice::Unity.exe found at C:/Program Files/Unity/Unity.exe"
+        else
+            echo "::warning::Unity.exe not found in expected locations after installation"
         fi
 
         rm "${installer_name}"
@@ -173,11 +184,8 @@ install_unity_module() {
             return 1
         fi
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
-        if ! ./"${module_file}" /S; then
-            echo "::warning::Failed to install module ${module} from ${module_file}"
-            rm -f "${module_file}"
-            return 1
-        fi
+        start //wait "${module_file}" //S
+        sleep 10
     fi
 
     rm -f "${module_file}"

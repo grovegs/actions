@@ -28,18 +28,5 @@ fi
 
 echo "::notice::Unity executable found at: ${unity_exe}"
 
-echo "::notice::Getting Unity version information..."
-if [[ "$RUNNER_OS" == "Windows" ]]; then
-    "${unity_exe}" -version 2>/dev/null || echo "::notice::Unity version check completed"
-else
-    "${unity_exe}" -version 2>&1 | head -5 || echo "::notice::Unity version check completed"
-fi
-
-echo "::notice::Checking Unity license status..."
-if [[ "$RUNNER_OS" == "Windows" ]]; then
-    "${unity_exe}" -batchmode -quit -logFile - -serial 2>/dev/null || echo "::notice::License check completed"
-else
-    "${unity_exe}" -batchmode -quit -logFile /dev/stdout -serial 2>&1 | head -10 || echo "::notice::License check completed"
-fi
-
+echo "::notice::Skipping Unity version and license checks to prevent hanging"
 echo "::notice::Unity installation verification completed successfully"

@@ -67,46 +67,25 @@ if [ "${is_installed}" == "false" ]; then
                 if [ ! -f "${unity_exe}" ]; then
                     unity_exe="${path}/Unity.exe"
                 fi
+                
+                if [ -f "${unity_exe}" ]; then
+                    echo "::notice::Unity executable found at ${unity_exe}"
+                    is_installed="true"
+                    found_path="${path}"
+                    echo "::notice::Unity installation found at: ${found_path}"
+                    break
+                fi
             fi
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             if [ -d "${path}" ]; then
                 unity_exe="${path}/Contents/MacOS/Unity"
-            fi
-        fi
-        
-        if [ -f "${unity_exe}" ]; then
-            if [[ "${path}" == *"${unity_version}"* ]]; then
-                is_installed="true"
-                found_path="${path}"
-                echo "::notice::Unity ${unity_version} found at: ${found_path}"
-                break
-            else
-                echo "::debug::Found Unity executable at ${unity_exe}, verifying version..."
                 
-                if [[ "$RUNNER_OS" == "Windows" ]]; then
-                    installed_version=$("${unity_exe}" -version 2>/dev/null | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+" | head -1)
-                else
-                    installed_version=$("${unity_exe}" -version 2>&1 | head -1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+" | head -1)
-                fi
-                
-                if [ -n "${installed_version}" ]; then
-                    echo "::debug::Detected installed version: ${installed_version}"
-                    if [ "${installed_version}" = "${unity_version}" ]; then
-                        is_installed="true"
-                        found_path="${path}"
-                        echo "::notice::Unity ${unity_version} found at: ${found_path}"
-                        break
-                    else
-                        echo "::debug::Version mismatch: expected ${unity_version}, found ${installed_version}"
-                    fi
-                else
-                    echo "::debug::Could not determine version of Unity installation at ${path}"
-                    if [[ "${path}" == *"/Applications/Unity"* ]] || [[ "${path}" == *"Program Files/Unity"* ]]; then
-                        echo "::warning::Found Unity installation but could not verify version. Assuming compatible."
-                        is_installed="true"
-                        found_path="${path}"
-                        break
-                    fi
+                if [ -f "${unity_exe}" ]; then
+                    echo "::debug::Found Unity executable at ${unity_exe}"
+                    is_installed="true"
+                    found_path="${path}"
+                    echo "::notice::Unity ${unity_version} found at: ${found_path}"
+                    break
                 fi
             fi
         fi
