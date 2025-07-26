@@ -3,7 +3,7 @@ description: Downloads and installs Unity Editor directly for Windows and macOS 
 
 inputs:
   unity-version:
-    description: The Unity version to install (e.g., "6000.1.9f1", "2023.3.40f1"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
+    description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
     required: false
   unity-modules:
     description: Additional Unity modules to install (comma-separated list, e.g., "android,ios,webgl").
@@ -45,7 +45,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
-        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project-path }}"
+        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
 
     - name: 🔍 Check Unity Installation
       id: check_unity

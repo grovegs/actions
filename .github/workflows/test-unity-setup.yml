@@ -50,7 +50,7 @@ jobs:
       - name: Test Unity Setup with Specific Version
         uses: ./.github/actions/setup-unity
         with:
-          unity-version: "6000.1.9f1"
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
 
       - name: Verify Version
         run: |
@@ -65,7 +65,7 @@ jobs:
       - name: Test Unity Setup with Modules
         uses: ./.github/actions/setup-unity
         with:
-          unity-version: "6000.1.9f1"
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
           unity-modules: "webgl"
 
       - name: Check Modules
@@ -99,7 +99,7 @@ jobs:
       - name: Test Unity Setup without Cache
         uses: ./.github/actions/setup-unity
         with:
-          unity-version: "6000.1.9f1"
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
           cache: "false"
 
   test-platform-validation:
@@ -114,7 +114,7 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/setup-unity
         with:
-          unity-version: "6000.1.9f1"
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
 
       - name: Verify Platform Validation Failed
         if: steps.test-unsupported.outcome != 'failure'
@@ -134,15 +134,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Test Invalid Version (Should Fail)
-        id: test-invalid
+      - name: Test Invalid Version Format (Should Fail)
+        id: test-invalid-format
         continue-on-error: true
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "invalid-version"
 
-      - name: Verify Invalid Version Failed
-        if: steps.test-invalid.outcome != 'failure'
+      - name: Verify Invalid Format Failed
+        if: steps.test-invalid-format.outcome != 'failure'
         run: |
           echo "Action should have failed with invalid version format"
+          exit 1
+
+      - name: Test Missing Revision (Should Fail)
+        id: test-missing-revision
+        continue-on-error: true
+        uses: ./.github/actions/setup-unity
+        with:
+          unity-version: "6000.1.9f1"
+
+      - name: Verify Missing Revision Failed
+        if: steps.test-missing-revision.outcome != 'failure'
+        run: |
+          echo "Action should have failed with missing revision"
           exit 1

@@ -9,9 +9,31 @@ version="$1"
 changeset="$2"
 modules="$3"
 
+if [ -z "$version" ]; then
+    echo "::error::Unity version is required"
+    exit 1
+fi
+
+if [ -z "$changeset" ]; then
+    echo "::error::Unity changeset/revision is required"
+    exit 1
+fi
+
 if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
     echo "::error::Unity is only supported on Windows and macOS platforms"
     echo "::error::Current platform: $RUNNER_OS"
+    exit 1
+fi
+
+if ! echo "${version}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z][0-9]+; then
+    echo "::error::Invalid Unity version format: ${version}"
+    echo "::error::Expected format: major.minor.patch[stage][build] (e.g., 6000.1.9f1)"
+    exit 1
+fi
+
+if ! echo "${changeset}" | grep -qE '^[a-f0-9]{12}; then
+    echo "::error::Invalid Unity changeset format: ${changeset}"
+    echo "::error::Expected format: 12-character hexadecimal string (e.g., ed7b183fd33d)"
     exit 1
 fi
 
@@ -28,16 +50,17 @@ download_and_install_unity() {
         local download_url="${base_url}/MacEditorInstaller/${installer_name}"
 
         echo "::notice::Downloading Unity for macOS from ${download_url}"
-        curl -L -o "${installer_name}" "${download_url}" || {
-            echo "::error::Failed to download Unity installer"
+        if ! curl -L -o "${installer_name}" "${download_url}"; then
+            echo "::error::Failed to download Unity installer from ${download_url}"
+            echo "::error::Please verify that Unity version ${version} with changeset ${changeset} exists"
             return 1
-        }
+        fi
 
         echo "::notice::Installing Unity silently"
-        sudo installer -pkg "${installer_name}" -target / || {
-            echo "::error::Failed to install Unity"
+        if ! sudo installer -pkg "${installer_name}" -target /; then
+            echo "::error::Failed to install Unity from ${installer_name}"
             return 1
-        }
+        fi
 
         rm "${installer_name}"
 
@@ -46,19 +69,23 @@ download_and_install_unity() {
         local download_url="${base_url}/Windows64EditorInstaller/${installer_name}"
 
         echo "::notice::Downloading Unity for Windows from ${download_url}"
-        curl -L -o "${installer_name}" "${download_url}" || {
-            echo "::error::Failed to download Unity installer"
+        if ! curl -L -o "${installer_name}" "${download_url}"; then
+            echo "::error::Failed to download Unity installer from ${download_url}"
+            echo "::error::Please verify that Unity version ${version} with changeset ${changeset} exists"
             return 1
-        }
+        fi
 
         echo "::notice::Installing Unity silently"
-        ./"${installer_name}" /S /D="C:\\Program Files\\Unity\\Hub\\Editor\\${version}" || {
-            echo "::error::Failed to install Unity"
+        if ! ./"${installer_name}" /S /D="C:\\Program Files\\Unity\\Hub\\Editor\\${version}"; then
+            echo "::error::Failed to install Unity from ${installer_name}"
             return 1
-        }
+        fi
 
         rm "${installer_name}"
     fi
+
+    echo "::notice::Unity ${version} installed successfully"
+    return 0
 }
 
 install_unity_modules() {
@@ -77,7 +104,10 @@ install_unity_modules() {
 
     for module in "${MODULE_ARRAY[@]}"; do
         module=$(echo "${module}" | xargs)
-        install_unity_module "${version}" "${changeset}" "${module}"
+        echo "::notice::Installing module: ${module}"
+        if ! install_unity_module "${version}" "${changeset}" "${module}"; then
+            echo "::warning::Failed to install module: ${module}"
+        fi
     done
 }
 
@@ -86,18 +116,18 @@ install_unity_module() {
     local changeset="$2"
     local module="$3"
 
-    echo "::notice::Installing module: ${module}"
-
     local base_url="https://download.unity3d.com/download_unity/${changeset}"
+    local module_file=""
+    local module_url=""
 
     case "${module}" in
         "android")
             if [[ "$RUNNER_OS" == "macOS" ]]; then
-                local module_file="UnitySetup-Android-Support-${version}.pkg"
-                local module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-${version}.pkg"
+                module_file="UnitySetup-Android-Support-${version}.pkg"
+                module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-${version}.pkg"
             else
-                local module_file="UnitySetup-Android-Support-${version}.exe"
-                local module_url="${base_url}/TargetSupportInstaller/UnitySetup-Android-Support-for-Editor-${version}.exe"
+                module_file="UnitySetup-Android-Support-${version}.exe"
+                module_url="${base_url}/TargetSupportInstaller/UnitySetup-Android-Support-for-Editor-${version}.exe"
             fi
             ;;
         "ios")
@@ -105,50 +135,65 @@ install_unity_module() {
                 echo "::warning::iOS support is only available on macOS"
                 return 0
             fi
-            local module_file="UnitySetup-iOS-Support-${version}.pkg"
-            local module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-iOS-Support-for-Editor-${version}.pkg"
+            module_file="UnitySetup-iOS-Support-${version}.pkg"
+            module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-iOS-Support-for-Editor-${version}.pkg"
             ;;
         "webgl")
             if [[ "$RUNNER_OS" == "macOS" ]]; then
-                local module_file="UnitySetup-WebGL-Support-${version}.pkg"
-                local module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.pkg"
+                module_file="UnitySetup-WebGL-Support-${version}.pkg"
+                module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.pkg"
             else
-                local module_file="UnitySetup-WebGL-Support-${version}.exe"
-                local module_url="${base_url}/TargetSupportInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.exe"
+                module_file="UnitySetup-WebGL-Support-${version}.exe"
+                module_url="${base_url}/TargetSupportInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.exe"
             fi
             ;;
         *)
-            echo "::warning::Unknown module: ${module}"
+            echo "::warning::Unknown or unsupported module: ${module}"
+            echo "::warning::Supported modules: android, ios (macOS only), webgl"
             return 0
             ;;
     esac
 
     echo "::notice::Downloading module from ${module_url}"
-    curl -L -o "${module_file}" "${module_url}" || {
-        echo "::warning::Failed to download module ${module}"
+    if ! curl -L -o "${module_file}" "${module_url}"; then
+        echo "::warning::Failed to download module ${module} from ${module_url}"
         return 1
-    }
-
-    if [[ "$RUNNER_OS" == "macOS" ]]; then
-        sudo installer -pkg "${module_file}" -target / || {
-            echo "::warning::Failed to install module ${module}"
-        }
-    elif [[ "$RUNNER_OS" == "Windows" ]]; then
-        ./"${module_file}" /S || {
-            echo "::warning::Failed to install module ${module}"
-        }
     fi
 
-    rm "${module_file}"
+    if [[ "$RUNNER_OS" == "macOS" ]]; then
+        if ! sudo installer -pkg "${module_file}" -target /; then
+            echo "::warning::Failed to install module ${module} from ${module_file}"
+            rm -f "${module_file}"
+            return 1
+        fi
+    elif [[ "$RUNNER_OS" == "Windows" ]]; then
+        if ! ./"${module_file}" /S; then
+            echo "::warning::Failed to install module ${module} from ${module_file}"
+            rm -f "${module_file}"
+            return 1
+        fi
+    fi
+
+    rm -f "${module_file}"
+    echo "::notice::Module ${module} installed successfully"
+    return 0
 }
 
 main() {
-    download_and_install_unity "${version}" "${changeset}" || {
+    echo "::group::Installing Unity ${version}"
+    
+    if ! download_and_install_unity "${version}" "${changeset}"; then
         echo "::error::Unity installation failed"
         exit 1
-    }
+    fi
+    
+    echo "::endgroup::"
 
-    install_unity_modules "${version}" "${changeset}" "${modules}"
+    if [ -n "${modules}" ]; then
+        echo "::group::Installing Unity Modules"
+        install_unity_modules "${version}" "${changeset}" "${modules}"
+        echo "::endgroup::"
+    fi
 
     echo "::notice::Unity ${version} installation completed successfully"
 }
