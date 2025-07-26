@@ -38,12 +38,12 @@ read_from_project_version() {
         exit 1
     fi
 
-    echo "::notice::Reading Unity version and revision from ${project_version_file}"
-
     local version
     local revision
     version=$(grep "^m_EditorVersion:" "${project_version_file}" | sed -E 's/^m_EditorVersion:\s*//' | tr -d '\r\n ')
     revision=$(grep "^m_EditorVersionWithRevision:" "${project_version_file}" | sed -E 's/.*\(([a-f0-9]+)\)/\1/' | tr -d '\r\n ')
+    
+    echo "::notice::Reading Unity version and revision from ${project_version_file}" >&2
 
     if [ -z "${version}" ]; then
         echo "::error::Failed to extract version from ${project_version_file}"
