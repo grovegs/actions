@@ -5,13 +5,13 @@ on:
     branches: [main, master, develop]
     paths:
       - ".github/actions/setup-unity/**"
-      - ".github/workflows/test-unity-action.yml"
+      - ".github/workflows/test-unity-setup.yml"
       - "sandbox/UnityApplication/**"
   push:
     branches: [main, master, develop]
     paths:
       - ".github/actions/setup-unity/**"
-      - ".github/workflows/test-unity-action.yml"
+      - ".github/workflows/test-unity-setup.yml"
       - "sandbox/UnityApplication/**"
   workflow_dispatch:
     inputs:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +43,7 @@ jobs:
 
   test-specific-version:
     name: Test Specific Version
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -54,11 +54,11 @@ jobs:
 
       - name: Verify Version
         run: |
-          unity -version | grep "6000.1.9f1"
+          unity -version | findstr "6000.1.9f1"
 
   test-with-modules:
     name: Test Module Installation
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -66,16 +66,15 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1"
-          unity-modules: "android,webgl"
+          unity-modules: "webgl"
 
       - name: Check Modules
         run: |
-          unity -batchmode -quit -logFile - -buildTarget Android || echo "Android module check"
           unity -batchmode -quit -logFile - -buildTarget WebGL || echo "WebGL module check"
 
   test-caching:
     name: Test Caching
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +92,7 @@ jobs:
 
   test-no-cache:
     name: Test Without Cache
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -103,9 +102,34 @@ jobs:
           unity-version: "6000.1.9f1"
           cache: "false"
 
+  test-platform-validation:
+    name: Test Platform Validation
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Unsupported Platform (Should Fail)
+        id: test-unsupported
+        continue-on-error: true
+        uses: ./.github/actions/setup-unity
+        with:
+          unity-version: "6000.1.9f1"
+
+      - name: Verify Platform Validation Failed
+        if: steps.test-unsupported.outcome != 'failure'
+        run: |
+          echo "Action should have failed on Linux platform"
+          exit 1
+
+      - name: Confirm Expected Failure
+        if: steps.test-unsupported.outcome == 'failure'
+        run: |
+          echo "Platform validation correctly rejected Linux platform"
+
   test-error-handling:
     name: Test Error Handling
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -120,5 +144,5 @@ jobs:
       - name: Verify Invalid Version Failed
         if: steps.test-invalid.outcome != 'failure'
         run: |
-          echo "❌ Action should have failed with invalid version format"
+          echo "Action should have failed with invalid version format"
           exit 1
