@@ -42,7 +42,6 @@ echo "::notice::Installing Unity ${version} (changeset: ${changeset}) directly (
 download_and_install_unity() {
     local version="$1"
     local changeset="$2"
-
     local base_url="https://download.unity3d.com/download_unity/${changeset}"
 
     if [[ "$RUNNER_OS" == "macOS" ]]; then
@@ -63,10 +62,8 @@ download_and_install_unity() {
         fi
 
         sleep 5
-
         echo "::notice::Searching for Unity.app in /Applications..."
         find /Applications -name "Unity.app" -type d 2>/dev/null | head -10
-
         rm "${installer_name}"
 
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -80,20 +77,28 @@ download_and_install_unity() {
             return 1
         fi
 
-        echo "::notice::Installing Unity silently"
-        install_dir="C:\\Program Files\\Unity-${version}"
+        echo "::notice::Installing Unity silently. This may take several minutes..."
+        local install_dir="C:\\Program Files\\Unity-${version}"
         echo "::notice::Installing to: ${install_dir}"
         
-        cmd //c "\"${installer_name}\" /S /D=${install_dir}"
+        cmd //c "start /wait \"\" \"${installer_name}\" /S /D=\"${install_dir}\""
         
-        echo "::notice::Waiting for installation to complete..."
-        sleep 30
-        
-        echo "::notice::Checking for Unity installation..."
+        local exit_code=$?
+        if [ $exit_code -ne 0 ]; then
+            echo "::error::Unity installer exited with a non-zero code: $exit_code"
+            rm "${installer_name}"
+            return 1
+        fi
+
+        echo "::notice::Installation process finished. Verifying installation..."
         if [ -f "${install_dir}/Editor/Unity.exe" ]; then
-            echo "::notice::Unity.exe found at ${install_dir}/Editor/Unity.exe"
+            echo "::notice::Unity.exe found at ${install_dir}/Editor/Unity.exe. Verification successful."
         else
+            echo "::error::Verification failed. Unity.exe not found at the expected location after installation."
+            echo "::error::Searched in: ${install_dir}/Editor/Unity.exe"
             find "C:/Program Files" -name "Unity.exe" -type f 2>/dev/null | grep -i editor | head -5
+            rm "${installer_name}"
+            return 1
         fi
 
         rm "${installer_name}"
@@ -114,7 +119,6 @@ install_unity_modules() {
     fi
 
     echo "::notice::Installing Unity modules: ${modules}"
-
     IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
 
     for module in "${MODULE_ARRAY[@]}"; do
@@ -182,8 +186,15 @@ install_unity_module() {
             return 1
         fi
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
-        cmd //c "\"${module_file}\" /S"
-        sleep 10
+        echo "::notice::Installing module ${module} silently..."
+        cmd //c "start /wait \"\" \"${module_file}\" /S"
+
+        local exit_code=$?
+        if [ $exit_code -ne 0 ]; then
+            echo "::warning::Module installer for ${module} exited with a non-zero code: $exit_code"
+            rm -f "${module_file}"
+            return 1
+        fi
     fi
 
     rm -f "${module_file}"
@@ -193,12 +204,10 @@ install_unity_module() {
 
 main() {
     echo "::group::Installing Unity ${version}"
-    
     if ! download_and_install_unity "${version}" "${changeset}"; then
         echo "::error::Unity installation failed"
         exit 1
     fi
-    
     echo "::endgroup::"
 
     if [ -n "${modules}" ]; then
