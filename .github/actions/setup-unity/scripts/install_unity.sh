@@ -32,9 +32,12 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
         echo "::error::Failed to extract Unity Editor archive."
         exit 1
     fi
+    
+    unity_executable="${install_location}/Editor/Unity"
+    chmod +x "${unity_executable}"
+    
     if [ -n "${modules}" ]; then
         echo "::notice::Installing Linux modules: ${modules}"
-        unity_executable="${install_location}/Editor/Unity"
         install_command=(
             "${unity_executable}"
             -install-modules
