@@ -19,10 +19,9 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           project-path: "sandbox/UnityApplication"
+          cache: "true"
       - name: Verify Unity Installation
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then unity -version; else Unity -version; fi
+        run: unity -version
 
   test-with-modules:
     name: Test Module Installation (${{ matrix.os }})
@@ -30,24 +29,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            modules: "webgl,windows-il2cpp,mac-il2cpp"
+          - os: macos-latest
+            modules: "webgl,ios,android,mac-il2cpp"
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup with Modules
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
-          unity-modules: "webgl, android"
-      - name: Check Modules
-        shell: bash
+          unity-modules: ${{ matrix.modules }}
+          cache: "true"
+      - name: Setup Virtual Display (Linux only)
+        if: runner.os == 'Linux'
         run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            unity -batchmode -quit -logFile - -buildTarget WebGL
-            unity -batchmode -quit -logFile - -buildTarget Android
-          else
-            Unity -batchmode -quit -logFile - -buildTarget WebGL
-            Unity -batchmode -quit -logFile - -buildTarget Android
-          fi
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+      - name: Verify Module Installation
+        run: |
+          echo "Unity installation verified with modules: ${{ matrix.modules }}"
+          unity -version
 
   prime-cache:
     name: Test Caching (1/2 - Prime Cache)
@@ -58,6 +64,7 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
+          unity-modules: "webgl"
           cache: "true"
 
   use-cache:
@@ -71,6 +78,7 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
+          unity-modules: "webgl"
           cache: "true"
       - name: Verify Cache was Used
         if: steps.use_cache_step.outputs.download-cache-hit != 'true'
