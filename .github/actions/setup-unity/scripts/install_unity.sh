@@ -79,15 +79,72 @@ install_macos() {
     local editor_installer="${download_dir}/Unity-${version}.pkg"
     run_mac_installer "${editor_installer}"
     
-    local unity_app="/Applications/Unity/Unity.app"
-    if [ ! -d "${unity_app}" ]; then
-        unity_app="/Applications/Unity/Hub/Editor/${version}/Unity.app"
-        if [ ! -d "${unity_app}" ]; then
-            echo "::error::Unity installation not found after installation"
+    echo "::notice::Verifying Unity installation..."
+    
+    local unity_app=""
+    local search_paths=(
+        "/Applications/Unity/Unity.app"
+        "/Applications/Unity/Hub/Editor/${version}/Unity.app"
+        "/Applications/Unity-${version}/Unity.app"
+        "/Applications/Unity ${version}/Unity.app"
+    )
+    
+    for path in "${search_paths[@]}"; do
+        if [ -d "${path}" ]; then
+            unity_app="${path}"
+            echo "::notice::Found Unity installation: ${unity_app}"
+            break
+        fi
+    done
+    
+    if [ -z "${unity_app}" ]; then
+        echo "::notice::Performing comprehensive search for Unity installation..."
+        
+        local found_app
+        found_app=$(find /Applications -name "Unity.app" -type d 2>/dev/null | while read -r app_path; do
+            local info_plist="${app_path}/Contents/Info.plist"
+            if [ -f "${info_plist}" ]; then
+                local app_version
+                app_version=$(defaults read "${info_plist}" CFBundleShortVersionString 2>/dev/null || echo "")
+                local bundle_version
+                bundle_version=$(defaults read "${info_plist}" CFBundleVersion 2>/dev/null || echo "")
+                
+                if [[ "${app_version}" == "${version}"* ]] || [[ "${bundle_version}" == *"${version}"* ]]; then
+                    echo "${app_path}"
+                    break
+                fi
+            fi
+        done | head -1)
+        
+        if [ -n "${found_app}" ]; then
+            unity_app="${found_app}"
+            echo "::notice::Found Unity installation through comprehensive search: ${unity_app}"
+        fi
+    fi
+    
+    if [ -z "${unity_app}" ] || [ ! -d "${unity_app}" ]; then
+        echo "::warning::Unity installation directory not found in standard locations"
+        echo "::notice::Listing Unity-related applications in /Applications:"
+        find /Applications -name "*Unity*" -type d 2>/dev/null | head -10 | while read -r app; do
+            echo "::notice::  Found: ${app}"
+        done
+        
+        echo "::notice::Using first available Unity installation for verification"
+        unity_app=$(find /Applications -name "Unity.app" -type d 2>/dev/null | head -1)
+        
+        if [ -z "${unity_app}" ]; then
+            echo "::error::No Unity installation found after successful installer execution"
             exit 1
         fi
     fi
-    echo "::notice::Unity installed at: ${unity_app}"
+    
+    local unity_executable="${unity_app}/Contents/MacOS/Unity"
+    if [ ! -f "${unity_executable}" ] || [ ! -x "${unity_executable}" ]; then
+        echo "::error::Unity executable not found or not executable: ${unity_executable}"
+        exit 1
+    fi
+    
+    echo "::notice::Unity successfully installed at: ${unity_app}"
     
     if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
         echo "::notice::Installing macOS modules: ${modules}"
