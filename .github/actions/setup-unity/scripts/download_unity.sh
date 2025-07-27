@@ -1,38 +1,43 @@
 #!/bin/bash
 set -e
-if [ "$#" -ne 3 ]; then echo "::error::Usage: $0 <version> <modules> <download_dir>"; exit 1; fi
-version="$1"
-modules="$2"
-download_dir="$3"
-run_installer() {
-    local installer_path="$1"; echo "::notice::Running installer/extractor: ${installer_path}"
-    if [[ "$RUNNER_OS" == "macOS" ]]; then
-        sudo installer -pkg "${installer_path}" -target /
-    elif [[ "$RUNNER_OS" == "Linux" ]]; then
-        install_location="$HOME/Unity-${version}"
-        mkdir -p "${install_location}"
-        tar -xf "${installer_path}" -C "${install_location}"
-    fi
-    local exit_code=$?; if [ "$exit_code" -ne 0 ]; then echo "::error::Process exited with code: ${exit_code}"; exit 1; fi
-}
-if [[ "$RUNNER_OS" == "macOS" ]]; then editor_installer="${download_dir}/Unity-${version}.pkg";
-elif [[ "$RUNNER_OS" == "Linux" ]]; then editor_installer="${download_dir}/Unity.tar.xz";
+if [ "$#" -ne 4 ]; then
+    echo "::error::Usage: $0 <version> <changeset> <modules> <download_dir>"
+    exit 1
 fi
-run_installer "${editor_installer}"
+version="$1"
+changeset="$2"
+modules="$3"
+download_dir="$4"
+mkdir -p "${download_dir}"
+download_file() {
+    local url="$1"; local file_path="$2"; echo "::notice::Downloading from ${url} to ${file_path}"
+    if ! curl -L -o "${file_path}" "${url}"; then echo "::error::Failed to download from ${url}"; exit 1; fi
+}
+base_url="https://download.unity3d.com/download_unity/${changeset}"
+if [[ "$RUNNER_OS" == "macOS" ]]; then
+    echo "::notice::Forcing Apple Silicon (arm64) download for macOS."
+    mac_editor_segment="MacEditorInstallerArm64"
+    mac_module_segment="MacEditorTargetInstallerArm64"
+    editor_url="${base_url}/${mac_editor_segment}/Unity-${version}.pkg"
+elif [[ "$RUNNER_OS" == "Linux" ]]; then
+    editor_url="${base_url}/LinuxEditorInstaller/Unity.tar.xz"
+fi
+download_file "${editor_url}" "${download_dir}/$(basename "${editor_url}")"
 if [ -n "${modules}" ]; then
     IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
     for module in "${MODULE_ARRAY[@]}"; do
-        module_trimmed=$(echo "${module}" | xargs); installer_name=""
+        module_trimmed=$(echo "${module}" | xargs); module_url=""
         case "${module_trimmed}" in
-            "android") if [[ "$RUNNER_OS" == "Linux" ]]; then installer_name="Unity-Linux-Android-Support-for-Editor-${version}.tar.xz"; else installer_name="UnitySetup-Android-Support-for-Editor-${version}"; fi;;
-            "ios") if [[ "$RUNNER_OS" == "macOS" ]]; then installer_name="UnitySetup-iOS-Support-for-Editor-${version}"; fi;;
-            "webgl") if [[ "$RUNNER_OS" == "Linux" ]]; then installer_name="Unity-Linux-WebGL-Support-for-Editor-${version}.tar.xz"; else installer_name="UnitySetup-WebGL-Support-for-Editor-${version}"; fi;;
+            "android")
+                if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${mac_module_segment}/UnitySetup-Android-Support-for-Editor-${version}.pkg";
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/TargetSupportInstaller/Unity-Linux-Android-Support-for-Editor-${version}.tar.xz"; fi;;
+            "ios")
+                if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${mac_module_segment}/UnitySetup-iOS-Support-for-Editor-${version}.pkg"; fi;;
+            "webgl")
+                if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${mac_module_segment}/UnitySetup-WebGL-Support-for-Editor-${version}.pkg";
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/TargetSupportInstaller/Unity-Linux-WebGL-Support-for-Editor-${version}.tar.xz"; fi;;
+            *) echo "::warning::Skipping unknown module: ${module_trimmed}";;
         esac
-        if [ -n "$installer_name" ]; then
-            if [[ "$RUNNER_OS" == "macOS" ]]; then module_installer="${download_dir}/${installer_name}.pkg";
-            elif [[ "$RUNNER_OS" == "Linux" ]]; then module_installer="${download_dir}/${installer_name}";
-            fi
-            if [ -f "$module_installer" ]; then run_installer "$module_installer"; else echo "::warning::Could not find installer for module ${module_trimmed}"; fi
-        fi
+        if [ -n "${module_url}" ]; then download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"; fi
     done
 fi
