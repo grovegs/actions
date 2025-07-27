@@ -76,13 +76,15 @@ if [ -z "${unity_path}" ]; then
         echo "  - ${path}"
     done
     
+    # === MODIFIED BLOCK START ===
     if [[ "$RUNNER_OS" == "Windows" ]]; then
-        echo "::error::Current Program Files contents:"
-        ls -la "C:/Program Files/" | grep -i unity | head -10
+        echo "::error::Current Unity-related Program Files contents (found with 'find'):"
+        find "C:/Program Files/" -mindepth 1 -maxdepth 1 -iname "*unity*"
     elif [[ "$RUNNER_OS" == "macOS" ]]; then
-        echo "::error::Current /Applications directory contents:"
-        ls -la /Applications/ | head -20
+        echo "::error::Current /Applications directory contents (found with 'find'):"
+        find /Applications/ -mindepth 1 -maxdepth 1 | head -20
     fi
+    # === MODIFIED BLOCK END ===
     
     exit 1
 fi
