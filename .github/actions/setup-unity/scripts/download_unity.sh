@@ -16,7 +16,6 @@ download_file() {
 base_url="https://download.unity3d.com/download_unity/${changeset}"
 
 if [[ "$RUNNER_OS" == "macOS" ]]; then
-    echo "::notice::Forcing Apple Silicon (arm64) download for macOS."
     editor_url="${base_url}/MacEditorInstallerArm64/Unity-${version}.pkg"
 elif [[ "$RUNNER_OS" == "Linux" ]]; then
     editor_url="${base_url}/LinuxEditorInstaller/Unity.tar.xz"
@@ -29,19 +28,18 @@ if [ -n "${modules}" ]; then
     elif [[ "$RUNNER_OS" == "Linux" ]]; then
         module_path_segment="TargetSupportInstaller"
     fi
-
     IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
     for module in "${MODULE_ARRAY[@]}"; do
         module_trimmed=$(echo "${module}" | xargs); module_url=""
         case "${module_trimmed}" in
             "android")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-Android-Support-for-Editor-${version}.pkg";
-                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-Android-Support-for-Editor-${version}.tar.xz"; fi;;
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Android.tar.xz"; fi;;
             "ios")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-iOS-Support-for-Editor-${version}.pkg"; fi;;
             "webgl")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-WebGL-Support-for-Editor-${version}.pkg";
-                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-WebGL-Support-for-Editor-${version}.tar.xz"; fi;;
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/WebGL.tar.xz"; fi;;
             *) echo "::warning::Skipping unknown module: ${module_trimmed}";;
         esac
         if [ -n "${module_url}" ]; then download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"; fi
