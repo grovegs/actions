@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+if [ "$#" -ne 4 ]; then echo "::error::Usage: $0 <version> <changeset> <modules> <download_dir>"; exit 1; fi
+version="$1"
+changeset="$2"
+modules="$3"
+download_dir="$4"
+mkdir -p "${download_dir}"
+download_file() {
+    local url="$1"; local file_path="$2"; echo "::notice::Downloading from ${url} to ${file_path}"
+    if ! curl -L -o "${file_path}" "${url}"; then echo "::error::Failed to download from ${url}"; exit 1; fi
+}
+base_url="https://download.unity3d.com/download_unity/${changeset}"
+if [[ "$RUNNER_OS" == "macOS" ]]; then editor_url="${base_url}/MacEditorInstaller/Unity-${version}.pkg"; else editor_url="${base_url}/Windows64EditorInstaller/UnitySetup64-${version}.exe"; fi
+download_file "${editor_url}" "${download_dir}/$(basename "${editor_url}")"
+if [ -n "${modules}" ]; then
+    IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
+    for module in "${MODULE_ARRAY[@]}"; do
+        module_trimmed=$(echo "${module}" | xargs); module_url=""
+        case "${module_trimmed}" in
+            "android") if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-${version}.pkg"; else module_url="${base_url}/TargetSupportInstaller/UnitySetup-Android-Support-for-Editor-${version}.exe"; fi;;
+            "ios") if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-iOS-Support-for-Editor-${version}.pkg"; fi;;
+            "webgl") if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/MacEditorTargetInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.pkg"; else module_url="${base_url}/TargetSupportInstaller/UnitySetup-WebGL-Support-for-Editor-${version}.exe"; fi;;
+            *) echo "::warning::Skipping unknown module: ${module_trimmed}";;
+        esac
+        if [ -n "${module_url}" ]; then download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"; fi
+    done
+fi

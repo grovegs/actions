@@ -1,112 +1,71 @@
 name: Setup Unity
-description: Downloads and installs Unity Editor directly for Windows and macOS platforms. This action bypasses Unity Hub to ensure compatibility with CI/CD environments.
-
+description: Downloads, installs, and caches Unity for the specified platform.
 inputs:
   unity-version:
-    description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)"). If not specified, uses the version from ProjectSettings/ProjectVersion.txt.
+    description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
     required: false
   unity-modules:
-    description: Additional Unity modules to install (comma-separated list, e.g., "android,ios,webgl").
+    description: Comma-separated list of target modules to install (e.g., "ios,android,webgl").
     required: false
     default: ""
   cache:
-    description: Whether to cache the Unity installation (true/false).
+    description: Whether to use caching for the downloaded installers.
     required: false
     default: "true"
   project-path:
     description: Path to the Unity project directory.
     required: false
     default: "."
-
 outputs:
-  unity-version:
-    description: The Unity version that was set up.
-    value: ${{ steps.get_unity_info.outputs.version }}
-  unity-path:
-    description: The path to the Unity installation.
-    value: ${{ steps.get_unity_path.outputs.unity_path }}
-
+  download-cache-hit:
+    description: "A boolean value to indicate if the download cache was hit."
+    value: ${{ steps.cache_downloads.outputs.cache-hit }}
 runs:
   using: composite
   steps:
-    - name: ✅ Validate Platform Support
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" != "Windows" && "$RUNNER_OS" != "macOS" ]]; then
-          echo "::error::Unity is only supported on Windows and macOS platforms"
-          echo "::error::Current platform: $RUNNER_OS"
-          echo "::error::Please use a Windows or macOS runner for Unity development"
-          exit 1
-        fi
-        echo "::notice::Platform validation successful: $RUNNER_OS"
-
-    - name: 🧬 Get Unity Info
+    - name: 📖 Get Unity Info
       id: get_unity_info
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
         "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
-
-    - name: 🔍 Check Unity Installation
-      id: check_unity
+    - name: 🔧 Prepare Paths and Module ID
+      id: prepare_paths
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/check_unity.sh"
-        "${{ github.action_path }}/scripts/check_unity.sh" "${{ steps.get_unity_info.outputs.version }}"
-
-    - name: 🔧 Prepare Cache Key
-      id: prepare_cache_key
-      shell: bash
-      run: |
-        modules="${{ inputs.unity-modules }}"
-        sanitized_modules="${modules//,/-}"
-        echo "modules_key=${sanitized_modules}" >> $GITHUB_OUTPUT
-
-    - name: 📦 Cache Unity Installation
-      if: ${{ inputs.cache == 'true' && steps.check_unity.outputs.is_installed == 'false' }}
-      id: cache_unity
+        chmod +x "${{ github.action_path }}/scripts/get_modules_id.sh"
+        VERSION="${{ steps.get_unity_info.outputs.version }}"
+        MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
+        DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
+        echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
+        echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${MODULES_ID}" >> $GITHUB_OUTPUT
+    - name: 💾 Cache Downloaded Installers
+      id: cache_downloads
+      if: inputs.cache == 'true'
       uses: actions/cache@v4
       with:
-        path: |
-          /Applications/Unity
-          C:\Program Files\Unity
-        key: unity-direct-${{ steps.get_unity_info.outputs.version }}-${{ runner.os }}-${{ steps.prepare_cache_key.outputs.modules_key }}
-        restore-keys: |
-          unity-direct-${{ steps.get_unity_info.outputs.version }}-${{ runner.os }}-
-
-    - name: 🎮 Install Unity
-      if: ${{ steps.check_unity.outputs.is_installed == 'false' && steps.cache_unity.outputs.cache-hit != 'true' }}
+        path: ${{ steps.prepare_paths.outputs.download_dir }}
+        key: ${{ steps.prepare_paths.outputs.cache_key }}
+    - name: ⬇️ Download Unity
+      if: steps.cache_downloads.outputs.cache-hit != 'true' || inputs.cache != 'true'
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/download_unity.sh"
+        "${{ github.action_path }}/scripts/download_unity.sh" \
+        "${{ steps.get_unity_info.outputs.version }}" \
+        "${{ steps.get_unity_info.outputs.revision }}" \
+        "${{ inputs.unity-modules }}" \
+        "${{ steps.prepare_paths.outputs.download_dir }}"
+    - name: ⚙️ Install Unity
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
-        "${{ github.action_path }}/scripts/install_unity.sh" "${{ steps.get_unity_info.outputs.version }}" "${{ steps.get_unity_info.outputs.revision }}" "${{ inputs.unity-modules }}"
-
-    - name: 📍 Get Unity Path
-      id: get_unity_path
+        "${{ github.action_path }}/scripts/install_unity.sh" \
+        "${{ steps.get_unity_info.outputs.version }}" \
+        "${{ inputs.unity-modules }}" \
+        "${{ steps.prepare_paths.outputs.download_dir }}"
+    - name: 🔧 Configure Environment
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/get_unity_path.sh"
-        "${{ github.action_path }}/scripts/get_unity_path.sh" "${{ steps.get_unity_info.outputs.version }}"
-
-    - name: 🔎 Verify Unity Installation
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/verify_unity.sh"
-        "${{ github.action_path }}/scripts/verify_unity.sh" "${{ steps.get_unity_path.outputs.unity_path }}"
-
-    - name: 📝 Set Unity Environment Variables
-      shell: bash
-      run: |
-        echo "UNITY_PATH=${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_ENV
-        echo "UNITY_VERSION=${{ steps.get_unity_info.outputs.version }}" >> $GITHUB_ENV
-
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          UNITY_DIR="${{ steps.get_unity_path.outputs.editor_dir }}"
-          echo "${UNITY_DIR}" >> $GITHUB_PATH
-          
-          echo "@echo off" > "${UNITY_DIR}/unity.bat"
-          echo "\"${{ steps.get_unity_path.outputs.unity_path }}\" %*" >> "${UNITY_DIR}/unity.bat"
-          chmod +x "${UNITY_DIR}/unity.bat"
-        else
-          echo "${{ steps.get_unity_path.outputs.editor_dir }}" >> $GITHUB_PATH
-        fi
+        chmod +x "${{ github.action_path }}/scripts/configure_environment.sh"
+        "${{ github.action_path }}/scripts/configure_environment.sh" "${{ steps.get_unity_info.outputs.version }}"

@@ -1,161 +1,101 @@
 name: Test Unity Setup Action
-
 on:
   pull_request:
-    branches: [main, master, develop]
-    paths:
-      - ".github/actions/setup-unity/**"
-      - ".github/workflows/test-unity-setup.yml"
-      - "sandbox/UnityApplication/**"
   push:
-    branches: [main, master, develop]
-    paths:
-      - ".github/actions/setup-unity/**"
-      - ".github/workflows/test-unity-setup.yml"
-      - "sandbox/UnityApplication/**"
+    branches: [main, master]
   workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: "Run with debug logging"
-        required: false
-        default: "false"
 
 jobs:
   test-basic-setup:
-    name: Test Basic Setup
+    name: Test Basic Setup (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Test Unity Setup (Auto-detect from sandbox)
+      - name: Test Unity Setup (Auto-detect)
         uses: ./.github/actions/setup-unity
         with:
-          project-path: sandbox/UnityApplication
-
+          project-path: "sandbox/UnityApplication"
       - name: Verify Unity Installation
+        shell: bash
         run: |
-          echo "Unity Version: $UNITY_VERSION"
-          echo "Unity Path: $UNITY_PATH"
-          unity -version || Unity -version
-
-  test-specific-version:
-    name: Test Specific Version
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Unity Setup with Specific Version
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "6000.1.9f1 (ed7b183fd33d)"
-
-      - name: Verify Version
-        run: |
-          unity -version | findstr "6000.1.9f1"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then unity -version; else Unity -version; fi
 
   test-with-modules:
     name: Test Module Installation
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Test Unity Setup with Modules
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
-          unity-modules: "webgl"
-
+          unity-modules: "webgl, android"
       - name: Check Modules
         run: |
-          unity -batchmode -quit -logFile - -buildTarget WebGL || echo "WebGL module check"
+          Unity -batchmode -quit -logFile - -buildTarget WebGL
+          Unity -batchmode -quit -logFile - -buildTarget Android
 
-  test-caching:
-    name: Test Caching
+  prime-cache:
+    name: Test Caching (1/2 - Prime Cache)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: First Install (No Cache)
+      - name: Install and Save to Cache
         uses: ./.github/actions/setup-unity
         with:
-          project-path: sandbox/UnityApplication
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
           cache: "true"
 
-      - name: Second Install (Should Use Cache)
+  use-cache:
+    name: Test Caching (2/2 - Use Cache)
+    runs-on: windows-latest
+    needs: prime-cache
+    steps:
+      - uses: actions/checkout@v4
+      - name: Second Install (Should be a cache-hit)
+        id: use_cache_step
         uses: ./.github/actions/setup-unity
         with:
-          project-path: sandbox/UnityApplication
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
           cache: "true"
+      - name: Verify Cache was Used
+        if: steps.use_cache_step.outputs.download-cache-hit != 'true'
+        run: |
+          echo "::error::The download cache was not used on the second run."
+          exit 1
+      - name: Verify Unity Installation from Cache
+        run: unity -version
 
   test-no-cache:
     name: Test Without Cache
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Test Unity Setup without Cache
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
           cache: "false"
-
-  test-platform-validation:
-    name: Test Platform Validation
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Unsupported Platform (Should Fail)
-        id: test-unsupported
-        continue-on-error: true
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "6000.1.9f1 (ed7b183fd33d)"
-
-      - name: Verify Platform Validation Failed
-        if: steps.test-unsupported.outcome != 'failure'
-        run: |
-          echo "Action should have failed on Linux platform"
-          exit 1
-
-      - name: Confirm Expected Failure
-        if: steps.test-unsupported.outcome == 'failure'
-        run: |
-          echo "Platform validation correctly rejected Linux platform"
+      - name: Verify Unity Installation
+        run: Unity -version
 
   test-error-handling:
     name: Test Error Handling
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
-      - name: Test Invalid Version Format (Should Fail)
-        id: test-invalid-format
+      - name: Test Invalid Version (Should Fail)
+        id: test_invalid
         continue-on-error: true
         uses: ./.github/actions/setup-unity
         with:
-          unity-version: "invalid-version"
-
-      - name: Verify Invalid Format Failed
-        if: steps.test-invalid-format.outcome != 'failure'
+          unity-version: "invalid"
+      - name: Verify Invalid Version Failed
+        if: steps.test_invalid.outcome == 'success'
         run: |
-          echo "Action should have failed with invalid version format"
-          exit 1
-
-      - name: Test Missing Revision (Should Fail)
-        id: test-missing-revision
-        continue-on-error: true
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "6000.1.9f1"
-
-      - name: Verify Missing Revision Failed
-        if: steps.test-missing-revision.outcome != 'failure'
-        run: |
-          echo "Action should have failed with missing revision"
+          echo "::error::Action should have failed with invalid version."
           exit 1
