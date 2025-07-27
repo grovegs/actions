@@ -42,7 +42,15 @@ download_file() {
             mv "${temp_file}" "${file_path}"
             return 0
         else
+            local curl_exit_code=$?
             retry_count=$((retry_count + 1))
+            
+            if [ $curl_exit_code -eq 22 ]; then
+                echo "::warning::Module ${filename} is not available for this platform (HTTP 404)"
+                rm -f "${temp_file}" 2>/dev/null || true
+                return 1
+            fi
+            
             echo "::warning::Download attempt ${retry_count} failed for ${filename}"
             
             if [ $retry_count -lt $max_retries ]; then
@@ -55,7 +63,7 @@ download_file() {
     echo "::error::Failed to download ${filename} after ${max_retries} attempts"
     echo "::error::URL: ${url}"
     rm -f "${temp_file}" 2>/dev/null || true
-    exit 1
+    return 1
 }
 
 validate_download() {
@@ -147,9 +155,6 @@ get_module_info() {
             ;;
         "Linux")
             case "$module" in
-                "android")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.tar.xz"
-                    ;;
                 "webgl")
                     echo "LinuxEditorTargetInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.tar.xz"
                     ;;
@@ -218,8 +223,11 @@ if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
         module_url="${base_url}/${module_path_segment}/${module_filename}"
         module_file_path="${download_dir}/${module_filename}"
         
-        download_file "${module_url}" "${module_file_path}"
-        validate_download "${module_file_path}"
+        if download_file "${module_url}" "${module_file_path}"; then
+            validate_download "${module_file_path}"
+        else
+            echo "::warning::Skipping module '${module_trimmed}' as it is not available for ${platform}"
+        fi
     done
 else
     echo "::notice::No modules specified for download"
