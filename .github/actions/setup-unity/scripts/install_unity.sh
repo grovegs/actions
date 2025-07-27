@@ -18,9 +18,24 @@ if [[ "$RUNNER_OS" == "macOS" ]]; then
         IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
         for module in "${MODULE_ARRAY[@]}"; do
             module_trimmed=$(echo "${module}" | xargs)
-            installer_filename="UnitySetup-${module_trimmed^}-Support-for-Editor-${version}.pkg"
-            module_installer="${download_dir}/${installer_filename}"
-            if [ -f "$module_installer" ]; then run_mac_installer "$module_installer"; else echo "::warning::Could not find installer for module ${module_trimmed}"; fi
+            capitalized_module=""
+            
+            case "${module_trimmed}" in
+                "android") capitalized_module="Android";;
+                "ios") capitalized_module="iOS";;
+                "webgl") capitalized_module="WebGL";;
+                *) echo "::warning::Cannot determine installer name for unknown module: ${module_trimmed}";;
+            esac
+
+            if [ -n "${capitalized_module}" ]; then
+                installer_filename="UnitySetup-${capitalized_module}-Support-for-Editor-${version}.pkg"
+                module_installer="${download_dir}/${installer_filename}"
+                if [ -f "$module_installer" ]; then
+                    run_mac_installer "$module_installer"
+                else
+                    echo "::warning::Could not find installer for module ${module_trimmed}"
+                fi
+            fi
         done
     fi
 fi
@@ -32,10 +47,8 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
         echo "::error::Failed to extract Unity Editor archive."
         exit 1
     fi
-    
     unity_executable="${install_location}/Editor/Unity"
     chmod +x "${unity_executable}"
-    
     if [ -n "${modules}" ]; then
         echo "::notice::Installing Linux modules: ${modules}"
         install_command=(
