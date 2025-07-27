@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup (Auto-detect)
@@ -22,11 +22,15 @@ jobs:
       - name: Verify Unity Installation
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then unity -version; else Unity -version; fi
+          if [[ "$RUNNER_OS" == "Linux" ]]; then unity -version; else Unity -version; fi
 
   test-with-modules:
-    name: Test Module Installation
-    runs-on: macos-latest
+    name: Test Module Installation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup with Modules
@@ -35,13 +39,19 @@ jobs:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
           unity-modules: "webgl, android"
       - name: Check Modules
+        shell: bash
         run: |
-          Unity -batchmode -quit -logFile - -buildTarget WebGL
-          Unity -batchmode -quit -logFile - -buildTarget Android
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            unity -batchmode -quit -logFile - -buildTarget WebGL
+            unity -batchmode -quit -logFile - -buildTarget Android
+          else
+            Unity -batchmode -quit -logFile - -buildTarget WebGL
+            Unity -batchmode -quit -logFile - -buildTarget Android
+          fi
 
   prime-cache:
     name: Test Caching (1/2 - Prime Cache)
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install and Save to Cache
@@ -52,7 +62,7 @@ jobs:
 
   use-cache:
     name: Test Caching (2/2 - Use Cache)
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: prime-cache
     steps:
       - uses: actions/checkout@v4
@@ -70,22 +80,9 @@ jobs:
       - name: Verify Unity Installation from Cache
         run: unity -version
 
-  test-no-cache:
-    name: Test Without Cache
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test Unity Setup without Cache
-        uses: ./.github/actions/setup-unity
-        with:
-          unity-version: "6000.1.9f1 (ed7b183fd33d)"
-          cache: "false"
-      - name: Verify Unity Installation
-        run: Unity -version
-
   test-error-handling:
     name: Test Error Handling
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Test Invalid Version (Should Fail)

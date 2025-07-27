@@ -1,5 +1,5 @@
 name: Setup Unity
-description: Downloads, installs, and caches Unity for the specified platform.
+description: Downloads, installs, and caches Unity for macOS and Linux platforms.
 inputs:
   unity-version:
     description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
@@ -16,6 +16,15 @@ inputs:
     description: Path to the Unity project directory.
     required: false
     default: "."
+  unity-username:
+    description: "Your Unity account email address."
+    required: false
+  unity-password:
+    description: "Your Unity account password."
+    required: false
+  unity-serial:
+    description: "Your Unity license serial key (Pro/Plus)."
+    required: false
 outputs:
   download-cache-hit:
     description: "A boolean value to indicate if the download cache was hit."
@@ -23,6 +32,13 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: ✅ Validate Platform Support
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" != "macOS" && "$RUNNER_OS" != "Linux" ]]; then
+          echo "::error::This action only supports macOS and Linux. Unsupported platform: $RUNNER_OS"
+          exit 1
+        fi
     - name: 📖 Get Unity Info
       id: get_unity_info
       shell: bash
@@ -37,11 +53,7 @@ runs:
         VERSION="${{ steps.get_unity_info.outputs.version }}"
         MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
         DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
-          ARCH="arm64"
-        else
-          ARCH="x64"
-        fi
+        if [[ "$RUNNER_OS" == "macOS" ]]; then ARCH="arm64"; else ARCH="x64"; fi
         echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
         echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}" >> $GITHUB_OUTPUT
     - name: 💾 Cache Downloaded Installers
@@ -74,3 +86,12 @@ runs:
       run: |
         chmod +x "${{ github.action_path }}/scripts/configure_environment.sh"
         "${{ github.action_path }}/scripts/configure_environment.sh" "${{ steps.get_unity_info.outputs.version }}"
+    - name: 🔑 Activate Unity License
+      if: inputs.unity-username != '' && inputs.unity-password != '' && inputs.unity-serial != ''
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
+        "${{ github.action_path }}/scripts/activate_unity.sh" \
+          "${{ inputs.unity-username }}" \
+          "${{ inputs.unity-password }}" \
+          "${{ inputs.unity-serial }}"
