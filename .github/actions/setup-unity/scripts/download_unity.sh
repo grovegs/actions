@@ -11,7 +11,7 @@ download_dir="$4"
 mkdir -p "${download_dir}"
 download_file() {
     local url="$1"; local file_path="$2"; echo "::notice::Downloading from ${url} to ${file_path}"
-    if ! curl -L -o "${file_path}" "${url}"; then echo "::error::Failed to download from ${url}"; exit 1; fi
+    if ! curl --fail -L -o "${file_path}" "${url}"; then echo "::error::Failed to download from ${url} (server returned an error)"; exit 1; fi
 }
 base_url="https://download.unity3d.com/download_unity/${changeset}"
 
@@ -36,12 +36,12 @@ if [ -n "${modules}" ]; then
         case "${module_trimmed}" in
             "android")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-Android-Support-for-Editor-${version}.pkg";
-                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-Linux-Android-Support-for-Editor-${version}.tar.xz"; fi;;
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-Android-Support-for-Editor-${version}.tar.xz"; fi;;
             "ios")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-iOS-Support-for-Editor-${version}.pkg"; fi;;
             "webgl")
                 if [[ "$RUNNER_OS" == "macOS" ]]; then module_url="${base_url}/${module_path_segment}/UnitySetup-WebGL-Support-for-Editor-${version}.pkg";
-                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-Linux-WebGL-Support-for-Editor-${version}.tar.xz"; fi;;
+                elif [[ "$RUNNER_OS" == "Linux" ]]; then module_url="${base_url}/${module_path_segment}/Unity-WebGL-Support-for-Editor-${version}.tar.xz"; fi;;
             *) echo "::warning::Skipping unknown module: ${module_trimmed}";;
         esac
         if [ -n "${module_url}" ]; then download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"; fi
