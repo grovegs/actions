@@ -61,9 +61,6 @@ download_and_install_unity() {
             return 1
         fi
 
-        sleep 5
-        echo "::notice::Searching for Unity.app in /Applications..."
-        find /Applications -name "Unity.app" -type d 2>/dev/null | head -10
         rm "${installer_name}"
 
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -134,7 +131,6 @@ install_unity_module() {
     local version="$1"
     local changeset="$2"
     local module="$3"
-
     local base_url="https://download.unity3d.com/download_unity/${changeset}"
     local module_file=""
     local module_url=""
