@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 if [ "$#" -ne 4 ]; then
     echo "::error::Usage: $0 <version> <changeset> <modules> <download_dir>"
@@ -11,73 +11,218 @@ changeset="$2"
 modules="$3"
 download_dir="$4"
 
-mkdir -p "${download_dir}"
+echo "::notice::Creating download directory: ${download_dir}"
+if ! mkdir -p "${download_dir}"; then
+    echo "::error::Failed to create download directory: ${download_dir}"
+    exit 1
+fi
 
 download_file() {
     local url="$1"
     local file_path="$2"
-    echo "::notice::Downloading from ${url} to ${file_path}"
-    if ! curl --fail -L -o "${file_path}" "${url}"; then
-        echo "::error::Failed to download from ${url} (server returned an error)"
-        exit 1
+    local filename
+    filename=$(basename "${file_path}")
+    
+    echo "::notice::Downloading ${filename} from ${url}"
+    
+    if [ -f "${file_path}" ]; then
+        echo "::notice::File already exists, skipping: ${file_path}"
+        return 0
     fi
+    
+    local temp_file
+    temp_file="${file_path}.tmp"
+    
+    local max_retries=3
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if curl --fail --location --silent --show-error --output "${temp_file}" "${url}"; then
+            echo "::notice::Successfully downloaded ${filename}"
+            mv "${temp_file}" "${file_path}"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            echo "::warning::Download attempt ${retry_count} failed for ${filename}"
+            
+            if [ $retry_count -lt $max_retries ]; then
+                echo "::notice::Retrying in 5 seconds..."
+                sleep 5
+            fi
+        fi
+    done
+    
+    echo "::error::Failed to download ${filename} after ${max_retries} attempts"
+    echo "::error::URL: ${url}"
+    rm -f "${temp_file}" 2>/dev/null || true
+    exit 1
 }
 
-base_url="https://download.unity3d.com/download_unity/${changeset}"
+validate_download() {
+    local file_path="$1"
+    local filename
+    filename=$(basename "${file_path}")
+    
+    if [ ! -f "${file_path}" ]; then
+        echo "::error::Downloaded file not found: ${file_path}"
+        exit 1
+    fi
+    
+    local file_size
+    file_size=$(stat -f%z "${file_path}" 2>/dev/null || stat -c%s "${file_path}" 2>/dev/null || echo "0")
+    if [ "${file_size}" -lt 1048576 ]; then
+        echo "::error::Downloaded file appears to be corrupted or incomplete: ${filename} (${file_size} bytes)"
+        exit 1
+    fi
+    
+    echo "::notice::Download validated: ${filename} (${file_size} bytes)"
+}
 
-if [[ "$RUNNER_OS" == "macOS" ]]; then
-    editor_url="${base_url}/MacEditorInstallerArm64/Unity-${version}.pkg"
-elif [[ "$RUNNER_OS" == "Linux" ]]; then
-    editor_url="${base_url}/LinuxEditorInstaller/Unity.tar.xz"
-else
-    echo "::error::Unsupported OS: ${RUNNER_OS}"
-    exit 1
-fi
+get_platform_info() {
+    case "$RUNNER_OS" in
+        "macOS")
+            echo "macOS"
+            ;;
+        "Linux")
+            echo "Linux"
+            ;;
+        *)
+            echo "::error::Unsupported platform: $RUNNER_OS"
+            exit 1
+            ;;
+    esac
+}
 
-download_file "${editor_url}" "${download_dir}/$(basename "${editor_url}")"
+get_editor_info() {
+    local platform="$1"
+    
+    case "$platform" in
+        "macOS")
+            echo "MacEditorInstallerArm64|Unity-${version}.pkg"
+            ;;
+        "Linux")
+            echo "LinuxEditorInstaller|Unity.tar.xz"
+            ;;
+    esac
+}
 
-if [ -n "${modules}" ]; then
-    IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
-
-    if [[ "$RUNNER_OS" == "macOS" ]]; then
-        module_path_segment="MacEditorTargetInstaller"
-        for module in "${MODULE_ARRAY[@]}"; do
-            module_trimmed=$(echo "${module}" | xargs)
-            case "${module_trimmed}" in
+get_module_info() {
+    local platform="$1"
+    local module="$2"
+    
+    case "$platform" in
+        "macOS")
+            case "$module" in
                 "android")
-                    module_url="${base_url}/${module_path_segment}/UnitySetup-Android-Support-for-Editor-${version}.pkg"
+                    echo "MacEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.pkg"
                     ;;
                 "ios")
-                    module_url="${base_url}/${module_path_segment}/UnitySetup-iOS-Support-for-Editor-${version}.pkg"
+                    echo "MacEditorTargetInstaller|UnitySetup-iOS-Support-for-Editor-${version}.pkg"
                     ;;
                 "webgl")
-                    module_url="${base_url}/${module_path_segment}/UnitySetup-WebGL-Support-for-Editor-${version}.pkg"
+                    echo "MacEditorTargetInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.pkg"
+                    ;;
+                "mac-il2cpp")
+                    echo "MacEditorTargetInstaller|UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.pkg"
+                    ;;
+                "mac-mono")
+                    echo "MacEditorTargetInstaller|UnitySetup-Mac-Mono-Support-for-Editor-${version}.pkg"
+                    ;;
+                "windows-mono")
+                    echo "MacEditorTargetInstaller|UnitySetup-Windows-Mono-Support-for-Editor-${version}.pkg"
+                    ;;
+                "windows-il2cpp")
+                    echo "MacEditorTargetInstaller|UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.pkg"
+                    ;;
+                "linux-il2cpp")
+                    echo "MacEditorTargetInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.pkg"
+                    ;;
+                "linux-mono")
+                    echo "MacEditorTargetInstaller|UnitySetup-Linux-Mono-Support-for-Editor-${version}.pkg"
                     ;;
                 *)
-                    echo "::warning::Skipping unknown module: ${module_trimmed}"
-                    continue
+                    echo ""
                     ;;
             esac
-            download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"
-        done
-
-    elif [[ "$RUNNER_OS" == "Linux" ]]; then
-        module_path_segment="LinuxEditorTargetInstaller"
-        for module in "${MODULE_ARRAY[@]}"; do
-            module_trimmed=$(echo "${module}" | xargs)
-            case "${module_trimmed}" in
+            ;;
+        "Linux")
+            case "$module" in
                 "android")
-                    module_url="${base_url}/${module_path_segment}/UnitySetup-Android-Support-for-Editor-${version}.tar.xz"
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.tar.xz"
                     ;;
                 "webgl")
-                    module_url="${base_url}/${module_path_segment}/UnitySetup-WebGL-Support-for-Editor-${version}.tar.xz"
+                    echo "LinuxEditorTargetInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                "windows-mono")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Windows-Mono-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                "windows-il2cpp")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                "mac-mono")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Mac-Mono-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                "mac-il2cpp")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                "linux-il2cpp")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.tar.xz"
                     ;;
                 *)
-                    echo "::warning::Skipping unknown module: ${module_trimmed}"
-                    continue
+                    echo ""
                     ;;
             esac
-            download_file "${module_url}" "${download_dir}/$(basename "${module_url}")"
-        done
-    fi
+            ;;
+    esac
+}
+
+echo "::notice::Starting Unity ${version} download for ${RUNNER_OS}"
+echo "::notice::Changeset: ${changeset}"
+echo "::notice::Modules: ${modules}"
+
+platform=$(get_platform_info)
+base_url="https://download.unity3d.com/download_unity/${changeset}"
+
+editor_info=$(get_editor_info "$platform")
+editor_path_segment=$(echo "$editor_info" | cut -d'|' -f1)
+editor_filename=$(echo "$editor_info" | cut -d'|' -f2)
+editor_url="${base_url}/${editor_path_segment}/${editor_filename}"
+editor_file_path="${download_dir}/${editor_filename}"
+
+download_file "${editor_url}" "${editor_file_path}"
+validate_download "${editor_file_path}"
+
+if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
+    echo "::notice::Processing modules: ${modules}"
+    
+    IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
+    
+    for module in "${MODULE_ARRAY[@]}"; do
+        module_trimmed=$(echo "${module}" | xargs)
+        
+        if [ -z "${module_trimmed}" ]; then
+            continue
+        fi
+        
+        echo "::notice::Processing module: ${module_trimmed}"
+        
+        module_info=$(get_module_info "$platform" "$module_trimmed")
+        
+        if [ -z "$module_info" ]; then
+            echo "::warning::Module '${module_trimmed}' is not supported on ${platform}, skipping"
+            continue
+        fi
+        
+        module_path_segment=$(echo "$module_info" | cut -d'|' -f1)
+        module_filename=$(echo "$module_info" | cut -d'|' -f2)
+        module_url="${base_url}/${module_path_segment}/${module_filename}"
+        module_file_path="${download_dir}/${module_filename}"
+        
+        download_file "${module_url}" "${module_file_path}"
+        validate_download "${module_file_path}"
+    done
+else
+    echo "::notice::No modules specified for download"
 fi
+
+echo "::notice::Unity download completed successfully"
