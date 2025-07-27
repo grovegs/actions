@@ -64,7 +64,6 @@ download_and_install_unity() {
 
         sleep 5
 
-        echo "::notice::Verifying Unity installation..."
         echo "::notice::Searching for Unity.app in /Applications..."
         find /Applications -name "Unity.app" -type d 2>/dev/null | head -10
 
@@ -82,20 +81,19 @@ download_and_install_unity() {
         fi
 
         echo "::notice::Installing Unity silently"
-        echo "::notice::Running installer with: ${installer_name} /S /D=C:\\Program Files\\Unity"
+        install_dir="C:\\Program Files\\Unity-${version}"
+        echo "::notice::Installing to: ${install_dir}"
         
-        start //wait "${installer_name}" //S //D="C:\\Program Files\\Unity"
+        cmd //c "\"${installer_name}\" /S /D=${install_dir}"
         
         echo "::notice::Waiting for installation to complete..."
         sleep 30
         
         echo "::notice::Checking for Unity installation..."
-        if [ -f "C:/Program Files/Unity/Editor/Unity.exe" ]; then
-            echo "::notice::Unity.exe found at C:/Program Files/Unity/Editor/Unity.exe"
-        elif [ -f "C:/Program Files/Unity/Unity.exe" ]; then
-            echo "::notice::Unity.exe found at C:/Program Files/Unity/Unity.exe"
+        if [ -f "${install_dir}/Editor/Unity.exe" ]; then
+            echo "::notice::Unity.exe found at ${install_dir}/Editor/Unity.exe"
         else
-            echo "::warning::Unity.exe not found in expected locations after installation"
+            find "C:/Program Files" -name "Unity.exe" -type f 2>/dev/null | grep -i editor | head -5
         fi
 
         rm "${installer_name}"
@@ -184,7 +182,7 @@ install_unity_module() {
             return 1
         fi
     elif [[ "$RUNNER_OS" == "Windows" ]]; then
-        start //wait "${module_file}" //S
+        cmd //c "\"${module_file}\" /S"
         sleep 10
     fi
 

@@ -101,7 +101,12 @@ runs:
         echo "UNITY_VERSION=${{ steps.get_unity_info.outputs.version }}" >> $GITHUB_ENV
 
         if [[ "$RUNNER_OS" == "Windows" ]]; then
-          echo "${{ steps.get_unity_path.outputs.unity_path }}" >> $GITHUB_PATH
+          UNITY_DIR="${{ steps.get_unity_path.outputs.editor_dir }}"
+          echo "${UNITY_DIR}" >> $GITHUB_PATH
+          
+          echo "@echo off" > "${UNITY_DIR}/unity.bat"
+          echo "\"${{ steps.get_unity_path.outputs.unity_path }}\" %*" >> "${UNITY_DIR}/unity.bat"
+          chmod +x "${UNITY_DIR}/unity.bat"
         else
-          echo "${{ steps.get_unity_path.outputs.unity_path }}/Contents/MacOS" >> $GITHUB_PATH
+          echo "${{ steps.get_unity_path.outputs.editor_dir }}" >> $GITHUB_PATH
         fi

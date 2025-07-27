@@ -25,11 +25,11 @@ if [[ "$RUNNER_OS" == "macOS" ]]; then
     )
 elif [[ "$RUNNER_OS" == "Windows" ]]; then
     unity_paths=(
+        "C:/Program Files/Unity-${unity_version}/Editor/Unity.exe"
+        "C:/Program Files/Unity ${unity_version}/Editor/Unity.exe"
         "C:/Program Files/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
         "C:/Program Files/Unity/Editor/Unity.exe"
         "C:/Program Files (x86)/Unity/Editor/Unity.exe"
-        "C:/Program Files/Unity ${unity_version}/Editor/Unity.exe"
-        "C:/Program Files/Unity-${unity_version}/Editor/Unity.exe"
     )
 else
     echo "::error::Unsupported OS: $RUNNER_OS"
@@ -45,6 +45,15 @@ if [[ "$RUNNER_OS" == "macOS" ]]; then
         echo "::notice::Found Unity installations via search:"
         echo "$found_apps"
         unity_path=$(echo "$found_apps" | head -1)
+        echo "::notice::Selected Unity at: ${unity_path}"
+    fi
+elif [[ "$RUNNER_OS" == "Windows" ]]; then
+    echo "::notice::Searching for Unity.exe in Program Files..."
+    found_exe=$(find "C:/Program Files" -name "Unity.exe" -type f 2>/dev/null | grep -i editor | head -5)
+    if [ -n "$found_exe" ]; then
+        echo "::notice::Found Unity installations:"
+        echo "$found_exe"
+        unity_path=$(echo "$found_exe" | head -1)
         echo "::notice::Selected Unity at: ${unity_path}"
     fi
 fi
@@ -67,12 +76,12 @@ if [ -z "${unity_path}" ]; then
         echo "  - ${path}"
     done
     
-    if [[ "$RUNNER_OS" == "macOS" ]]; then
+    if [[ "$RUNNER_OS" == "Windows" ]]; then
+        echo "::error::Current Program Files contents:"
+        ls -la "C:/Program Files/" | grep -i unity | head -10
+    elif [[ "$RUNNER_OS" == "macOS" ]]; then
         echo "::error::Current /Applications directory contents:"
-        find /Applications -maxdepth 1 -type d -name "*Unity*" 2>/dev/null | head -20
-        if [ $? -ne 0 ] || [ -z "$(find /Applications -maxdepth 1 -type d -name "*Unity*" 2>/dev/null)" ]; then
-            find /Applications -maxdepth 1 -type d 2>/dev/null | head -20
-        fi
+        ls -la /Applications/ | head -20
     fi
     
     exit 1

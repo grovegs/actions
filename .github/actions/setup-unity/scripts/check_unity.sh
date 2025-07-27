@@ -37,11 +37,11 @@ if [[ "$RUNNER_OS" == "macOS" ]]; then
     )
 elif [[ "$RUNNER_OS" == "Windows" ]]; then
     unity_paths=(
+        "C:/Program Files/Unity-${unity_version}"
+        "C:/Program Files/Unity ${unity_version}"
         "C:/Program Files/Unity/Hub/Editor/${unity_version}"
         "C:/Program Files/Unity"
         "C:/Program Files (x86)/Unity"
-        "C:/Program Files/Unity ${unity_version}"
-        "C:/Program Files/Unity-${unity_version}"
     )
 fi
 

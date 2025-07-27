@@ -27,6 +27,4 @@ if [ ! -f "${unity_exe}" ]; then
 fi
 
 echo "::notice::Unity executable found at: ${unity_exe}"
-
-echo "::notice::Skipping Unity version and license checks to prevent hanging"
 echo "::notice::Unity installation verification completed successfully"
