@@ -37,8 +37,13 @@ runs:
         VERSION="${{ steps.get_unity_info.outputs.version }}"
         MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
         DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          ARCH="arm64"
+        else
+          ARCH="x64"
+        fi
         echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
-        echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${MODULES_ID}" >> $GITHUB_OUTPUT
+        echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}" >> $GITHUB_OUTPUT
     - name: 💾 Cache Downloaded Installers
       id: cache_downloads
       if: inputs.cache == 'true'
