@@ -31,7 +31,7 @@ outputs:
     value: ${{ steps.cache_downloads.outputs.cache-hit }}
   unity-path:
     description: "The path to the Unity executable."
-    value: ${{ steps.configure_environment.outputs.unity_path }}
+    value: ${{ steps.install_unity.outputs.unity_path }}
 runs:
   using: composite
   steps:
@@ -89,6 +89,7 @@ runs:
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
     - name: ⚙️ Install Unity
+      id: install_unity
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
@@ -96,13 +97,6 @@ runs:
         "${{ steps.get_unity_info.outputs.version }}" \
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
-
-    - name: 🔧 Configure Environment
-      id: configure_environment
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/configure_environment.sh"
-        "${{ github.action_path }}/scripts/configure_environment.sh" "${{ steps.get_unity_info.outputs.version }}"
 
     - name: 🔑 Activate Unity License
       if: inputs.unity-username != '' && inputs.unity-password != '' && inputs.unity-serial != ''
