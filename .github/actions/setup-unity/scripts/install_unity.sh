@@ -213,18 +213,21 @@ create_symlinks() {
     
     echo "::notice::Creating Unity symlinks..."
     
-    local symlinks=("/usr/local/bin/unity" "/usr/local/bin/Unity")
-    
-    for symlink in "${symlinks[@]}"; do
-        if [ -L "${symlink}" ]; then
-            echo "::notice::Removing existing symlink: ${symlink}"
-            if ! sudo rm -f "${symlink}"; then
-                echo "::warning::Failed to remove existing symlink: ${symlink}"
-            fi
-        elif [ -f "${symlink}" ]; then
-            echo "::warning::File exists at symlink location (not a symlink): ${symlink}"
+    if [ -L "/usr/local/bin/unity" ]; then
+        echo "::notice::Removing existing symlink: /usr/local/bin/unity"
+        if ! sudo rm -f "/usr/local/bin/unity"; then
+            echo "::warning::Failed to remove existing symlink: /usr/local/bin/unity"
         fi
-    done
+    elif [ -f "/usr/local/bin/unity" ]; then
+        echo "::warning::File exists at symlink location (not a symlink): /usr/local/bin/unity"
+    fi
+    
+    if [ -L "/usr/local/bin/Unity" ]; then
+        echo "::notice::Removing legacy Unity symlink: /usr/local/bin/Unity"
+        if ! sudo rm -f "/usr/local/bin/Unity"; then
+            echo "::warning::Failed to remove legacy symlink: /usr/local/bin/Unity"
+        fi
+    fi
     
     echo "::notice::Creating symlink: /usr/local/bin/unity -> ${unity_path}"
     if sudo ln -s "${unity_path}" /usr/local/bin/unity; then
