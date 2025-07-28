@@ -33,7 +33,7 @@ activation_command=(
 
 if [ -f "$activation_output" ]; then
     echo "::notice::Unity activation log:"
-    cat "$activation_output" | tr -d '\r'
+    tr -d '\r' < "$activation_output"
     rm -f "$activation_output"
 fi
 
