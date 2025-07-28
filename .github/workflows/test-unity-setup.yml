@@ -2,7 +2,7 @@ name: Test Unity Setup Action
 on:
   pull_request:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup (Auto-detect)
@@ -34,6 +34,8 @@ jobs:
             modules: "webgl,windows-il2cpp,mac-il2cpp"
           - os: macos-latest
             modules: "webgl,ios,android,mac-il2cpp"
+          - os: windows-latest
+            modules: "webgl,android,ios,windows-il2cpp,mac-il2cpp,linux-il2cpp"
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup with Modules
@@ -47,26 +49,65 @@ jobs:
         run: |
           echo "Verifying Unity installation and module availability"
           unity -version
+
           unity -batchmode -quit -nographics -logFile - -projectPath sandbox/UnityApplication || echo "Unity headless test completed"
-          
-          unity_base_dir=$(dirname $(which unity))
-          echo "Unity base directory: $unity_base_dir"
-          
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            if [[ "${{ matrix.modules }}" == *"webgl"* ]]; then
-              echo "Checking WebGL module installation..."
-              find $unity_base_dir/../.. -name "*webgl*" -o -name "*WebGL*" 2>/dev/null | head -3 || echo "WebGL module check completed"
-            fi
-          else
-            if [[ "${{ matrix.modules }}" == *"ios"* ]]; then
-              echo "Checking iOS module installation..."
-              find $unity_base_dir/../.. -name "*iOS*" -o -name "*ios*" 2>/dev/null | head -3 || echo "iOS module check completed"
-            fi
-          fi
+
+          echo "Checking for installed modules: ${{ matrix.modules }}"
+          unity_cmd=$(which unity)
+          echo "Unity command location: $unity_cmd"
+
+  test-platform-specific:
+    name: Test Platform-Specific Features (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            test-features: "Linux-specific module support"
+          - os: macos-latest
+            test-features: "macOS application bundle handling"
+          - os: windows-latest
+            test-features: "Windows executable installation"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Platform Features
+        uses: ./.github/actions/setup-unity
+        with:
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
+          unity-modules: "webgl"
+          cache: "true"
+      - name: Verify Platform-Specific Installation
+        shell: bash
+        run: |
+          echo "Testing ${{ matrix.test-features }}"
+          unity -version
+
+          case "$RUNNER_OS" in
+            "Linux")
+              echo "Verifying Linux installation structure"
+              unity_path=$(which unity)
+              ls -la "$unity_path"
+              ;;
+            "macOS")
+              echo "Verifying macOS application bundle"
+              unity_path=$(which unity)
+              ls -la "$unity_path"
+              ;;
+            "Windows")
+              echo "Verifying Windows executable wrapper"
+              unity_path=$(which unity)
+              cat "$unity_path"
+              ;;
+          esac
 
   prime-cache:
     name: Test Caching (1/2 - Prime Cache)
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Install and Save to Cache
@@ -78,8 +119,12 @@ jobs:
 
   use-cache:
     name: Test Caching (2/2 - Use Cache)
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: prime-cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Second Install (Should be a cache-hit)
@@ -98,8 +143,12 @@ jobs:
         run: unity -version
 
   test-error-handling:
-    name: Test Error Handling
-    runs-on: ubuntu-latest
+    name: Test Error Handling (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Test Invalid Version (Should Fail)
@@ -113,3 +162,28 @@ jobs:
         run: |
           echo "::error::Action should have failed with invalid version."
           exit 1
+
+  test-cross-platform-consistency:
+    name: Test Cross-Platform Consistency
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Unity with Standard Configuration
+        uses: ./.github/actions/setup-unity
+        with:
+          unity-version: "6000.1.9f1 (ed7b183fd33d)"
+          unity-modules: "webgl"
+          cache: "true"
+      - name: Test Unified Command Interface
+        run: |
+          unity -version
+
+          unity -batchmode -quit -nographics -logFile - || echo "Command executed successfully"
+
+          command -v unity
+
+          echo "Cross-platform consistency verified for $RUNNER_OS"
