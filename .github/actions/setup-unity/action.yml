@@ -23,7 +23,7 @@ inputs:
     description: "The Unity account password."
     required: false
   unity-license-key:
-    description: "Your Unity license serial key."
+    description: "The Unity license serial key."
     required: false
 outputs:
   download-cache-hit:
