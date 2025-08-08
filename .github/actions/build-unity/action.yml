@@ -49,9 +49,6 @@ inputs:
   ios-bundle-identifier:
     description: "The iOS bundle identifier (e.g., com.company.appname)."
     required: false
-  unity-license:
-    description: "Base64-encoded Unity license file (.ulf) for CI/CD builds."
-    required: false
   build-method:
     description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod). If not specified, uses default build."
     required: false
@@ -102,13 +99,6 @@ runs:
             exit 1
             ;;
         esac
-
-    - name: 🔑 Setup Unity License
-      if: inputs.unity-license != ''
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/setup_license.sh"
-        "${{ github.action_path }}/scripts/setup_license.sh" "${{ inputs.unity-license }}"
 
     - name: 🏗️ Build Project
       id: build_project
@@ -171,10 +161,3 @@ runs:
             exit 1
             ;;
         esac
-
-    - name: 🧹 Cleanup Unity License
-      if: always() && inputs.unity-license != ''
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/cleanup_license.sh"
-        "${{ github.action_path }}/scripts/cleanup_license.sh"
