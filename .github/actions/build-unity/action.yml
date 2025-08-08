@@ -61,13 +61,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: ✅ Validate Version Format
-      id: validate_version
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/validate_version.sh"
-        "${{ github.action_path }}/scripts/validate_version.sh" "${{ inputs.version }}"
-
     - name: ✅ Validate Platform Inputs
       shell: bash
       run: |
