@@ -24,14 +24,11 @@ inputs:
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
-  android-keystore-password:
-    description: The password for the Android keystore.
-    required: false
-  android-keystore-alias:
+  android-keystore-user:
     description: The alias name in the Android keystore.
     required: false
-  android-keystore-alias-password:
-    description: The password for the keystore alias.
+  android-keystore-password:
+    description: The password for the Android keystore.
     required: false
   android-format:
     description: "The Android build format to use. Supported values: `apk` or `aab`."
