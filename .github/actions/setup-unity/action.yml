@@ -1,6 +1,10 @@
 name: Setup Unity
 description: Downloads, installs, and caches Unity for macOS and Linux platforms.
 inputs:
+  project:
+    description: Path to the Unity project directory.
+    required: false
+    default: "."
   unity-version:
     description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
     required: false
@@ -12,10 +16,6 @@ inputs:
     description: Whether to use caching for the downloaded installers.
     required: false
     default: "true"
-  project-path:
-    description: Path to the Unity project directory.
-    required: false
-    default: "."
   unity-email:
     description: "The Unity account email address."
     required: false
@@ -49,7 +49,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
-        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
+        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project }}" "${{ inputs.unity-version }}"
 
     - name: 🔧 Prepare Paths and Module ID
       id: prepare_paths
