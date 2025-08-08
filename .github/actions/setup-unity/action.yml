@@ -16,14 +16,14 @@ inputs:
     description: Path to the Unity project directory.
     required: false
     default: "."
-  unity-username:
-    description: "Your Unity account email address."
+  unity-email:
+    description: "The Unity account email address."
     required: false
   unity-password:
-    description: "Your Unity account password."
+    description: "The Unity account password."
     required: false
-  unity-serial:
-    description: "Your Unity license serial key (Pro/Plus)."
+  unity-license-key:
+    description: "Your Unity license serial key."
     required: false
 outputs:
   download-cache-hit:
@@ -99,11 +99,11 @@ runs:
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
     - name: 🔑 Activate Unity License
-      if: inputs.unity-username != '' && inputs.unity-password != '' && inputs.unity-serial != ''
+      if: inputs.unity-email != '' && inputs.unity-password != '' && inputs.unity-license-key != ''
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
         "${{ github.action_path }}/scripts/activate_unity.sh" \
-          "${{ inputs.unity-username }}" \
+          "${{ inputs.unity-email }}" \
           "${{ inputs.unity-password }}" \
-          "${{ inputs.unity-serial }}"
+          "${{ inputs.unity-license-key }}"
