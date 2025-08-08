@@ -45,6 +45,28 @@ run_mac_installer() {
     fi
 }
 
+run_windows_installer() {
+    local installer_path="$1"
+    local installer_name
+    installer_name=$(basename "${installer_path}")
+    
+    if [ ! -f "${installer_path}" ]; then
+        echo "::error::Installer not found: ${installer_path}"
+        exit 1
+    fi
+    
+    echo "::notice::Installing ${installer_name}..."
+    
+    if "${installer_path}" /S; then
+        echo "::notice::Successfully installed ${installer_name}"
+    else
+        local exit_code
+        exit_code=$?
+        echo "::error::Failed to install ${installer_name} (exit code: ${exit_code})"
+        exit 1
+    fi
+}
+
 extract_linux_archive() {
     local archive_path="$1"
     local extract_dir="$2"
@@ -171,6 +193,47 @@ find_unity_installation() {
             fi
             ;;
             
+        "Windows")
+            local search_paths=(
+                "C:/Program Files/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
+                "C:/Program Files/Unity/Editor/Unity.exe"
+                "C:/Program Files (x86)/Unity/Editor/Unity.exe"
+                "/c/Program Files/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
+                "/c/Program Files/Unity/Editor/Unity.exe"
+                "/c/Program Files (x86)/Unity/Editor/Unity.exe"
+            )
+            
+            for path in "${search_paths[@]}"; do
+                if [ -f "${path}" ]; then
+                    unity_exe_path="${path}"
+                    echo "::notice::Found Unity installation: ${path}" >&2
+                    break
+                fi
+            done
+            
+            if [ -z "${unity_exe_path}" ] || [ ! -f "${unity_exe_path}" ]; then
+                echo "::notice::Performing comprehensive search for Unity installations..." >&2
+                
+                local search_dirs=(
+                    "/c/Program Files/Unity"
+                    "/c/Program Files (x86)/Unity"
+                    "C:/Program Files/Unity"
+                    "C:/Program Files (x86)/Unity"
+                )
+                
+                for dir in "${search_dirs[@]}"; do
+                    if [ -d "${dir}" ]; then
+                        local found_path
+                        found_path=$(find "${dir}" -name "Unity.exe" -type f 2>/dev/null | head -1)
+                        
+                        if [ -n "${found_path}" ]; then
+                            unity_exe_path="${found_path}"
+                            break
+                        fi
+                    fi
+                done
+            fi
+            ;;
         *)
             echo "::error::Unsupported platform: $RUNNER_OS" >&2
             exit 1
@@ -213,29 +276,45 @@ create_symlinks() {
     
     echo "::notice::Creating Unity symlinks..."
     
-    if [ -L "/usr/local/bin/unity" ]; then
-        echo "::notice::Removing existing symlink: /usr/local/bin/unity"
-        if ! sudo rm -f "/usr/local/bin/unity"; then
-            echo "::warning::Failed to remove existing symlink: /usr/local/bin/unity"
-        fi
-    elif [ -f "/usr/local/bin/unity" ]; then
-        echo "::warning::File exists at symlink location (not a symlink): /usr/local/bin/unity"
-    fi
-    
-    if [ -L "/usr/local/bin/Unity" ]; then
-        echo "::notice::Removing legacy Unity symlink: /usr/local/bin/Unity"
-        if ! sudo rm -f "/usr/local/bin/Unity"; then
-            echo "::warning::Failed to remove legacy symlink: /usr/local/bin/Unity"
-        fi
-    fi
-    
-    echo "::notice::Creating symlink: /usr/local/bin/unity -> ${unity_path}"
-    if sudo ln -s "${unity_path}" /usr/local/bin/unity; then
-        echo "::notice::Successfully created Unity symlink"
-    else
-        echo "::error::Failed to create Unity symlink"
-        exit 1
-    fi
+    case "$RUNNER_OS" in
+        "Windows")
+            local wrapper_script="/usr/local/bin/unity"
+            mkdir -p "$(dirname "${wrapper_script}")"
+            
+            echo "::notice::Creating Unity wrapper script: ${wrapper_script}"
+            cat > "${wrapper_script}" << EOF
+#!/bin/bash
+unity_path="${unity_path}"
+exec "\${unity_path}" "\$@"
+EOF
+            chmod +x "${wrapper_script}"
+            ;;
+        *)
+            if [ -L "/usr/local/bin/unity" ]; then
+                echo "::notice::Removing existing symlink: /usr/local/bin/unity"
+                if ! sudo rm -f "/usr/local/bin/unity"; then
+                    echo "::warning::Failed to remove existing symlink: /usr/local/bin/unity"
+                fi
+            elif [ -f "/usr/local/bin/unity" ]; then
+                echo "::warning::File exists at symlink location (not a symlink): /usr/local/bin/unity"
+            fi
+            
+            if [ -L "/usr/local/bin/Unity" ]; then
+                echo "::notice::Removing legacy Unity symlink: /usr/local/bin/Unity"
+                if ! sudo rm -f "/usr/local/bin/Unity"; then
+                    echo "::warning::Failed to remove legacy symlink: /usr/local/bin/Unity"
+                fi
+            fi
+            
+            echo "::notice::Creating symlink: /usr/local/bin/unity -> ${unity_path}"
+            if sudo ln -s "${unity_path}" /usr/local/bin/unity; then
+                echo "::notice::Successfully created Unity symlink"
+            else
+                echo "::error::Failed to create Unity symlink"
+                exit 1
+            fi
+            ;;
+    esac
     
     if command -v unity >/dev/null 2>&1; then
         echo "::notice::Unity command is now available in PATH"
@@ -409,6 +488,55 @@ install_linux() {
     configure_unity_environment "${version}"
 }
 
+install_windows() {
+    echo "::notice::Installing Unity for Windows..."
+    
+    local editor_installer="${download_dir}/UnitySetup64-${version}.exe"
+    run_windows_installer "${editor_installer}"
+    
+    if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
+        echo "::notice::Installing Windows modules: ${modules}"
+        
+        IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
+        for module in "${MODULE_ARRAY[@]}"; do
+            module_trimmed=$(echo "${module}" | xargs)
+            
+            if [ -z "${module_trimmed}" ]; then
+                continue
+            fi
+            
+            echo "::notice::Installing module: ${module_trimmed}"
+            
+            local installer_name=""
+            case "${module_trimmed}" in
+                "android") installer_name="UnitySetup-Android-Support-for-Editor-${version}.exe" ;;
+                "ios") installer_name="UnitySetup-iOS-Support-for-Editor-${version}.exe" ;;
+                "webgl") installer_name="UnitySetup-WebGL-Support-for-Editor-${version}.exe" ;;
+                "windows-il2cpp") installer_name="UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.exe" ;;
+                "windows-mono") installer_name="UnitySetup-Windows-Mono-Support-for-Editor-${version}.exe" ;;
+                "mac-il2cpp") installer_name="UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.exe" ;;
+                "mac-mono") installer_name="UnitySetup-Mac-Mono-Support-for-Editor-${version}.exe" ;;
+                "linux-il2cpp") installer_name="UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.exe" ;;
+                "linux-mono") installer_name="UnitySetup-Linux-Mono-Support-for-Editor-${version}.exe" ;;
+                "universal-windows-platform") installer_name="UnitySetup-Universal-Windows-Platform-Support-for-Editor-${version}.exe" ;;
+                *)
+                    echo "::warning::Unknown module for Windows: ${module_trimmed}"
+                    continue
+                    ;;
+            esac
+            
+            module_installer="${download_dir}/${installer_name}"
+            if [ -f "${module_installer}" ]; then
+                run_windows_installer "${module_installer}"
+            else
+                echo "::warning::Module installer not found: ${installer_name}"
+            fi
+        done
+    fi
+    
+    configure_unity_environment "${version}"
+}
+
 echo "::notice::Starting Unity installation for ${RUNNER_OS}"
 echo "::notice::Version: ${version}"
 echo "::notice::Modules: ${modules}"
@@ -421,6 +549,9 @@ case "$RUNNER_OS" in
         ;;
     "Linux")
         install_linux
+        ;;
+    "Windows")
+        install_windows
         ;;
     *)
         echo "::error::Unsupported platform: $RUNNER_OS"

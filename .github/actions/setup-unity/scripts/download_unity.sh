@@ -77,7 +77,12 @@ validate_download() {
     fi
     
     local file_size
-    file_size=$(stat -f%z "${file_path}" 2>/dev/null || stat -c%s "${file_path}" 2>/dev/null || echo "0")
+    if [[ "$RUNNER_OS" == "macOS" ]]; then
+        file_size=$(stat -f%z "${file_path}" 2>/dev/null || echo "0")
+    else
+        file_size=$(stat -c%s "${file_path}" 2>/dev/null || echo "0")
+    fi
+    
     if [ "${file_size}" -lt 1048576 ]; then
         echo "::error::Downloaded file appears to be corrupted or incomplete: ${filename} (${file_size} bytes)"
         exit 1
@@ -93,6 +98,9 @@ get_platform_info() {
             ;;
         "Linux")
             echo "Linux"
+            ;;
+        "Windows")
+            echo "Windows"
             ;;
         *)
             echo "::error::Unsupported platform: $RUNNER_OS"
@@ -110,6 +118,9 @@ get_editor_info() {
             ;;
         "Linux")
             echo "LinuxEditorInstaller|Unity.tar.xz"
+            ;;
+        "Windows")
+            echo "Windows64EditorInstaller|UnitySetup64-${version}.exe"
             ;;
     esac
 }
@@ -172,6 +183,43 @@ get_module_info() {
                     ;;
                 "linux-il2cpp")
                     echo "LinuxEditorTargetInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.tar.xz"
+                    ;;
+                *)
+                    echo ""
+                    ;;
+            esac
+            ;;
+        "Windows")
+            case "$module" in
+                "android")
+                    echo "TargetSupportInstaller|UnitySetup-Android-Support-for-Editor-${version}.exe"
+                    ;;
+                "ios")
+                    echo "TargetSupportInstaller|UnitySetup-iOS-Support-for-Editor-${version}.exe"
+                    ;;
+                "webgl")
+                    echo "TargetSupportInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.exe"
+                    ;;
+                "windows-il2cpp")
+                    echo "TargetSupportInstaller|UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.exe"
+                    ;;
+                "windows-mono")
+                    echo "TargetSupportInstaller|UnitySetup-Windows-Mono-Support-for-Editor-${version}.exe"
+                    ;;
+                "mac-il2cpp")
+                    echo "TargetSupportInstaller|UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.exe"
+                    ;;
+                "mac-mono")
+                    echo "TargetSupportInstaller|UnitySetup-Mac-Mono-Support-for-Editor-${version}.exe"
+                    ;;
+                "linux-il2cpp")
+                    echo "TargetSupportInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.exe"
+                    ;;
+                "linux-mono")
+                    echo "TargetSupportInstaller|UnitySetup-Linux-Mono-Support-for-Editor-${version}.exe"
+                    ;;
+                "universal-windows-platform")
+                    echo "TargetSupportInstaller|UnitySetup-Universal-Windows-Platform-Support-for-Editor-${version}.exe"
                     ;;
                 *)
                     echo ""

@@ -1,5 +1,5 @@
 name: Setup Unity
-description: Downloads, installs, and caches Unity for macOS and Linux platforms.
+description: Downloads, installs, and caches Unity for macOS, Linux, and Windows platforms.
 inputs:
   unity-version:
     description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
@@ -38,8 +38,8 @@ runs:
     - name: ✅ Validate Platform Support
       shell: bash
       run: |
-        if [[ "$RUNNER_OS" != "macOS" && "$RUNNER_OS" != "Linux" ]]; then
-          echo "::error::This action only supports macOS and Linux. Unsupported platform: $RUNNER_OS"
+        if [[ "$RUNNER_OS" != "macOS" && "$RUNNER_OS" != "Linux" && "$RUNNER_OS" != "Windows" ]]; then
+          echo "::error::This action supports macOS, Linux, and Windows. Unsupported platform: $RUNNER_OS"
           exit 1
         fi
         echo "::notice::Platform validation passed for $RUNNER_OS"
@@ -59,11 +59,22 @@ runs:
         VERSION="${{ steps.get_unity_info.outputs.version }}"
         MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
         DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
-        if [[ "$RUNNER_OS" == "macOS" ]]; then 
-          ARCH="arm64"
-        else 
-          ARCH="x64"
-        fi
+
+        case "$RUNNER_OS" in
+          "macOS")
+            ARCH="arm64"
+            ;;
+          "Linux")
+            ARCH="x64"
+            ;;
+          "Windows")
+            ARCH="x64"
+            ;;
+          *)
+            ARCH="unknown"
+            ;;
+        esac
+
         echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
         echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}" >> $GITHUB_OUTPUT
         echo "::notice::Download directory: ${DOWNLOAD_DIR}"
