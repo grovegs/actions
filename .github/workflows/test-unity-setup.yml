@@ -18,7 +18,7 @@ jobs:
       - name: Test Unity Setup (Auto-detect)
         uses: ./.github/actions/setup-unity
         with:
-          project-path: "sandbox/UnityApplication"
+          project: "sandbox/UnityApplication"
           cache: "true"
       - name: Verify Unity Installation
         run: unity -version
