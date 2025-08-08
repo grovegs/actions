@@ -1,0 +1,183 @@
+name: Build Unity
+description: Build Unity project for selected platforms.
+
+inputs:
+  project:
+    description: The relative path to the Unity project folder.
+    required: true
+  version:
+    description: The version number for the build output.
+    required: true
+  platform:
+    description: "The target platform for the build. Supported values: `Android`, `iOS`, `WebGL`, `Windows`, `Mac`, `Linux`."
+    required: true
+  configuration:
+    description: The build configuration (e.g., `Release` or `Debug`).
+    required: false
+    default: "Release"
+  filename:
+    description: The name of the output file of the build.
+    required: true
+  define-symbols:
+    description: A semicolon-separated list of optional symbols to define during the build.
+    required: false
+  android-keystore:
+    description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
+    required: false
+  android-keystore-password:
+    description: The password for the Android keystore.
+    required: false
+  android-keystore-alias:
+    description: The alias name in the Android keystore.
+    required: false
+  android-keystore-alias-password:
+    description: The password for the keystore alias.
+    required: false
+  android-format:
+    description: "The Android build format to use. Supported values: `apk` or `aab`."
+    required: false
+    default: "apk"
+  ios-team-id:
+    description: "The Apple Developer Team ID associated with your Apple Developer account."
+    required: false
+  ios-certificate:
+    description: "The Base64-encoded iOS distribution certificate (.p12 file) used for signing the application."
+    required: false
+  ios-certificate-password:
+    description: "The password for the iOS distribution certificate."
+    required: false
+  ios-provisioning-profile:
+    description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
+    required: false
+  ios-bundle-identifier:
+    description: "The iOS bundle identifier (e.g., com.company.appname)."
+    required: false
+  unity-license:
+    description: "Base64-encoded Unity license file (.ulf) for CI/CD builds."
+    required: false
+  build-method:
+    description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod). If not specified, uses default build."
+    required: false
+
+outputs:
+  file:
+    description: "The path to the exported project file."
+    value: ${{ steps.build_project.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    - name: ✅ Validate Version Format
+      id: validate_version
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/validate_version.sh"
+        "${{ github.action_path }}/scripts/validate_version.sh" "${{ inputs.version }}"
+
+    - name: ✅ Validate Platform Inputs
+      shell: bash
+      run: |
+        case ${{ inputs.platform }} in
+          "Android")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "Android" \
+            "android-keystore=${{ inputs.android-keystore }}" \
+            "android-keystore-password=${{ inputs.android-keystore-password }}" \
+            "android-keystore-alias=${{ inputs.android-keystore-alias }}" \
+            "android-keystore-alias-password=${{ inputs.android-keystore-alias-password }}"
+            ;;
+          "iOS")
+            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+            "iOS" \
+            "ios-team-id=${{ inputs.ios-team-id }}" \
+            "ios-certificate=${{ inputs.ios-certificate }}" \
+            "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
+            "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
+            "ios-bundle-identifier=${{ inputs.ios-bundle-identifier }}"
+            ;;
+          "WebGL"|"Windows"|"Mac"|"Linux")
+            echo "::notice::Platform ${{ inputs.platform }} validated"
+            ;;
+          *)
+            echo "::error::Unsupported platform: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+
+    - name: 🔑 Setup Unity License
+      if: inputs.unity-license != ''
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/setup_license.sh"
+        "${{ github.action_path }}/scripts/setup_license.sh" "${{ inputs.unity-license }}"
+
+    - name: 🏗️ Build Project
+      id: build_project
+      shell: bash
+      run: |
+        case ${{ inputs.platform }} in
+          "Android")
+            chmod +x "${{ github.action_path }}/scripts/build_android.sh"
+            "${{ github.action_path }}/scripts/build_android.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.version }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
+            "${{ inputs.android-keystore }}" \
+            "${{ inputs.android-keystore-password }}" \
+            "${{ inputs.android-keystore-alias }}" \
+            "${{ inputs.android-keystore-alias-password }}" \
+            "${{ inputs.android-format }}" \
+            "${{ inputs.build-method }}"
+            ;;
+          "iOS")
+            chmod +x "${{ github.action_path }}/scripts/build_ios.sh"
+            "${{ github.action_path }}/scripts/build_ios.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.version }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
+            "${{ inputs.ios-team-id }}" \
+            "${{ inputs.ios-certificate }}" \
+            "${{ inputs.ios-certificate-password }}" \
+            "${{ inputs.ios-provisioning-profile }}" \
+            "${{ inputs.ios-bundle-identifier }}" \
+            "${{ inputs.build-method }}"
+            ;;
+          "WebGL")
+            chmod +x "${{ github.action_path }}/scripts/build_webgl.sh"
+            "${{ github.action_path }}/scripts/build_webgl.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.version }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
+            "${{ inputs.build-method }}"
+            ;;
+          "Windows"|"Mac"|"Linux")
+            chmod +x "${{ github.action_path }}/scripts/build_standalone.sh"
+            "${{ github.action_path }}/scripts/build_standalone.sh" \
+            "${{ inputs.project }}" \
+            "${{ inputs.platform }}" \
+            "${{ inputs.version }}" \
+            "${{ inputs.configuration }}" \
+            "${{ inputs.filename }}" \
+            "${{ inputs.define-symbols }}" \
+            "${{ inputs.build-method }}"
+            ;;
+          *)
+            echo "::error::Unsupported platform: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+
+    - name: 🧹 Cleanup Unity License
+      if: always() && inputs.unity-license != ''
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/cleanup_license.sh"
+        "${{ github.action_path }}/scripts/cleanup_license.sh"
