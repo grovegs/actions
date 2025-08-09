@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 11 ]; then
-    echo "::error::Invalid number of arguments. Expected 11, got $#"
+if [ $# -ne 10 ]; then
+    echo "::error::Invalid number of arguments. Expected 10, got $#"
     exit 1
 fi
 
@@ -11,11 +11,10 @@ configuration="$3"
 filename="$4"
 define_symbols="$5"
 keystore="$6"
-keystore_password="$7"
-keystore_alias="$8"
-keystore_alias_password="$9"
-format="${10}"
-build_method="${11}"
+keystore_user="$7"
+keystore_password="$8"
+format="${9}"
+build_method="${10}"
 
 builds_dir="${HOME}/.builds/android"
 keystore_file="${RUNNER_TEMP}/android.keystore"
@@ -179,8 +178,8 @@ build_args+=(-buildFormat "${format}")
 if [ -n "${keystore}" ]; then
     build_args+=(-keystorePath "${keystore_file}")
     build_args+=(-keystorePass "${keystore_password}")
-    build_args+=(-keyaliasName "${keystore_alias}")
-    build_args+=(-keyaliasPass "${keystore_alias_password}")
+    build_args+=(-keyaliasName "${keystore_user}")
+    build_args+=(-keyaliasPass "${keystore_password}")
 fi
 
 # Execute Unity build
