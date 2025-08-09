@@ -106,9 +106,8 @@ runs:
             "${{ inputs.filename }}" \
             "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
-            "${{ inputs.android-keystore-password }}" \
             "${{ inputs.android-keystore-user }}" \
-            "${{ inputs.android-keystore-user-password }}" \
+            "${{ inputs.android-keystore-password }}" \
             "${{ inputs.android-format }}" \
             "${{ inputs.build-method }}"
             ;;
