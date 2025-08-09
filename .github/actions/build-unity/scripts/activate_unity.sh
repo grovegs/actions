@@ -4,16 +4,19 @@ if [ "$#" -ne 3 ]; then
     echo "::error::Usage: $0 <username> <password> <serial>"
     exit 1
 fi
+
 username="$1"
 password="$2"
 serial="$3"
-if [ -z "$UNITY_PATH" ]; then
-    echo "::error::UNITY_PATH environment variable not set. Run configure_environment.sh first."
+
+if ! command -v unity &> /dev/null; then
+    echo "::error::Unity command not found. Please ensure Unity is installed and in PATH."
     exit 1
 fi
+
 echo "::notice::Attempting to activate Unity license..."
 activation_command=(
-    "$UNITY_PATH"
+    unity
     -batchmode
     -nographics
     -quit
