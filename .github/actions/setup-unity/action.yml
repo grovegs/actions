@@ -16,15 +16,6 @@ inputs:
     description: Whether to use caching for the downloaded installers.
     required: false
     default: "true"
-  unity-email:
-    description: "The Unity account email address."
-    required: false
-  unity-password:
-    description: "The Unity account password."
-    required: false
-  unity-license-key:
-    description: "The Unity license serial key."
-    required: false
 outputs:
   download-cache-hit:
     description: "A boolean value to indicate if the download cache was hit."
@@ -97,13 +88,3 @@ runs:
         "${{ steps.get_unity_info.outputs.version }}" \
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
-
-    - name: 🔑 Activate Unity License
-      if: inputs.unity-email != '' && inputs.unity-password != '' && inputs.unity-license-key != ''
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
-        "${{ github.action_path }}/scripts/activate_unity.sh" \
-          "${{ inputs.unity-email }}" \
-          "${{ inputs.unity-password }}" \
-          "${{ inputs.unity-license-key }}"

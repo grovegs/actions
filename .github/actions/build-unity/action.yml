@@ -18,6 +18,15 @@ inputs:
   filename:
     description: The name of the output file of the build.
     required: true
+  unity-email:
+    description: "The Unity account email address."
+    required: true
+  unity-password:
+    description: "The Unity account password."
+    required: true
+  unity-license-key:
+    description: "The Unity license serial key."
+    required: true
   define-symbols:
     description: A semicolon-separated list of optional symbols to define during the build.
     required: false
@@ -91,6 +100,15 @@ runs:
             exit 1
             ;;
         esac
+
+    - name: 🔑 Activate Unity License
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
+        "${{ github.action_path }}/scripts/activate_unity.sh" \
+          "${{ inputs.unity-email }}" \
+          "${{ inputs.unity-password }}" \
+          "${{ inputs.unity-license-key }}"
 
     - name: 🏗️ Build Project
       id: build_project
