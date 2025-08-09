@@ -9,9 +9,38 @@ validate_args() {
 }
 
 validate_inputs() {
-    [ -d "$1" ] || { echo "::error::Project directory not found: $1"; exit 1; }
-    [[ "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid version format: $2. Expected x.y.z"; exit 1; }
-    [[ "${13}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+$ ]] || { echo "::error::Invalid bundle identifier format: ${13}"; exit 1; }
+    local project_dir="$1"
+    
+    if [[ "$project_dir" != /* ]]; then
+        project_dir="$(cd "$project_dir" 2>/dev/null && pwd)" || {
+            echo "::error::Project directory not found or inaccessible: $1"
+            exit 1
+        }
+    fi
+    
+    [ -d "$project_dir" ] || { 
+        echo "::error::Project directory not found: $project_dir"; 
+        exit 1; 
+    }
+    
+    [ -d "$project_dir/Assets" ] || { 
+        echo "::error::Not a valid Unity project (missing Assets folder): $project_dir"; 
+        exit 1; 
+    }
+    [ -d "$project_dir/ProjectSettings" ] || { 
+        echo "::error::Not a valid Unity project (missing ProjectSettings folder): $project_dir"; 
+        exit 1; 
+    }
+    
+    [[ "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { 
+        echo "::error::Invalid version format: $2. Expected x.y.z"; 
+        exit 1; 
+    }
+    
+    [[ "${13}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+$ ]] || { 
+        echo "::error::Invalid bundle identifier format: ${13}"; 
+        exit 1; 
+    }
 }
 
 validate_args "$@"
@@ -33,6 +62,10 @@ build_method="${14}"
 
 validate_inputs "$@"
 
+if [[ "$project_dir" != /* ]]; then
+    project_dir="$(cd "$project_dir" && pwd)"
+fi
+
 builds_dir="${HOME}/.builds/ios"
 xcode_project_dir="${builds_dir}/${filename}"
 archive_path="${builds_dir}/${filename}.xcarchive"
@@ -52,9 +85,10 @@ mkdir -p "${builds_dir}" || {
 }
 
 echo "::notice::Building Unity project for iOS..."
+echo "::notice::Project path: ${project_dir}"
 
 if [ -n "${build_method}" ]; then
-    build_method_arg="-executeMethod ${build_method}"
+    build_method_args=("-executeMethod" "${build_method}")
 else
     build_script_dest="${project_dir}/Assets/Editor/BuildiOS.cs"
     mkdir -p "${project_dir}/Assets/Editor"
@@ -69,8 +103,13 @@ else
         exit 1
     fi
     
-    build_method_arg="-executeMethod BuildiOS.Build"
+    build_method_args=("-executeMethod" "BuildiOS.Build")
 fi
+
+mkdir -p "${xcode_project_dir}" || {
+    echo "::error::Failed to create Xcode project directory: ${xcode_project_dir}"
+    exit 1
+}
 
 build_args=(
     -batchmode
@@ -82,7 +121,7 @@ build_args=(
     -projectPath "${project_dir}"
     -buildTarget iOS
     -logFile -
-    ${build_method_arg}
+    "${build_method_args[@]}"
     -outputPath "${xcode_project_dir}"
     -defineSymbols "${define_symbols}"
     -versionName "${version}"
@@ -93,12 +132,20 @@ build_args=(
 
 if ! unity "${build_args[@]}"; then
     echo "::error::Unity build failed for iOS"
+    
+    echo "::debug::Project directory contents:"
+    ls -la "${project_dir}" || echo "::debug::Cannot list project directory"
+    
+    unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
+    
     exit 1
 fi
 
 xcodeproj_file=$(find "${xcode_project_dir}" -name "*.xcodeproj" -type d | head -1)
 if [ -z "$xcodeproj_file" ]; then
     echo "::error::No Xcode project found in ${xcode_project_dir}"
+    echo "::debug::Contents of Xcode project directory:"
+    ls -la "${xcode_project_dir}" || echo "::debug::Cannot list Xcode project directory"
     exit 1
 fi
 
