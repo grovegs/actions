@@ -9,9 +9,38 @@ validate_args() {
 }
 
 validate_inputs() {
-    [ -d "$1" ] || { echo "::error::Project directory not found: $1"; exit 1; }
-    [[ "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid version format: $2. Expected x.y.z"; exit 1; }
-    [[ "${12}" =~ ^(apk|aab)$ ]] || { echo "::error::Invalid Android format: ${12}. Expected apk or aab"; exit 1; }
+    local project_dir="$1"
+    
+    if [[ "$project_dir" != /* ]]; then
+        project_dir="$(cd "$project_dir" 2>/dev/null && pwd)" || {
+            echo "::error::Project directory not found or inaccessible: $1"
+            exit 1
+        }
+    fi
+    
+    [ -d "$project_dir" ] || { 
+        echo "::error::Project directory not found: $project_dir"; 
+        exit 1; 
+    }
+    
+    [ -d "$project_dir/Assets" ] || { 
+        echo "::error::Not a valid Unity project (missing Assets folder): $project_dir"; 
+        exit 1; 
+    }
+    [ -d "$project_dir/ProjectSettings" ] || { 
+        echo "::error::Not a valid Unity project (missing ProjectSettings folder): $project_dir"; 
+        exit 1; 
+    }
+    
+    [[ "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { 
+        echo "::error::Invalid version format: $2. Expected x.y.z"; 
+        exit 1; 
+    }
+    
+    [[ "${12}" =~ ^(apk|aab)$ ]] || { 
+        echo "::error::Invalid Android format: ${12}. Expected apk or aab"; 
+        exit 1; 
+    }
 }
 
 validate_args "$@"
@@ -31,6 +60,10 @@ format="${12}"
 build_method="${13}"
 
 validate_inputs "$@"
+
+if [[ "$project_dir" != /* ]]; then
+    project_dir="$(cd "$project_dir" && pwd)"
+fi
 
 builds_dir="${HOME}/.builds/android"
 keystore_file="${RUNNER_TEMP}/android.keystore"
@@ -58,9 +91,10 @@ if [ -n "${keystore}" ]; then
 fi
 
 echo "::notice::Building Unity project for Android (${format})..."
+echo "::notice::Project path: ${project_dir}"
 
 if [ -n "${build_method}" ]; then
-    build_method_arg="-executeMethod ${build_method}"
+    build_method_args=("-executeMethod" "${build_method}")
 else
     build_script_dest="${project_dir}/Assets/Editor/BuildAndroid.cs"
     mkdir -p "${project_dir}/Assets/Editor"
@@ -75,8 +109,13 @@ else
         exit 1
     fi
     
-    build_method_arg="-executeMethod BuildAndroid.Build"
+    build_method_args=("-executeMethod" "BuildAndroid.Build")
 fi
+
+mkdir -p "$(dirname "${output_file}")" || {
+    echo "::error::Failed to create output directory: $(dirname "${output_file}")"
+    exit 1
+}
 
 build_args=(
     -batchmode
@@ -88,7 +127,7 @@ build_args=(
     -projectPath "${project_dir}"
     -logFile -
     -buildTarget Android
-    "${build_method_arg}"
+    "${build_method_args[@]}"
     -outputPath "${output_file}"
     -defineSymbols "${define_symbols}"
     -versionName "${version}"
@@ -107,11 +146,19 @@ fi
 
 if ! unity "${build_args[@]}"; then
     echo "::error::Unity build failed for Android"
+    
+    echo "::debug::Project directory contents:"
+    ls -la "${project_dir}" || echo "::debug::Cannot list project directory"
+    
+    unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
+    
     exit 1
 fi
 
 if [ ! -f "${output_file}" ]; then
     echo "::error::Build output not found: ${output_file}"
+    echo "::debug::Contents of build directory:"
+    ls -la "${builds_dir}" || echo "::debug::Cannot list build directory"
     exit 1
 fi
 
