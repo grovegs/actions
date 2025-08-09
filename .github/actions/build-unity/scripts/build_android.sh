@@ -90,11 +90,27 @@ if [ -n "${keystore}" ]; then
     chmod 600 "${keystore_file}"
 fi
 
-echo "::notice::Building Unity project for Android (${format})..."
-echo "::notice::Project path: ${project_dir}"
+echo "::notice::Checking Android build requirements..."
+if [ ! -f "${project_dir}/ProjectSettings/ProjectSettings.asset" ]; then
+    echo "::warning::ProjectSettings.asset not found - this might not be a valid Unity project"
+fi
+
+if [ -d "${project_dir}/ProjectSettings" ]; then
+    echo "::debug::ProjectSettings directory contents:"
+    ls -la "${project_dir}/ProjectSettings/" || true
+fi
+
+echo "::notice::Build configuration:"
+echo "::notice::  Project: ${project_dir}"
+echo "::notice::  Version: ${version}"
+echo "::notice::  Configuration: ${configuration}"
+echo "::notice::  Format: ${format}"
+echo "::notice::  Output: ${output_file}"
+echo "::notice::  Define symbols: ${define_symbols}"
 
 if [ -n "${build_method}" ]; then
     build_method_args=("-executeMethod" "${build_method}")
+    echo "::notice::Using custom build method: ${build_method}"
 else
     build_script_dest="${project_dir}/Assets/Editor/BuildAndroid.cs"
     mkdir -p "${project_dir}/Assets/Editor"
@@ -104,12 +120,14 @@ else
             echo "::error::Failed to copy build script"
             exit 1
         }
+        echo "::notice::Copied BuildAndroid.cs to ${build_script_dest}"
     else
         echo "::error::Build script not found: ${GITHUB_ACTION_PATH}/scripts/BuildAndroid.cs"
         exit 1
     fi
     
     build_method_args=("-executeMethod" "BuildAndroid.Build")
+    echo "::notice::Using default build method: BuildAndroid.Build"
 fi
 
 mkdir -p "$(dirname "${output_file}")" || {
@@ -135,6 +153,10 @@ build_args=(
     -buildFormat "${format}"
 )
 
+echo "::notice::Unity command line:"
+printf '%s ' "${build_args[@]}"
+echo ""
+
 if [ -n "${keystore}" ]; then
     build_args+=(
         -keystorePath "${keystore_file}"
@@ -144,12 +166,18 @@ if [ -n "${keystore}" ]; then
     )
 fi
 
-if ! unity "${build_args[@]}"; then
+echo "::notice::Starting Unity build..."
+if ! unity "${build_args[@]}" 2>&1; then
     echo "::error::Unity build failed for Android"
+    echo "::error::Check the Unity log output above for specific error details"
     
     echo "::debug::Project directory contents:"
     ls -la "${project_dir}" || echo "::debug::Cannot list project directory"
     
+    echo "::debug::Build directory contents:"
+    ls -la "${builds_dir}" || echo "::debug::Cannot list build directory"
+    
+    echo "::debug::Unity version:"
     unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
     
     exit 1
