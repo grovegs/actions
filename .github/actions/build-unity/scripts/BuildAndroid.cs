@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Linq;
 using System;
+using UnityEditor.Build;
 
 public static class BuildAndroid
 {
@@ -11,7 +12,7 @@ public static class BuildAndroid
         {
             Debug.Log("BuildAndroid.Build() started");
             
-            var args = System.Environment.GetCommandLineArgs();
+            var args = Environment.GetCommandLineArgs();
             
             string outputPath = GetArg(args, "-outputPath");
             string defineSymbols = GetArg(args, "-defineSymbols");
@@ -60,7 +61,7 @@ public static class BuildAndroid
 
             if (!string.IsNullOrEmpty(defineSymbols))
             {
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, defineSymbols);
+                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Android, defineSymbols);
                 Debug.Log($"Set define symbols: {defineSymbols}");
             }
 
