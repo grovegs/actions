@@ -208,55 +208,74 @@ verify_unity_installation() {
     return 0
 }
 
-create_symlinks() {
+create_unity_wrapper() {
     local unity_path="$1"
     
-    echo "::notice::Creating Unity symlinks..."
+    echo "::notice::Creating Unity wrapper script..."
     
-    if [ -L "/usr/local/bin/unity" ]; then
-        echo "::notice::Removing existing symlink: /usr/local/bin/unity"
+    if [ -L "/usr/local/bin/unity" ] || [ -f "/usr/local/bin/unity" ]; then
+        echo "::notice::Removing existing unity command: /usr/local/bin/unity"
         if ! sudo rm -f "/usr/local/bin/unity"; then
-            echo "::warning::Failed to remove existing symlink: /usr/local/bin/unity"
+            echo "::warning::Failed to remove existing unity command: /usr/local/bin/unity"
         fi
-    elif [ -f "/usr/local/bin/unity" ]; then
-        echo "::warning::File exists at symlink location (not a symlink): /usr/local/bin/unity"
     fi
     
-    if [ -L "/usr/local/bin/Unity" ]; then
-        echo "::notice::Removing legacy Unity symlink: /usr/local/bin/Unity"
+    if [ -L "/usr/local/bin/Unity" ] || [ -f "/usr/local/bin/Unity" ]; then
+        echo "::notice::Removing legacy Unity command: /usr/local/bin/Unity"
         if ! sudo rm -f "/usr/local/bin/Unity"; then
-            echo "::warning::Failed to remove legacy symlink: /usr/local/bin/Unity"
+            echo "::warning::Failed to remove legacy Unity command: /usr/local/bin/Unity"
         fi
     fi
     
-    echo "::notice::Creating symlink: /usr/local/bin/unity -> ${unity_path}"
-    if sudo ln -s "${unity_path}" /usr/local/bin/unity; then
-        echo "::notice::Successfully created Unity symlink"
+    echo "::notice::Creating wrapper script: /usr/local/bin/unity -> ${unity_path}"
+    
+    local wrapper_script="#!/bin/bash
+set -euo pipefail
+
+unity_real_path=\"${unity_path}\"
+
+if [ ! -f \"\$unity_real_path\" ]; then
+    echo \"Error: Unity executable not found: \$unity_real_path\" >&2
+    exit 1
+fi"
+
+    if [ "$RUNNER_OS" = "macOS" ]; then
+        wrapper_script+="
+
+unity_app_dir=\$(dirname \$(dirname \$(dirname \"\$unity_real_path\")))
+
+cd \"\$unity_app_dir\""
+    fi
+
+    wrapper_script+="
+
+exec \"\$unity_real_path\" \"\$@\"
+"
+    
+    if echo "$wrapper_script" | sudo tee /usr/local/bin/unity > /dev/null; then
+        if sudo chmod +x /usr/local/bin/unity; then
+            echo "::notice::Successfully created Unity wrapper script"
+        else
+            echo "::error::Failed to make Unity wrapper script executable"
+            exit 1
+        fi
     else
-        echo "::error::Failed to create Unity symlink"
+        echo "::error::Failed to create Unity wrapper script"
         exit 1
     fi
     
     if command -v unity >/dev/null 2>&1; then
         echo "::notice::Unity command is now available in PATH"
+        
+        echo "::notice::Testing Unity wrapper script..."
+        if unity -version >/dev/null 2>&1; then
+            echo "::notice::Unity wrapper script test successful"
+        else
+            echo "::warning::Unity wrapper script test failed, but this may be normal for licensing checks"
+        fi
     else
         echo "::warning::Unity command may not be available in PATH"
     fi
-}
-
-setup_environment_variables() {
-    local unity_path="$1"
-    local unity_version="$2"
-    
-    echo "::notice::Setting up environment variables..."
-    
-    echo "UNITY_VERSION=${unity_version}" >> "$GITHUB_ENV"
-    echo "UNITY_PATH=${unity_path}" >> "$GITHUB_ENV"
-    echo "unity_path=${unity_path}" >> "$GITHUB_OUTPUT"
-    
-    echo "::notice::Environment variables configured:"
-    echo "::notice::  UNITY_VERSION=${unity_version}"
-    echo "::notice::  UNITY_PATH=${unity_path}"
 }
 
 configure_unity_environment() {
@@ -276,8 +295,7 @@ configure_unity_environment() {
         exit 1
     fi
     
-    create_symlinks "${unity_exe_path}"
-    setup_environment_variables "${unity_exe_path}" "${unity_version}"
+    create_unity_wrapper "${unity_exe_path}"
     
     echo "::notice::Unity environment configuration completed successfully"
     echo "::notice::Unity executable: ${unity_exe_path}"
@@ -292,8 +310,8 @@ install_macos() {
     if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
         echo "::notice::Installing macOS modules: ${modules}"
         
-        IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
-        for module in "${MODULE_ARRAY[@]}"; do
+        IFS=',' read -ra module_array <<< "${modules}"
+        for module in "${module_array[@]}"; do
             module_trimmed=$(echo "${module}" | xargs)
             
             if [ -z "${module_trimmed}" ]; then
@@ -306,13 +324,6 @@ install_macos() {
             case "${module_trimmed}" in
                 "android") installer_name="UnitySetup-Android-Support-for-Editor-${version}.pkg" ;;
                 "ios") installer_name="UnitySetup-iOS-Support-for-Editor-${version}.pkg" ;;
-                "webgl") installer_name="UnitySetup-WebGL-Support-for-Editor-${version}.pkg" ;;
-                "mac-il2cpp") installer_name="UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.pkg" ;;
-                "mac-mono") installer_name="UnitySetup-Mac-Mono-Support-for-Editor-${version}.pkg" ;;
-                "windows-mono") installer_name="UnitySetup-Windows-Mono-Support-for-Editor-${version}.pkg" ;;
-                "windows-il2cpp") installer_name="UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.pkg" ;;
-                "linux-il2cpp") installer_name="UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.pkg" ;;
-                "linux-mono") installer_name="UnitySetup-Linux-Mono-Support-for-Editor-${version}.pkg" ;;
                 *)
                     echo "::warning::Unknown module for macOS: ${module_trimmed}"
                     continue
@@ -371,8 +382,8 @@ install_linux() {
         else
             echo "::warning::Unity module installer failed, attempting manual installation..."
             
-            IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
-            for module in "${MODULE_ARRAY[@]}"; do
+            IFS=',' read -ra module_array <<< "${modules}"
+            for module in "${module_array[@]}"; do
                 module_trimmed=$(echo "${module}" | xargs)
                 
                 if [ -z "${module_trimmed}" ]; then
@@ -384,12 +395,6 @@ install_linux() {
                 local archive_name=""
                 case "${module_trimmed}" in
                     "android") archive_name="UnitySetup-Android-Support-for-Editor-${version}.tar.xz" ;;
-                    "webgl") archive_name="UnitySetup-WebGL-Support-for-Editor-${version}.tar.xz" ;;
-                    "windows-mono") archive_name="UnitySetup-Windows-Mono-Support-for-Editor-${version}.tar.xz" ;;
-                    "windows-il2cpp") archive_name="UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.tar.xz" ;;
-                    "mac-mono") archive_name="UnitySetup-Mac-Mono-Support-for-Editor-${version}.tar.xz" ;;
-                    "mac-il2cpp") archive_name="UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.tar.xz" ;;
-                    "linux-il2cpp") archive_name="UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.tar.xz" ;;
                     *)
                         echo "::warning::Unknown module for Linux: ${module_trimmed}"
                         continue

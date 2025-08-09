@@ -31,9 +31,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            modules: "webgl,windows-il2cpp,mac-il2cpp"
+            modules: "android"
           - os: macos-latest
-            modules: "webgl,ios,android,mac-il2cpp"
+            modules: "ios,android"
     steps:
       - uses: actions/checkout@v4
       - name: Test Unity Setup with Modules
@@ -52,16 +52,14 @@ jobs:
           unity_base_dir=$(dirname $(which unity))
           echo "Unity base directory: $unity_base_dir"
           
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            if [[ "${{ matrix.modules }}" == *"webgl"* ]]; then
-              echo "Checking WebGL module installation..."
-              find $unity_base_dir/../.. -name "*webgl*" -o -name "*WebGL*" 2>/dev/null | head -3 || echo "WebGL module check completed"
-            fi
-          else
-            if [[ "${{ matrix.modules }}" == *"ios"* ]]; then
-              echo "Checking iOS module installation..."
-              find $unity_base_dir/../.. -name "*iOS*" -o -name "*ios*" 2>/dev/null | head -3 || echo "iOS module check completed"
-            fi
+          if [[ "${{ matrix.modules }}" == *"android"* ]]; then
+            echo "Checking Android module installation..."
+            find $unity_base_dir/../.. -name "*Android*" -o -name "*android*" 2>/dev/null | head -3 || echo "Android module check completed"
+          fi
+          
+          if [[ "$RUNNER_OS" == "macOS" && "${{ matrix.modules }}" == *"ios"* ]]; then
+            echo "Checking iOS module installation..."
+            find $unity_base_dir/../.. -name "*iOS*" -o -name "*ios*" 2>/dev/null | head -3 || echo "iOS module check completed"
           fi
 
   prime-cache:
@@ -73,7 +71,7 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
-          unity-modules: "webgl"
+          unity-modules: "android"
           cache: "true"
 
   use-cache:
@@ -87,7 +85,7 @@ jobs:
         uses: ./.github/actions/setup-unity
         with:
           unity-version: "6000.1.9f1 (ed7b183fd33d)"
-          unity-modules: "webgl"
+          unity-modules: "android"
           cache: "true"
       - name: Verify Cache was Used
         if: steps.use_cache_step.outputs.download-cache-hit != 'true'

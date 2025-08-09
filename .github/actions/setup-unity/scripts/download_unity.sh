@@ -127,27 +127,6 @@ get_module_info() {
                 "ios")
                     echo "MacEditorTargetInstaller|UnitySetup-iOS-Support-for-Editor-${version}.pkg"
                     ;;
-                "webgl")
-                    echo "MacEditorTargetInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.pkg"
-                    ;;
-                "mac-il2cpp")
-                    echo "MacEditorTargetInstaller|UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.pkg"
-                    ;;
-                "mac-mono")
-                    echo "MacEditorTargetInstaller|UnitySetup-Mac-Mono-Support-for-Editor-${version}.pkg"
-                    ;;
-                "windows-mono")
-                    echo "MacEditorTargetInstaller|UnitySetup-Windows-Mono-Support-for-Editor-${version}.pkg"
-                    ;;
-                "windows-il2cpp")
-                    echo "MacEditorTargetInstaller|UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.pkg"
-                    ;;
-                "linux-il2cpp")
-                    echo "MacEditorTargetInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.pkg"
-                    ;;
-                "linux-mono")
-                    echo "MacEditorTargetInstaller|UnitySetup-Linux-Mono-Support-for-Editor-${version}.pkg"
-                    ;;
                 *)
                     echo ""
                     ;;
@@ -155,23 +134,8 @@ get_module_info() {
             ;;
         "Linux")
             case "$module" in
-                "webgl")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-WebGL-Support-for-Editor-${version}.tar.xz"
-                    ;;
-                "windows-mono")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Windows-Mono-Support-for-Editor-${version}.tar.xz"
-                    ;;
-                "windows-il2cpp")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Windows-IL2CPP-Support-for-Editor-${version}.tar.xz"
-                    ;;
-                "mac-mono")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Mac-Mono-Support-for-Editor-${version}.tar.xz"
-                    ;;
-                "mac-il2cpp")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Mac-IL2CPP-Support-for-Editor-${version}.tar.xz"
-                    ;;
-                "linux-il2cpp")
-                    echo "LinuxEditorTargetInstaller|UnitySetup-Linux-IL2CPP-Support-for-Editor-${version}.tar.xz"
+                "android")
+                    echo "LinuxEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.tar.xz"
                     ;;
                 *)
                     echo ""
@@ -200,9 +164,9 @@ validate_download "${editor_file_path}"
 if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
     echo "::notice::Processing modules: ${modules}"
     
-    IFS=',' read -ra MODULE_ARRAY <<< "${modules}"
+    IFS=',' read -ra module_array <<< "${modules}"
     
-    for module in "${MODULE_ARRAY[@]}"; do
+    for module in "${module_array[@]}"; do
         module_trimmed=$(echo "${module}" | xargs)
         
         if [ -z "${module_trimmed}" ]; then
