@@ -70,9 +70,8 @@ runs:
             "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
             "Android" \
             "android-keystore=${{ inputs.android-keystore }}" \
-            "android-keystore-password=${{ inputs.android-keystore-password }}" \
-            "android-keystore-alias=${{ inputs.android-keystore-alias }}" \
-            "android-keystore-alias-password=${{ inputs.android-keystore-alias-password }}"
+            "android-keystore-user=${{ inputs.android-keystore-user }}" \
+            "android-keystore-password=${{ inputs.android-keystore-password }}"
             ;;
           "iOS")
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
@@ -108,8 +107,8 @@ runs:
             "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-password }}" \
-            "${{ inputs.android-keystore-alias }}" \
-            "${{ inputs.android-keystore-alias-password }}" \
+            "${{ inputs.android-keystore-user }}" \
+            "${{ inputs.android-keystore-user-password }}" \
             "${{ inputs.android-format }}" \
             "${{ inputs.build-method }}"
             ;;
