@@ -1,5 +1,5 @@
 name: Build Unity
-description: Build Unity project for selected platforms.
+description: Build Unity project for Android and iOS platforms.
 
 inputs:
   project:
@@ -9,7 +9,7 @@ inputs:
     description: The version number for the build output.
     required: true
   platform:
-    description: "The target platform for the build. Supported values: `Android`, `iOS`, `WebGL`, `Windows`, `Mac`, `Linux`."
+    description: "The target platform for the build. Supported values: `Android`, `iOS`."
     required: true
   configuration:
     description: The build configuration (e.g., `Release` or `Debug`).
@@ -73,7 +73,7 @@ runs:
     - name: ✅ Validate Platform Inputs
       shell: bash
       run: |
-        case ${{ inputs.platform }} in
+        case "${{ inputs.platform }}" in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
             "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
@@ -92,9 +92,6 @@ runs:
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
             "ios-bundle-identifier=${{ inputs.ios-bundle-identifier }}"
             ;;
-          "WebGL"|"Windows"|"Mac"|"Linux")
-            echo "::notice::Platform ${{ inputs.platform }} validated"
-            ;;
           *)
             echo "::error::Unsupported platform: ${{ inputs.platform }}"
             exit 1
@@ -104,6 +101,9 @@ runs:
     - name: 🔑 Activate Unity License
       shell: bash
       run: |
+        echo "::add-mask::${{ inputs.unity-email }}"
+        echo "::add-mask::${{ inputs.unity-password }}"
+        echo "::add-mask::${{ inputs.unity-license-key }}"
         chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
         "${{ github.action_path }}/scripts/activate_unity.sh" \
           "${{ inputs.unity-email }}" \
@@ -114,7 +114,12 @@ runs:
       id: build_project
       shell: bash
       run: |
-        case ${{ inputs.platform }} in
+        echo "::add-mask::${{ inputs.unity-email }}"
+        echo "::add-mask::${{ inputs.unity-password }}"
+        echo "::add-mask::${{ inputs.unity-license-key }}"
+        echo "::add-mask::${{ inputs.android-keystore-password }}"
+        echo "::add-mask::${{ inputs.ios-certificate-password }}"
+        case "${{ inputs.platform }}" in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/build_android.sh"
             "${{ github.action_path }}/scripts/build_android.sh" \

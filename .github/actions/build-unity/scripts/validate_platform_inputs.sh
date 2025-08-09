@@ -15,7 +15,7 @@ for pair in "$@"; do
     value="${pair#*=}"
 
     if [[ -z "$value" || "$value" == "$pair" ]]; then
-        missing_inputs+=("$key=<missing>")
+        missing_inputs+=("$key")
     fi
 done
 
