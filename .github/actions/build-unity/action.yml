@@ -122,6 +122,9 @@ runs:
             "${{ inputs.version }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
+            "${{ inputs.unity-email }}" \
+            "${{ inputs.unity-password }}" \
+            "${{ inputs.unity-license-key }}" \
             "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
@@ -136,33 +139,15 @@ runs:
             "${{ inputs.version }}" \
             "${{ inputs.configuration }}" \
             "${{ inputs.filename }}" \
+            "${{ inputs.unity-email }}" \
+            "${{ inputs.unity-password }}" \
+            "${{ inputs.unity-license-key }}" \
             "${{ inputs.define-symbols }}" \
             "${{ inputs.ios-team-id }}" \
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
             "${{ inputs.ios-bundle-identifier }}" \
-            "${{ inputs.build-method }}"
-            ;;
-          "WebGL")
-            chmod +x "${{ github.action_path }}/scripts/build_webgl.sh"
-            "${{ github.action_path }}/scripts/build_webgl.sh" \
-            "${{ inputs.project }}" \
-            "${{ inputs.version }}" \
-            "${{ inputs.configuration }}" \
-            "${{ inputs.filename }}" \
-            "${{ inputs.define-symbols }}" \
-            "${{ inputs.build-method }}"
-            ;;
-          "Windows"|"Mac"|"Linux")
-            chmod +x "${{ github.action_path }}/scripts/build_standalone.sh"
-            "${{ github.action_path }}/scripts/build_standalone.sh" \
-            "${{ inputs.project }}" \
-            "${{ inputs.platform }}" \
-            "${{ inputs.version }}" \
-            "${{ inputs.configuration }}" \
-            "${{ inputs.filename }}" \
-            "${{ inputs.define-symbols }}" \
             "${{ inputs.build-method }}"
             ;;
           *)

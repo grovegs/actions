@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 11 ]; then
-    echo "::error::Invalid number of arguments. Expected 11, got $#"
+if [ $# -ne 14 ]; then
+    echo "::error::Invalid number of arguments. Expected 14, got $#"
     exit 1
 fi
 
@@ -9,13 +9,16 @@ project_dir="$1"
 version="$2"
 configuration="$3"
 filename="$4"
-define_symbols="$5"
-team_id="$6"
-certificate="$7"
-certificate_password="$8"
-provisioning_profile="$9"
-bundle_identifier="${10}"
-build_method="${11}"
+unity_email="$5"
+unity_password="$6"
+unity_license_key="$7"
+define_symbols="$8"
+team_id="$9"
+certificate="${10}"
+certificate_password="${11}"
+provisioning_profile="${12}"
+bundle_identifier="${13}"
+build_method="${14}"
 
 builds_dir="${HOME}/.builds/ios"
 xcode_project_dir="${builds_dir}/${filename}"
@@ -36,6 +39,9 @@ build_args=(
     -batchmode
     -nographics
     -quit
+    -username "${unity_email}"
+    -password "${unity_password}"
+    -serial "${unity_license_key}"
     -projectPath "${project_dir}"
     -buildTarget iOS
     -logFile -

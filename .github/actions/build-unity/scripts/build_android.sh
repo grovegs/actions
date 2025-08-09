@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 10 ]; then
-    echo "::error::Invalid number of arguments. Expected 10, got $#"
+if [ $# -ne 13 ]; then
+    echo "::error::Invalid number of arguments. Expected 13, got $#"
     exit 1
 fi
 
@@ -9,12 +9,15 @@ project_dir="$1"
 version="$2"
 configuration="$3"
 filename="$4"
-define_symbols="$5"
-keystore="$6"
-keystore_user="$7"
-keystore_password="$8"
-format="${9}"
-build_method="${10}"
+unity_email="$5"
+unity_password="$6"
+unity_license_key="$7"
+define_symbols="$8"
+keystore="$9"
+keystore_user="${10}"
+keystore_password="${11}"
+format="${12}"
+build_method="${13}"
 
 builds_dir="${HOME}/.builds/android"
 keystore_file="${RUNNER_TEMP}/android.keystore"
@@ -50,6 +53,9 @@ build_args=(
     -batchmode
     -nographics
     -quit
+    -username "${unity_email}"
+    -password "${unity_password}"
+    -serial "${unity_license_key}"
     -projectPath "${project_dir}"
     -logFile -
 )
