@@ -101,25 +101,7 @@ runs:
             ;;
         esac
 
-    - name: 🔑 Activate Unity License
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.unity-email }}" ]; then
-          echo "::add-mask::${{ inputs.unity-email }}"
-        fi
-        if [ -n "${{ inputs.unity-password }}" ]; then
-          echo "::add-mask::${{ inputs.unity-password }}"
-        fi
-        if [ -n "${{ inputs.unity-license-key }}" ]; then
-          echo "::add-mask::${{ inputs.unity-license-key }}"
-        fi
-        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
-        "${{ github.action_path }}/scripts/activate_unity.sh" \
-          "${{ inputs.unity-email }}" \
-          "${{ inputs.unity-password }}" \
-          "${{ inputs.unity-license-key }}"
-
-    - name: 🏗️ Build Project with Build Profiles
+    - name: 🏗️ Build Project
       id: build_project
       shell: bash
       run: |
