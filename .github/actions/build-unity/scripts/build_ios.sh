@@ -1,8 +1,8 @@
 #!/bin/bash
 
 validate_args() {
-    if [ $# -ne 14 ]; then
-        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols team_id certificate certificate_password provisioning_profile bundle_identifier build_method"
+    if [ $# -ne 15 ]; then
+        echo "::error::Expected 15 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols team_id certificate certificate_password provisioning_profile bundle_identifier build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -59,6 +59,7 @@ certificate_password="${11}"
 provisioning_profile="${12}"
 bundle_identifier="${13}"
 build_method="${14}"
+profile_name="${15}"
 
 validate_inputs "$@"
 
@@ -84,11 +85,29 @@ mkdir -p "${builds_dir}" || {
     exit 1
 }
 
-echo "::notice::Building Unity project for iOS..."
-echo "::notice::Project path: ${project_dir}"
+echo "::notice::Checking iOS build requirements..."
+if [ ! -f "${project_dir}/ProjectSettings/ProjectSettings.asset" ]; then
+    echo "::warning::ProjectSettings.asset not found - this might not be a valid Unity project"
+fi
+
+if [ -d "${project_dir}/ProjectSettings" ]; then
+    echo "::debug::ProjectSettings directory contents:"
+    ls -la "${project_dir}/ProjectSettings/" || true
+fi
+
+echo "::notice::Build configuration:"
+echo "::notice::  Project: ${project_dir}"
+echo "::notice::  Version: ${version}"
+echo "::notice::  Configuration: ${configuration}"
+echo "::notice::  Output: ${xcode_project_dir}"
+echo "::notice::  Profile: ${profile_name:-"Default"}"
+echo "::notice::  Bundle ID: ${bundle_identifier}"
+echo "::notice::  Team ID: ${team_id}"
+echo "::notice::  Define symbols: ${define_symbols}"
 
 if [ -n "${build_method}" ]; then
     build_method_args=("-executeMethod" "${build_method}")
+    echo "::notice::Using custom build method: ${build_method}"
 else
     build_script_dest="${project_dir}/Assets/Editor/BuildiOS.cs"
     mkdir -p "${project_dir}/Assets/Editor"
@@ -98,12 +117,14 @@ else
             echo "::error::Failed to copy build script"
             exit 1
         }
+        echo "::notice::Copied BuildiOS.cs to ${build_script_dest}"
     else
         echo "::error::Build script not found: ${GITHUB_ACTION_PATH}/scripts/BuildiOS.cs"
         exit 1
     fi
     
     build_method_args=("-executeMethod" "BuildiOS.Build")
+    echo "::notice::Using default build method: BuildiOS.Build"
 fi
 
 mkdir -p "${xcode_project_dir}" || {
@@ -128,14 +149,25 @@ build_args=(
     -buildConfig "${configuration}"
     -bundleId "${bundle_identifier}"
     -teamId "${team_id}"
+    -profileName "${profile_name:-iOS}"
 )
 
-if ! unity "${build_args[@]}"; then
+echo "::notice::Unity command line:"
+printf '%s ' "${build_args[@]}"
+echo ""
+
+echo "::notice::Starting Unity build..."
+if ! unity "${build_args[@]}" 2>&1; then
     echo "::error::Unity build failed for iOS"
+    echo "::error::Check the Unity log output above for specific error details"
     
     echo "::debug::Project directory contents:"
     ls -la "${project_dir}" || echo "::debug::Cannot list project directory"
     
+    echo "::debug::Build directory contents:"
+    ls -la "${builds_dir}" || echo "::debug::Cannot list build directory"
+    
+    echo "::debug::Unity version:"
     unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
     
     exit 1

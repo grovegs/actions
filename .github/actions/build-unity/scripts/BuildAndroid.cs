@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using UnityEditor.Build;
+using UnityEditor.Build.Profile;
 
 public static class BuildAndroid
 {
@@ -10,7 +11,7 @@ public static class BuildAndroid
     {
         try
         {
-            Debug.Log("BuildAndroid.Build() started");
+            Debug.Log("BuildAndroid.Build() started (using Build Profiles)");
             
             var args = Environment.GetCommandLineArgs();
             
@@ -23,9 +24,11 @@ public static class BuildAndroid
             string buildConfig = GetArg(args, "-buildConfig");
             string versionName = GetArg(args, "-versionName");
             string buildFormat = GetArg(args, "-buildFormat");
+            string profileName = GetArg(args, "-profileName") ?? "Android";
 
             Debug.Log($"Build parameters:");
             Debug.Log($"  Output path: {outputPath}");
+            Debug.Log($"  Profile name: {profileName}");
             Debug.Log($"  Define symbols: {defineSymbols}");
             Debug.Log($"  Build config: {buildConfig}");
             Debug.Log($"  Version name: {versionName}");
@@ -39,80 +42,46 @@ public static class BuildAndroid
                 return;
             }
 
-            if (!string.IsNullOrEmpty(versionName))
+            BuildProfile buildProfile = FindOrCreateBuildProfile(profileName, BuildTarget.Android);
+            
+            if (buildProfile == null)
             {
-                PlayerSettings.bundleVersion = versionName;
-                var versionParts = versionName.Split('.');
-
-                if (versionParts.Length >= 3 && 
-                    int.TryParse(versionParts[0], out int major) &&
-                    int.TryParse(versionParts[1], out int minor) &&
-                    int.TryParse(versionParts[2], out int patch))
-                {
-                    long versionCode = (long)major * 10000000L + (long)minor * 10000L + (long)patch;
-                    PlayerSettings.Android.bundleVersionCode = (int)Math.Min(2147483647L, versionCode);
-                    Debug.Log($"Set bundle version to {versionName} (code: {PlayerSettings.Android.bundleVersionCode})");
-                }
-                else
-                {
-                    Debug.LogWarning($"Could not parse version {versionName} for version code");
-                }
+                Debug.LogError($"Failed to find or create build profile: {profileName}");
+                EditorApplication.Exit(1);
+                return;
             }
 
-            if (!string.IsNullOrEmpty(defineSymbols))
-            {
-                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Android, defineSymbols);
-                Debug.Log($"Set define symbols: {defineSymbols}");
-            }
+            Debug.Log($"Using build profile: {buildProfile.name}");
 
-            if (!string.IsNullOrEmpty(keystorePath) && System.IO.File.Exists(keystorePath))
-            {
-                PlayerSettings.Android.keystoreName = keystorePath;
-                PlayerSettings.Android.keystorePass = keystorePass;
-                PlayerSettings.Android.keyaliasName = keyaliasName;
-                PlayerSettings.Android.keyaliasPass = keyaliasPass;
-                Debug.Log("Configured Android keystore for signing");
-            }
-            else if (!string.IsNullOrEmpty(keystorePath))
-            {
-                Debug.LogWarning($"Keystore path provided but file not found: {keystorePath}");
-            }
+            ConfigurePlayerSettings(versionName, defineSymbols, keystorePath, keystorePass, keyaliasName, keyaliasPass, buildConfig, buildFormat);
 
-            BuildOptions buildOptions = BuildOptions.None;
-            if (buildConfig == "Debug")
+            var buildPlayerOptions = new BuildPlayerOptions
             {
-                buildOptions |= BuildOptions.Development | BuildOptions.AllowDebugging;
-                Debug.Log("Using Debug build configuration");
-            }
-            else
-            {
-                Debug.Log("Using Release build configuration");
-            }
+                scenes = EditorBuildSettings.scenes
+                    .Where(scene => scene.enabled)
+                    .Select(scene => scene.path)
+                    .ToArray(),
+                locationPathName = outputPath,
+                target = BuildTarget.Android,
+                options = GetBuildOptions(buildConfig)
+            };
 
-            bool buildAAB = (buildFormat == "aab");
-            EditorUserBuildSettings.buildAppBundle = buildAAB;
-            Debug.Log($"Build format: {(buildAAB ? "AAB" : "APK")}");
-
-            string[] scenes = EditorBuildSettings.scenes
-                .Where(scene => scene.enabled)
-                .Select(scene => scene.path)
-                .ToArray();
-
-            if (scenes.Length == 0)
+            if (buildPlayerOptions.scenes.Length == 0)
             {
                 Debug.LogError("No enabled scenes found in build settings");
                 EditorApplication.Exit(1);
                 return;
             }
 
-            Debug.Log($"Building {scenes.Length} scenes:");
-            foreach (string scene in scenes)
+            Debug.Log($"Building {buildPlayerOptions.scenes.Length} scenes:");
+            foreach (string scene in buildPlayerOptions.scenes)
             {
                 Debug.Log($"  - {scene}");
             }
 
-            Debug.Log("Starting Unity build process...");
-            var result = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.Android, buildOptions);
+            Debug.Log("Starting Unity build process with Build Profile...");
+            
+            var result = BuildPipeline.BuildPlayer(buildPlayerOptions);
             
             if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
             {
@@ -144,12 +113,92 @@ public static class BuildAndroid
         }
     }
 
+    static BuildProfile FindOrCreateBuildProfile(string profileName, BuildTarget target)
+    {
+        var existingProfile = BuildProfile.GetAvailableBuildProfiles()
+            .FirstOrDefault(p => p.name == profileName && p.buildTarget == target);
+            
+        if (existingProfile != null)
+        {
+            Debug.Log($"Found existing build profile: {profileName}");
+            return existingProfile;
+        }
+
+        Debug.Log($"Creating new build profile: {profileName}");
+        var newProfile = BuildProfile.CreateInstance(target);
+        newProfile.name = profileName;
+        
+        string profilePath = $"Assets/Settings/BuildProfiles/{profileName}.buildprofile";
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(profilePath));
+        AssetDatabase.CreateAsset(newProfile, profilePath);
+        AssetDatabase.SaveAssets();
+        
+        Debug.Log($"Created new build profile at: {profilePath}");
+        return newProfile;
+    }
+
+    static void ConfigurePlayerSettings(string versionName, string defineSymbols, string keystorePath, 
+        string keystorePass, string keyaliasName, string keyaliasPass, string buildConfig, string buildFormat)
+    {
+        if (!string.IsNullOrEmpty(versionName))
+        {
+            PlayerSettings.bundleVersion = versionName;
+            var versionParts = versionName.Split('.');
+
+            if (versionParts.Length >= 3 && 
+                int.TryParse(versionParts[0], out int major) &&
+                int.TryParse(versionParts[1], out int minor) &&
+                int.TryParse(versionParts[2], out int patch))
+            {
+                long versionCode = (long)major * 10000000L + (long)minor * 10000L + (long)patch;
+                PlayerSettings.Android.bundleVersionCode = (int)Math.Min(2147483647L, versionCode);
+                Debug.Log($"Set bundle version to {versionName} (code: {PlayerSettings.Android.bundleVersionCode})");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(defineSymbols))
+        {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Android, defineSymbols);
+            Debug.Log($"Set define symbols: {defineSymbols}");
+        }
+
+        if (!string.IsNullOrEmpty(keystorePath) && System.IO.File.Exists(keystorePath))
+        {
+            PlayerSettings.Android.keystoreName = keystorePath;
+            PlayerSettings.Android.keystorePass = keystorePass;
+            PlayerSettings.Android.keyaliasName = keyaliasName;
+            PlayerSettings.Android.keyaliasPass = keyaliasPass;
+            Debug.Log("Configured Android keystore for signing");
+        }
+
+        bool buildAAB = (buildFormat == "aab");
+        EditorUserBuildSettings.buildAppBundle = buildAAB;
+        Debug.Log($"Build format: {(buildAAB ? "AAB" : "APK")}");
+    }
+
+    static BuildOptions GetBuildOptions(string buildConfig)
+    {
+        BuildOptions buildOptions = BuildOptions.None;
+        if (buildConfig == "Debug")
+        {
+            buildOptions |= BuildOptions.Development | BuildOptions.AllowDebugging;
+            Debug.Log("Using Debug build configuration");
+        }
+        else
+        {
+            Debug.Log("Using Release build configuration");
+        }
+        return buildOptions;
+    }
+
     static string GetArg(string[] args, string name)
     {
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == name)
+            {
                 return args[i + 1];
+            }
         }
         return null;
     }

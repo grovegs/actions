@@ -1,8 +1,8 @@
 #!/bin/bash
 
 validate_args() {
-    if [ $# -ne 13 ]; then
-        echo "::error::Expected 13 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols keystore keystore_user keystore_password format build_method"
+    if [ $# -ne 14 ]; then
+        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols keystore keystore_user keystore_password format build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -58,6 +58,7 @@ keystore_user="${10}"
 keystore_password="${11}"
 format="${12}"
 build_method="${13}"
+profile_name="${14}"
 
 validate_inputs "$@"
 
@@ -106,6 +107,7 @@ echo "::notice::  Version: ${version}"
 echo "::notice::  Configuration: ${configuration}"
 echo "::notice::  Format: ${format}"
 echo "::notice::  Output: ${output_file}"
+echo "::notice::  Profile: ${profile_name:-"Default"}"
 echo "::notice::  Define symbols: ${define_symbols}"
 
 if [ -n "${build_method}" ]; then
@@ -151,11 +153,8 @@ build_args=(
     -versionName "${version}"
     -buildConfig "${configuration}"
     -buildFormat "${format}"
+    -profileName "${profile_name:-Android}"
 )
-
-echo "::notice::Unity command line:"
-printf '%s ' "${build_args[@]}"
-echo ""
 
 if [ -n "${keystore}" ]; then
     build_args+=(
@@ -165,6 +164,10 @@ if [ -n "${keystore}" ]; then
         -keyaliasPass "${keystore_password}"
     )
 fi
+
+echo "::notice::Unity command line:"
+printf '%s ' "${build_args[@]}"
+echo ""
 
 echo "::notice::Starting Unity build..."
 if ! unity "${build_args[@]}" 2>&1; then

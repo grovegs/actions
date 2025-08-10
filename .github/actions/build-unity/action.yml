@@ -1,5 +1,5 @@
 name: Build Unity
-description: Build Unity project for Android and iOS platforms.
+description: Build Unity project for Android and iOS platforms using Build Profiles.
 
 inputs:
   project:
@@ -18,6 +18,9 @@ inputs:
   filename:
     description: The name of the output file of the build.
     required: true
+  profile-name:
+    description: "The name of the Unity Build Profile to use. If not specified, defaults to platform name."
+    required: false
   unity-email:
     description: "The Unity account email address."
     required: true
@@ -98,7 +101,25 @@ runs:
             ;;
         esac
 
-    - name: 🏗️ Build Project
+    - name: 🔑 Activate Unity License
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.unity-email }}" ]; then
+          echo "::add-mask::${{ inputs.unity-email }}"
+        fi
+        if [ -n "${{ inputs.unity-password }}" ]; then
+          echo "::add-mask::${{ inputs.unity-password }}"
+        fi
+        if [ -n "${{ inputs.unity-license-key }}" ]; then
+          echo "::add-mask::${{ inputs.unity-license-key }}"
+        fi
+        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
+        "${{ github.action_path }}/scripts/activate_unity.sh" \
+          "${{ inputs.unity-email }}" \
+          "${{ inputs.unity-password }}" \
+          "${{ inputs.unity-license-key }}"
+
+    - name: 🏗️ Build Project with Build Profiles
       id: build_project
       shell: bash
       run: |
@@ -134,7 +155,8 @@ runs:
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
             "${{ inputs.android-format }}" \
-            "${{ inputs.build-method }}"
+            "${{ inputs.build-method }}" \
+            "${{ inputs.profile-name }}"
             ;;
           "iOS")
             chmod +x "${{ github.action_path }}/scripts/build_ios.sh"
@@ -152,7 +174,8 @@ runs:
             "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
             "${{ inputs.ios-bundle-identifier }}" \
-            "${{ inputs.build-method }}"
+            "${{ inputs.build-method }}" \
+            "${{ inputs.profile-name }}"
             ;;
           *)
             echo "::error::Unsupported platform: ${{ inputs.platform }}"
