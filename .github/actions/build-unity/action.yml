@@ -30,9 +30,6 @@ inputs:
   unity-license-key:
     description: "The Unity license serial key."
     required: true
-  define-symbols:
-    description: A semicolon-separated list of optional symbols to define during the build.
-    required: false
   android-keystore:
     description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
     required: false
@@ -132,7 +129,6 @@ runs:
             "${{ inputs.unity-email }}" \
             "${{ inputs.unity-password }}" \
             "${{ inputs.unity-license-key }}" \
-            "${{ inputs.define-symbols }}" \
             "${{ inputs.android-keystore }}" \
             "${{ inputs.android-keystore-user }}" \
             "${{ inputs.android-keystore-password }}" \
@@ -150,7 +146,6 @@ runs:
             "${{ inputs.unity-email }}" \
             "${{ inputs.unity-password }}" \
             "${{ inputs.unity-license-key }}" \
-            "${{ inputs.define-symbols }}" \
             "${{ inputs.ios-team-id }}" \
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-certificate-password }}" \
