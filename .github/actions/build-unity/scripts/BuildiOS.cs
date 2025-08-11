@@ -17,7 +17,7 @@ public static class BuildiOS
             string outputPath = GetArg(args, "-outputPath");
             string buildConfig = GetArg(args, "-buildConfig");
             string versionName = GetArg(args, "-versionName");
-            string bundleId = GetArg(args, "-bundleId");
+            string profileId = GetArg(args, "-profileId");
             string teamId = GetArg(args, "-teamId");
             string profileName = GetArg(args, "-profileName") ?? "iOS";
 
@@ -26,7 +26,7 @@ public static class BuildiOS
             Debug.Log($"  Profile name: {profileName}");
             Debug.Log($"  Build config: {buildConfig}");
             Debug.Log($"  Version name: {versionName}");
-            Debug.Log($"  Bundle ID: {bundleId}");
+            Debug.Log($"  Profile ID: {profileId}");
             Debug.Log($"  Team ID: {teamId}");
 
             if (string.IsNullOrEmpty(outputPath))
@@ -51,10 +51,10 @@ public static class BuildiOS
                 Debug.Log($"Set bundle version to {versionName}");
             }
 
-            if (!string.IsNullOrEmpty(bundleId))
+            if (!string.IsNullOrEmpty(profileId))
             {
-                PlayerSettings.applicationIdentifier = bundleId;
-                Debug.Log($"Set bundle identifier to {bundleId}");
+                PlayerSettings.iOS.iOSManualProvisioningProfileID = profileId;
+                Debug.Log($"Set profile identifier to {profileId}");
             }
 
             if (!string.IsNullOrEmpty(teamId))
@@ -87,7 +87,7 @@ public static class BuildiOS
             }
 
             Debug.Log($"Building {scenes.Length} scenes:");
-            
+
             foreach (string scene in scenes)
             {
                 Debug.Log($"  - {scene}");
