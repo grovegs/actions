@@ -37,8 +37,8 @@ validate_inputs() {
         exit 1; 
     }
     
-    [[ "${13}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+$ ]] || { 
-        echo "::error::Invalid bundle identifier format: ${13}"; 
+    [[ "${12}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+$ ]] || { 
+        echo "::error::Invalid bundle identifier format: ${12}"; 
         exit 1; 
     }
 }
