@@ -73,12 +73,26 @@ runs:
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
-    - name: ⚙️ Install Unity
-      id: install_unity
+    - name: ☕ Setup JDK for Android
+      if: contains(inputs.unity-modules, 'android')
+      uses: actions/setup-java@v4
+      with:
+        java-version: "17"
+        distribution: "temurin"
+
+    - name: 🛠️ Setup Android SDK
+      if: contains(inputs.unity-modules, 'android')
+      uses: android-actions/setup-android@v3
+      with:
+        packages: platform-tools build-tools;34.0.0 platforms;android-34 cmake;3.22.1 ndk;27.2.12479018
+
+    - name: 📱 Install Android Tools
+      if: contains(inputs.unity-modules, 'android')
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
-        "${{ github.action_path }}/scripts/install_unity.sh" \
+        chmod +x "${{ github.action_path }}/scripts/install_android_tools.sh"
+        "${{ github.action_path }}/scripts/install_android_tools.sh" \
         "${{ steps.get_unity_info.outputs.version }}" \
-        "${{ inputs.unity-modules }}" \
-        "${{ steps.prepare_paths.outputs.download_dir }}"
+        "$JAVA_HOME" \
+        "$ANDROID_SDK_ROOT" \
+        "$ANDROID_SDK_ROOT/ndk/27.2.12479018"
