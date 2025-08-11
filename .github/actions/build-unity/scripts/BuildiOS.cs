@@ -54,6 +54,7 @@ public static class BuildiOS
             if (!string.IsNullOrEmpty(profileId))
             {
                 PlayerSettings.iOS.iOSManualProvisioningProfileID = profileId;
+                PlayerSettings.iOS.iOSManualProvisioningProfileType = ProvisioningProfileType.Distribution;
                 Debug.Log($"Set profile identifier to {profileId}");
             }
 
