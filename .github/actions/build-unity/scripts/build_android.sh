@@ -1,8 +1,8 @@
 #!/bin/bash
 
 validate_args() {
-    if [ $# -ne 14 ]; then
-        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols keystore keystore_user keystore_password format build_method profile_name"
+    if [ $# -ne 13 ]; then
+        echo "::error::Expected 13 arguments: project_dir version configuration filename unity_email unity_password unity_license_key keystore keystore_user keystore_password format build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -52,13 +52,12 @@ filename="$4"
 unity_email="$5"
 unity_password="$6"
 unity_license_key="$7"
-define_symbols="$8"
-keystore="$9"
-keystore_user="${10}"
-keystore_password="${11}"
-format="${12}"
-build_method="${13}"
-profile_name="${14}"
+keystore="$8"
+keystore_user="${9}"
+keystore_password="${10}"
+format="${11}"
+build_method="${12}"
+profile_name="${13}"
 
 validate_inputs "$@"
 
@@ -108,7 +107,6 @@ echo "::notice::  Configuration: ${configuration}"
 echo "::notice::  Format: ${format}"
 echo "::notice::  Output: ${output_file}"
 echo "::notice::  Profile: ${profile_name:-"Default"}"
-echo "::notice::  Define symbols: ${define_symbols}"
 
 if [ -n "${build_method}" ]; then
     build_method_args=("-executeMethod" "${build_method}")
@@ -149,7 +147,6 @@ build_args=(
     -buildTarget Android
     "${build_method_args[@]}"
     -outputPath "${output_file}"
-    -defineSymbols "${define_symbols}"
     -versionName "${version}"
     -buildConfig "${configuration}"
     -buildFormat "${format}"

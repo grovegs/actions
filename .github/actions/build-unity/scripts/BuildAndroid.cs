@@ -15,7 +15,6 @@ public static class BuildAndroid
             var args = Environment.GetCommandLineArgs();
             
             string outputPath = GetArg(args, "-outputPath");
-            string defineSymbols = GetArg(args, "-defineSymbols");
             string keystorePath = GetArg(args, "-keystorePath");
             string keystorePass = GetArg(args, "-keystorePass");
             string keyaliasName = GetArg(args, "-keyaliasName");
@@ -28,7 +27,6 @@ public static class BuildAndroid
             Debug.Log($"Build parameters:");
             Debug.Log($"  Output path: {outputPath}");
             Debug.Log($"  Profile name: {profileName}");
-            Debug.Log($"  Define symbols: {defineSymbols}");
             Debug.Log($"  Build config: {buildConfig}");
             Debug.Log($"  Version name: {versionName}");
             Debug.Log($"  Build format: {buildFormat}");
@@ -59,12 +57,6 @@ public static class BuildAndroid
                 {
                     Debug.LogWarning($"Could not parse version {versionName} for version code");
                 }
-            }
-
-            if (!string.IsNullOrEmpty(defineSymbols))
-            {
-                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Android, defineSymbols);
-                Debug.Log($"Set define symbols: {defineSymbols}");
             }
 
             if (!string.IsNullOrEmpty(keystorePath) && System.IO.File.Exists(keystorePath))

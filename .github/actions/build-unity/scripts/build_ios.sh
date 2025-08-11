@@ -1,8 +1,8 @@
 #!/bin/bash
 
 validate_args() {
-    if [ $# -ne 15 ]; then
-        echo "::error::Expected 15 arguments: project_dir version configuration filename unity_email unity_password unity_license_key define_symbols team_id certificate certificate_password provisioning_profile bundle_identifier build_method profile_name"
+    if [ $# -ne 14 ]; then
+        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile bundle_identifier build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -52,14 +52,13 @@ filename="$4"
 unity_email="$5"
 unity_password="$6"
 unity_license_key="$7"
-define_symbols="$8"
-team_id="$9"
-certificate="${10}"
-certificate_password="${11}"
-provisioning_profile="${12}"
-bundle_identifier="${13}"
-build_method="${14}"
-profile_name="${15}"
+team_id="$8"
+certificate="${9}"
+certificate_password="${10}"
+provisioning_profile="${11}"
+bundle_identifier="${12}"
+build_method="${13}"
+profile_name="${14}"
 
 validate_inputs "$@"
 
@@ -103,7 +102,6 @@ echo "::notice::  Output: ${xcode_project_dir}"
 echo "::notice::  Profile: ${profile_name:-"Default"}"
 echo "::notice::  Bundle ID: ${bundle_identifier}"
 echo "::notice::  Team ID: ${team_id}"
-echo "::notice::  Define symbols: ${define_symbols}"
 
 if [ -n "${build_method}" ]; then
     build_method_args=("-executeMethod" "${build_method}")
@@ -144,7 +142,6 @@ build_args=(
     -logFile -
     "${build_method_args[@]}"
     -outputPath "${xcode_project_dir}"
-    -defineSymbols "${define_symbols}"
     -versionName "${version}"
     -buildConfig "${configuration}"
     -bundleId "${bundle_identifier}"

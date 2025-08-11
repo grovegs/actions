@@ -15,7 +15,6 @@ public static class BuildiOS
             var args = Environment.GetCommandLineArgs();
             
             string outputPath = GetArg(args, "-outputPath");
-            string defineSymbols = GetArg(args, "-defineSymbols");
             string buildConfig = GetArg(args, "-buildConfig");
             string versionName = GetArg(args, "-versionName");
             string bundleId = GetArg(args, "-bundleId");
@@ -23,7 +22,6 @@ public static class BuildiOS
 
             Debug.Log($"Build parameters:");
             Debug.Log($"  Output path: {outputPath}");
-            Debug.Log($"  Define symbols: {defineSymbols}");
             Debug.Log($"  Build config: {buildConfig}");
             Debug.Log($"  Version name: {versionName}");
             Debug.Log($"  Bundle ID: {bundleId}");
@@ -53,12 +51,6 @@ public static class BuildiOS
             {
                 PlayerSettings.iOS.appleDeveloperTeamID = teamId;
                 Debug.Log($"Set Apple Developer Team ID to {teamId}");
-            }
-
-            if (!string.IsNullOrEmpty(defineSymbols))
-            {
-                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.iOS, defineSymbols);
-                Debug.Log($"Set define symbols: {defineSymbols}");
             }
 
             BuildOptions buildOptions = BuildOptions.None;
