@@ -81,93 +81,25 @@ find_unity_installation() {
 
     case "$RUNNER_OS" in
         "macOS")
-            local search_paths=(
-                "/Applications/Unity/Hub/Editor/${unity_version}/Unity.app"
-                "/Applications/Unity/Unity.app"
-                "/Applications/Unity-${unity_version}/Unity.app"
-                "/Applications/Unity/Unity-${unity_version}/Unity.app"
-                "/Applications/Unity ${unity_version}/Unity.app"
-            )
-
-            for path in "${search_paths[@]}"; do
-                if [ -d "${path}" ]; then
-                    unity_exe_path="${path}/Contents/MacOS/Unity"
-                    if [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
-                        echo "::notice::Found Unity installation: ${path}" >&2
-                        break
-                    fi
-                fi
-            done
-
-            if [ -z "${unity_exe_path}" ] || [ ! -f "${unity_exe_path}" ]; then
-                echo "::notice::Performing comprehensive search for Unity installations..." >&2
-
-                local found_path
-                found_path=$(find /Applications -name "Unity.app" -type d 2>/dev/null | while read -r app_path; do
-                    local exe_path="${app_path}/Contents/MacOS/Unity"
-                    if [ -f "${exe_path}" ] && [ -x "${exe_path}" ]; then
-                        local info_plist="${app_path}/Contents/Info.plist"
-                        if [ -f "${info_plist}" ]; then
-                            local app_version
-                            app_version=$(defaults read "${info_plist}" CFBundleShortVersionString 2>/dev/null || echo "")
-                            local bundle_version
-                            bundle_version=$(defaults read "${info_plist}" CFBundleVersion 2>/dev/null || echo "")
-                            
-                            if [[ "${app_version}" == "${unity_version}"* ]] || [[ "${bundle_version}" == *"${unity_version}"* ]] || [[ "${app_path}" == *"${unity_version}"* ]]; then
-                                echo "${exe_path}"
-                                break
-                            fi
-                        fi
-                    fi
-                done | head -1)
-
-                if [ -n "${found_path}" ]; then
-                    unity_exe_path="${found_path}"
-                fi
+            local unity_app_path="/Applications/Unity/Unity-${unity_version}/Unity.app"
+            unity_exe_path="${unity_app_path}/Contents/MacOS/Unity"
+            
+            if [ -d "${unity_app_path}" ] && [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
+                echo "::notice::Found Unity installation: ${unity_app_path}" >&2
+            else
+                echo "::error::Unity installation not found at expected path: ${unity_app_path}" >&2
+                unity_exe_path=""
             fi
             ;;
 
         "Linux")
-            local search_paths=(
-                "$HOME/Unity-${unity_version}/Editor/Unity"
-                "$HOME/Unity/Hub/Editor/${unity_version}/Editor/Unity"
-                "/opt/Unity-${unity_version}/Editor/Unity"
-                "/usr/local/Unity-${unity_version}/Editor/Unity"
-            )
-
-            for path in "${search_paths[@]}"; do
-                if [ -f "${path}" ] && [ -x "${path}" ]; then
-                    unity_exe_path="${path}"
-                    echo "::notice::Found Unity installation: ${path}" >&2
-                    break
-                fi
-            done
-
-            if [ -z "${unity_exe_path}" ] || [ ! -f "${unity_exe_path}" ]; then
-                echo "::notice::Performing comprehensive search for Unity installations..." >&2
-
-                local search_dirs=(
-                    "$HOME"
-                    "/opt"
-                    "/usr/local"
-                )
-
-                for dir in "${search_dirs[@]}"; do
-                    if [ -d "${dir}" ]; then
-                        local found_path
-                        found_path=$(find "${dir}" -path "*/Editor/Unity" -type f -executable 2>/dev/null | while read -r exe_path; do
-                            if "${exe_path}" -version 2>/dev/null | grep -q "Unity"; then
-                                echo "${exe_path}"
-                                break
-                            fi
-                        done | head -1)
-
-                        if [ -n "${found_path}" ]; then
-                            unity_exe_path="${found_path}"
-                            break
-                        fi
-                    fi
-                done
+            unity_exe_path="$HOME/Unity-${unity_version}/Editor/Unity"
+            
+            if [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
+                echo "::notice::Found Unity installation: ${unity_exe_path}" >&2
+            else
+                echo "::error::Unity installation not found at expected path: ${unity_exe_path}" >&2
+                unity_exe_path=""
             fi
             ;;
 
@@ -276,101 +208,6 @@ exec \"\$unity_real_path\" \"\$@\"
     else
         echo "::warning::Unity command may not be available in PATH"
     fi
-}
-
-configure_android_environment() {
-    local unity_version="$1"
-    local installed_modules="$2"
-    
-    if [[ "${installed_modules}" != *"android"* ]]; then
-        echo "::debug::Android module not installed, skipping Android environment configuration"
-        return 0
-    fi
-
-    echo "::notice::Configuring Android environment..."
-
-    local android_player_path=""
-    
-    case "$RUNNER_OS" in
-        "macOS")
-            local unity_search_paths=(
-                "/Applications/Unity/Hub/Editor/${unity_version}/PlaybackEngines/AndroidPlayer"
-                "/Applications/Unity/PlaybackEngines/AndroidPlayer"
-                "/Applications/Unity-${unity_version}/PlaybackEngines/AndroidPlayer"
-            )
-            
-            for path in "${unity_search_paths[@]}"; do
-                if [ -d "${path}" ]; then
-                    android_player_path="${path}"
-                    echo "::notice::Found Unity Android Player at: ${android_player_path}"
-                    break
-                fi
-            done
-            ;;
-            
-        "Linux")
-            local unity_search_paths=(
-                "$HOME/Unity-${unity_version}/Editor/Data/PlaybackEngines/AndroidPlayer"
-                "$HOME/Unity/Hub/Editor/${unity_version}/Editor/Data/PlaybackEngines/AndroidPlayer"
-                "/opt/Unity-${unity_version}/Editor/Data/PlaybackEngines/AndroidPlayer"
-            )
-            
-            for path in "${unity_search_paths[@]}"; do
-                if [ -d "${path}" ]; then
-                    android_player_path="${path}"
-                    echo "::notice::Found Unity Android Player at: ${android_player_path}"
-                    break
-                fi
-            done
-            ;;
-    esac
-
-    if [ -z "${android_player_path}" ]; then
-        echo "::warning::Android Player directory not found, attempting comprehensive search..."
-        
-        android_player_path=$(find /Applications /opt "$HOME" -path "*/PlaybackEngines/AndroidPlayer" -type d 2>/dev/null | head -1)
-        
-        if [ -n "${android_player_path}" ]; then
-            echo "::notice::Found Unity Android Player at: ${android_player_path}"
-        else
-            echo "::error::Could not locate Unity Android Player directory"
-            return 1
-        fi
-    fi
-
-    local env_vars_set=0
-
-    if [ -d "${android_player_path}/SDK" ]; then
-        echo "ANDROID_SDK_ROOT=${android_player_path}/SDK" >> "$GITHUB_ENV"
-        echo "::notice::Set ANDROID_SDK_ROOT=${android_player_path}/SDK"
-        env_vars_set=1
-    else
-        echo "::warning::Android SDK not found at: ${android_player_path}/SDK"
-    fi
-
-    if [ -d "${android_player_path}/NDK" ]; then
-        echo "ANDROID_NDK_ROOT=${android_player_path}/NDK" >> "$GITHUB_ENV"
-        echo "::notice::Set ANDROID_NDK_ROOT=${android_player_path}/NDK"
-        env_vars_set=1
-    else
-        echo "::warning::Android NDK not found at: ${android_player_path}/NDK"
-    fi
-
-    if [ -d "${android_player_path}/OpenJDK" ]; then
-        echo "JAVA_HOME=${android_player_path}/OpenJDK" >> "$GITHUB_ENV"
-        echo "::notice::Set JAVA_HOME=${android_player_path}/OpenJDK"
-        env_vars_set=1
-    else
-        echo "::debug::OpenJDK not found at: ${android_player_path}/OpenJDK (may be using system Java)"
-    fi
-
-    if [ $env_vars_set -eq 1 ]; then
-        echo "::notice::Android environment configured successfully"
-    else
-        echo "::warning::No Android environment variables were set"
-    fi
-
-    return 0
 }
 
 configure_unity_environment() {
