@@ -2,7 +2,7 @@
 
 validate_args() {
     if [ $# -ne 14 ]; then
-        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile bundle_identifier build_method profile_name"
+        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile provisioning_profile_uuid build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -36,11 +36,6 @@ validate_inputs() {
         echo "::error::Invalid version format: $2. Expected x.y.z"; 
         exit 1; 
     }
-    
-    [[ "${12}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+$ ]] || { 
-        echo "::error::Invalid bundle identifier format: ${12}"; 
-        exit 1; 
-    }
 }
 
 validate_args "$@"
@@ -56,7 +51,7 @@ team_id="$8"
 certificate="${9}"
 certificate_password="${10}"
 provisioning_profile="${11}"
-bundle_identifier="${12}"
+provisioning_profile_uuid="${12}"
 build_method="${13}"
 profile_name="${14}"
 
@@ -100,7 +95,7 @@ echo "::notice::  Version: ${version}"
 echo "::notice::  Configuration: ${configuration}"
 echo "::notice::  Output: ${xcode_project_dir}"
 echo "::notice::  Profile: ${profile_name}"
-echo "::notice::  Bundle ID: ${bundle_identifier}"
+echo "::notice::  Profile ID: ${provisioning_profile_uuid}"
 echo "::notice::  Team ID: ${team_id}"
 
 if [ -n "${build_method}" ]; then
@@ -144,7 +139,7 @@ build_args=(
     -outputPath "${xcode_project_dir}"
     -versionName "${version}"
     -buildConfig "${configuration}"
-    -bundleId "${bundle_identifier}"
+    -profileId "${provisioning_profile_uuid}"
     -teamId "${team_id}"
     -profileName "${profile_name}"
 )
@@ -219,19 +214,6 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     fi
     
     echo "::notice::Exporting IPA..."
-    
-    cat > "${builds_dir}/export.plist" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>${team_id}</string>
-</dict>
-</plist>
-EOF
     
     if ! xcodebuild -exportArchive \
         -archivePath "${archive_path}" \
