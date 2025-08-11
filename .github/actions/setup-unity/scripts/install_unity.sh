@@ -229,8 +229,6 @@ configure_unity_environment() {
 
     create_unity_wrapper "${unity_exe_path}"
 
-    configure_android_environment "${unity_version}" "${modules}"
-
     echo "::notice::Unity environment configuration completed successfully"
     echo "::notice::Unity executable: ${unity_exe_path}"
 }
