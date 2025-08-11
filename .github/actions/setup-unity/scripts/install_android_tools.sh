@@ -81,14 +81,14 @@ link_directory() {
 
     if [ -e "${target_path}" ] || [ -L "${target_path}" ]; then
         echo "::notice::Removing existing ${description} at ${target_path}"
-        rm -rf "${target_path}"
+        sudo rm -rf "${target_path}"
     fi
 
     local parent_dir
     parent_dir=$(dirname "${target_path}")
-    mkdir -p "${parent_dir}"
+    sudo mkdir -p "${parent_dir}"
 
-    if ln -sf "${source_path}" "${target_path}"; then
+    if sudo ln -sf "${source_path}" "${target_path}"; then
         echo "::notice::Successfully linked ${description}"
     else
         echo "::error::Failed to create symbolic link for ${description}"
