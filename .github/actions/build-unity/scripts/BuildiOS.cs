@@ -1,8 +1,8 @@
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
-using System.IO;
-using UnityEditor.Build;
+using System;
+using UnityEditor.Build.Profile;
 
 public static class BuildiOS
 {
@@ -19,9 +19,11 @@ public static class BuildiOS
             string versionName = GetArg(args, "-versionName");
             string bundleId = GetArg(args, "-bundleId");
             string teamId = GetArg(args, "-teamId");
+            string profileName = GetArg(args, "-profileName") ?? "iOS";
 
             Debug.Log($"Build parameters:");
             Debug.Log($"  Output path: {outputPath}");
+            Debug.Log($"  Profile name: {profileName}");
             Debug.Log($"  Build config: {buildConfig}");
             Debug.Log($"  Version name: {versionName}");
             Debug.Log($"  Bundle ID: {bundleId}");
@@ -32,6 +34,14 @@ public static class BuildiOS
                 Debug.LogError("Output path is required but was not provided");
                 EditorApplication.Exit(1);
                 return;
+            }
+
+            if (!string.IsNullOrEmpty(profileName))
+            {
+                if (!SetBuildProfile(profileName))
+                {
+                    Debug.LogWarning($"Could not find or set build profile: {profileName}. Using current active profile.");
+                }
             }
 
             if (!string.IsNullOrEmpty(versionName))
@@ -77,12 +87,13 @@ public static class BuildiOS
             }
 
             Debug.Log($"Building {scenes.Length} scenes:");
+            
             foreach (string scene in scenes)
             {
                 Debug.Log($"  - {scene}");
             }
 
-            Debug.Log("Starting Unity build process...");
+            Debug.Log("Starting Unity build process with active profile");
             var result = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.iOS, buildOptions);
             
             if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
@@ -112,6 +123,46 @@ public static class BuildiOS
             Debug.LogError($"BuildiOS.Build() failed with exception: {e.Message}");
             Debug.LogError($"Stack trace: {e.StackTrace}");
             EditorApplication.Exit(1);
+        }
+    }
+
+    static bool SetBuildProfile(string profileName)
+    {
+        try
+        {
+            string[] guids = AssetDatabase.FindAssets($"{profileName} t:BuildProfile");
+            
+            if (guids.Length > 0)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
+                
+                if (profile != null)
+                {
+                    BuildProfile.SetActiveBuildProfile(profile);
+                    Debug.Log($"Successfully set active build profile to: {profile.name} (Path: {assetPath})");
+                    return true;
+                }
+            }
+            
+            Debug.LogWarning($"Build profile '{profileName}' not found. Available profiles:");
+            string[] allGuids = AssetDatabase.FindAssets("t:BuildProfile");
+            foreach (string guid in allGuids)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
+
+                if (profile != null)
+                {
+                    Debug.LogWarning($"  - {profile.name} at {assetPath}");
+                }
+            }
+            return false;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error setting build profile: {e.Message}");
+            return false;
         }
     }
 

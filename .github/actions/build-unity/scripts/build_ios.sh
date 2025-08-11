@@ -99,7 +99,7 @@ echo "::notice::  Project: ${project_dir}"
 echo "::notice::  Version: ${version}"
 echo "::notice::  Configuration: ${configuration}"
 echo "::notice::  Output: ${xcode_project_dir}"
-echo "::notice::  Profile: ${profile_name:-"Default"}"
+echo "::notice::  Profile: ${profile_name}"
 echo "::notice::  Bundle ID: ${bundle_identifier}"
 echo "::notice::  Team ID: ${team_id}"
 
@@ -146,7 +146,7 @@ build_args=(
     -buildConfig "${configuration}"
     -bundleId "${bundle_identifier}"
     -teamId "${team_id}"
-    -profileName "${profile_name:-iOS}"
+    -profileName "${profile_name}"
 )
 
 echo "::notice::Unity command line:"

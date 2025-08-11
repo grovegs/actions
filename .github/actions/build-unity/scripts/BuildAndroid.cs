@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using UnityEditor.Build;
+using UnityEditor.Build.Profile;
 
 public static class BuildAndroid
 {
@@ -37,6 +38,14 @@ public static class BuildAndroid
                 Debug.LogError("Output path is required but was not provided");
                 EditorApplication.Exit(1);
                 return;
+            }
+
+            if (!string.IsNullOrEmpty(profileName))
+            {
+                if (!SetBuildProfile(profileName))
+                {
+                    Debug.LogWarning($"Could not find or set build profile: {profileName}. Using current active profile.");
+                }
             }
 
             if (!string.IsNullOrEmpty(versionName))
@@ -105,7 +114,7 @@ public static class BuildAndroid
                 Debug.Log($"  - {scene}");
             }
 
-            Debug.Log($"Starting Unity build process with profile: {profileName}");
+            Debug.Log("Starting Unity build process with active profile");
             var result = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.Android, buildOptions);
             
             if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
@@ -135,6 +144,45 @@ public static class BuildAndroid
             Debug.LogError($"BuildAndroid.Build() failed with exception: {e.Message}");
             Debug.LogError($"Stack trace: {e.StackTrace}");
             EditorApplication.Exit(1);
+        }
+    }
+
+    static bool SetBuildProfile(string profileName)
+    {
+        try
+        {
+            string[] guids = AssetDatabase.FindAssets($"{profileName} t:BuildProfile");
+            
+            if (guids.Length > 0)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
+                
+                if (profile != null)
+                {
+                    BuildProfile.SetActiveBuildProfile(profile);
+                    Debug.Log($"Successfully set active build profile to: {profile.name} (Path: {assetPath})");
+                    return true;
+                }
+            }
+            
+            Debug.LogWarning($"Build profile '{profileName}' not found. Available profiles:");
+            string[] allGuids = AssetDatabase.FindAssets("t:BuildProfile");
+            foreach (string guid in allGuids)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
+                if (profile != null)
+                {
+                    Debug.LogWarning($"  - {profile.name} at {assetPath}");
+                }
+            }
+            return false;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error setting build profile: {e.Message}");
+            return false;
         }
     }
 

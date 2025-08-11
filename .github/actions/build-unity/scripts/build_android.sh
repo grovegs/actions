@@ -106,7 +106,7 @@ echo "::notice::  Version: ${version}"
 echo "::notice::  Configuration: ${configuration}"
 echo "::notice::  Format: ${format}"
 echo "::notice::  Output: ${output_file}"
-echo "::notice::  Profile: ${profile_name:-"Default"}"
+echo "::notice::  Profile: ${profile_name}"
 
 if [ -n "${build_method}" ]; then
     build_method_args=("-executeMethod" "${build_method}")
@@ -150,7 +150,7 @@ build_args=(
     -versionName "${version}"
     -buildConfig "${configuration}"
     -buildFormat "${format}"
-    -profileName "${profile_name:-Android}"
+    -profileName "${profile_name}"
 )
 
 if [ -n "${keystore}" ]; then
