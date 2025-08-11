@@ -73,6 +73,16 @@ runs:
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
+    - name: ⚙️ Install Unity
+      id: install_unity
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
+        "${{ github.action_path }}/scripts/install_unity.sh" \
+        "${{ steps.get_unity_info.outputs.version }}" \
+        "${{ inputs.unity-modules }}" \
+        "${{ steps.prepare_paths.outputs.download_dir }}"
+
     - name: ☕ Setup JDK for Android
       if: contains(inputs.unity-modules, 'android')
       uses: actions/setup-java@v4
