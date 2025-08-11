@@ -37,8 +37,8 @@ validate_inputs() {
         exit 1; 
     }
     
-    [[ "${12}" =~ ^(apk|aab)$ ]] || { 
-        echo "::error::Invalid Android format: ${12}. Expected apk or aab"; 
+    [[ "${11}" =~ ^(apk|aab)$ ]] || { 
+        echo "::error::Invalid Android format: ${11}. Expected apk or aab"; 
         exit 1; 
     }
 }
