@@ -55,8 +55,8 @@ inputs:
   ios-provisioning-profile:
     description: "The Base64-encoded iOS provisioning profile (.mobileprovision file) required for building the application."
     required: false
-  ios-bundle-identifier:
-    description: "The iOS bundle identifier (e.g., com.company.appname)."
+  ios-provisioning-profile-uuid:
+    description: "The UUID of the iOS provisioning profile to be used during the build process."
     required: false
   build-method:
     description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod). If not specified, uses default build."
@@ -90,7 +90,7 @@ runs:
             "ios-certificate=${{ inputs.ios-certificate }}" \
             "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-bundle-identifier=${{ inputs.ios-bundle-identifier }}"
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
             ;;
           *)
             echo "::error::Unsupported platform: ${{ inputs.platform }}"
@@ -150,7 +150,7 @@ runs:
             "${{ inputs.ios-certificate }}" \
             "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
-            "${{ inputs.ios-bundle-identifier }}" \
+            "${{ inputs.ios-provisioning-profile-uuid }}" \
             "${{ inputs.build-method }}" \
             "${{ inputs.profile-name }}"
             ;;
