@@ -1,7 +1,7 @@
 #!/bin/bash
 
 validate_args() {
-    if [ $# -ne 14 ]; then
+    if [ $# -ne 15 ]; then
         echo "::error::Expected 15 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile provisioning_profile_uuid export_method build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
