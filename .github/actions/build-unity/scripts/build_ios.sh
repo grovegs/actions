@@ -65,11 +65,12 @@ builds_dir="${HOME}/.builds/ios"
 xcode_project_dir="${builds_dir}/${filename}"
 archive_path="${builds_dir}/${filename}.xcarchive"
 export_path="${builds_dir}/${filename}.ipa"
+export_options_plist="${builds_dir}/export.plist"
 
 cleanup() {
     echo "::notice::Cleaning up sensitive files..."
     security delete-keychain "${keychain_file}" 2>/dev/null || true
-    rm -f "${certificate_file}" "${provisioning_file}" || true
+    rm -f "${certificate_file}" "${provisioning_file}" "${export_options_plist}" || true
 }
 trap cleanup EXIT
 
@@ -214,13 +215,51 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
         exit 1
     fi
     
+    echo "::notice::Creating export options plist..."
+    
+    bundle_id=$(grep -r "PRODUCT_BUNDLE_IDENTIFIER" "${xcodeproj_file}" | head -1 | sed 's/.*= "\([^"]*\)".*/\1/' || echo "com.defaultcompany.${scheme_name}")
+    
+    {
+        cat << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>ad-hoc</string>
+    <key>teamID</key>
+    <string>${team_id}</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>${bundle_id}</key>
+        <string>${provisioning_profile_uuid}</string>
+    </dict>
+    <key>compileBitcode</key>
+    <false/>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>signingStyle</key>
+    <string>manual</string>
+</dict>
+</plist>
+EOF
+    } > "${export_options_plist}"
+
+    echo "::notice::Export options plist created with bundle ID: ${bundle_id}"
+    echo "::debug::Export options plist contents:"
+    cat "${export_options_plist}"
+    
     echo "::notice::Exporting IPA..."
     
     if ! xcodebuild -exportArchive \
         -archivePath "${archive_path}" \
         -exportPath "${builds_dir}" \
-        -exportOptionsPlist "${builds_dir}/export.plist"; then
+        -exportOptionsPlist "${export_options_plist}"; then
         echo "::error::IPA export failed"
+        echo "::debug::Available files in build directory:"
+        ls -la "${builds_dir}" || true
         exit 1
     fi
     
@@ -231,6 +270,8 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     
     if [ ! -f "${export_path}" ]; then
         echo "::error::IPA file not found: ${export_path}"
+        echo "::debug::Contents of build directory:"
+        ls -la "${builds_dir}" || true
         exit 1
     fi
     
