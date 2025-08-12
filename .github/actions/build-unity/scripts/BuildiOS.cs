@@ -1,8 +1,11 @@
-using UnityEditor;
-using UnityEngine;
-using System.Linq;
 using System;
+using System.Linq;
+
+using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Profile;
+
+using UnityEngine;
 
 public static class BuildiOS
 {
@@ -64,7 +67,47 @@ public static class BuildiOS
                 Debug.Log($"Set Apple Developer Team ID to {teamId}");
             }
 
+            Debug.Log("Checking iOS app icon configuration...");
+            var appIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Application);
+            if (appIcons != null && appIcons.Length > 0)
+            {
+                Debug.Log($"Found {appIcons.Length} app icons configured");
+
+                foreach (var icon in appIcons)
+                {
+                    if (icon != null)
+                    {
+                        Debug.Log($"  Icon: {icon.name} ({icon.width}x{icon.height})");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("❌ No app icons found in iOS player settings!");
+                Debug.LogWarning("This will cause TestFlight upload to fail - please add icons in Player Settings > iOS > Icon");
+            }
+
+            var allIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Any);
+            bool hasMarketingIcon = false;
+
+            foreach (var icon in allIcons)
+            {
+                if (icon != null && icon.width == 1024 && icon.height == 1024)
+                {
+                    hasMarketingIcon = true;
+                    Debug.Log($"✅ Found required 1024x1024 marketing icon: {icon.name}");
+                    break;
+                }
+            }
+            
+            if (!hasMarketingIcon)
+            {
+                Debug.LogWarning("❌ Missing required 1024x1024 marketing icon!");
+                Debug.LogWarning("Add a 1024x1024 PNG icon in Player Settings > iOS > Icon for App Store/TestFlight submission");
+            }
+
             BuildOptions buildOptions = BuildOptions.None;
+            
             if (buildConfig == "Debug")
             {
                 buildOptions |= BuildOptions.Development | BuildOptions.AllowDebugging;
