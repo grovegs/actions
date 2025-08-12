@@ -207,6 +207,7 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     if ! xcodebuild -project "${xcodeproj_file}" \
         -scheme "${scheme_name}" \
         -configuration "${configuration}" \
+        -destination "generic/platform=iOS" \
         -archivePath "${archive_path}" \
         archive; then
         echo "::error::Xcode archive failed"
