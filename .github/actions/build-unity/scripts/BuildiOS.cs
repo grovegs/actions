@@ -39,6 +39,13 @@ public static class BuildiOS
                 return;
             }
 
+            if (!ValidateAppIcons())
+            {
+                Debug.LogError("App icon validation failed. Build cannot continue.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
             if (!string.IsNullOrEmpty(profileName))
             {
                 if (!SetBuildProfile(profileName))
@@ -65,45 +72,6 @@ public static class BuildiOS
             {
                 PlayerSettings.iOS.appleDeveloperTeamID = teamId;
                 Debug.Log($"Set Apple Developer Team ID to {teamId}");
-            }
-
-            Debug.Log("Checking iOS app icon configuration...");
-            var appIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Application);
-            if (appIcons != null && appIcons.Length > 0)
-            {
-                Debug.Log($"Found {appIcons.Length} app icons configured");
-
-                foreach (var icon in appIcons)
-                {
-                    if (icon != null)
-                    {
-                        Debug.Log($"  Icon: {icon.name} ({icon.width}x{icon.height})");
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogWarning("❌ No app icons found in iOS player settings!");
-                Debug.LogWarning("This will cause TestFlight upload to fail - please add icons in Player Settings > iOS > Icon");
-            }
-
-            var allIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Any);
-            bool hasMarketingIcon = false;
-
-            foreach (var icon in allIcons)
-            {
-                if (icon != null && icon.width == 1024 && icon.height == 1024)
-                {
-                    hasMarketingIcon = true;
-                    Debug.Log($"✅ Found required 1024x1024 marketing icon: {icon.name}");
-                    break;
-                }
-            }
-            
-            if (!hasMarketingIcon)
-            {
-                Debug.LogWarning("❌ Missing required 1024x1024 marketing icon!");
-                Debug.LogWarning("Add a 1024x1024 PNG icon in Player Settings > iOS > Icon for App Store/TestFlight submission");
             }
 
             BuildOptions buildOptions = BuildOptions.None;
@@ -168,6 +136,76 @@ public static class BuildiOS
             Debug.LogError($"Stack trace: {e.StackTrace}");
             EditorApplication.Exit(1);
         }
+    }
+
+    static bool ValidateAppIcons()
+    {
+        Debug.Log("🔍 Validating iOS app icon configuration...");
+        
+        var appIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Application);
+        if (appIcons != null && appIcons.Length > 0)
+        {
+            Debug.Log($"✅ Found {appIcons.Length} app icons configured");
+
+            foreach (var icon in appIcons)
+            {
+                if (icon != null)
+                {
+                    Debug.Log($"  📱 App Icon: {icon.name} ({icon.width}x{icon.height})");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ No app icons found in iOS player settings!");
+            Debug.LogError("Configure app icons in Player Settings > iOS > Icon");
+            return false;
+        }
+
+        var allIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Any);
+        bool hasMarketingIcon = false;
+
+        foreach (var icon in allIcons)
+        {
+            if (icon != null && icon.width == 1024 && icon.height == 1024)
+            {
+                hasMarketingIcon = true;
+                Debug.Log($"✅ Found required 1024x1024 marketing icon: {icon.name}");
+                break;
+            }
+        }
+        
+        if (!hasMarketingIcon)
+        {
+            Debug.LogError("❌ CRITICAL: Missing required 1024x1024 marketing icon!");
+            Debug.LogError("This icon is MANDATORY for TestFlight and App Store submissions.");
+            Debug.LogError("");
+            Debug.LogError("To fix this:");
+            Debug.LogError("1. Open Player Settings (Edit > Project Settings > Player)");
+            Debug.LogError("2. Go to iOS settings tab");
+            Debug.LogError("3. Find the 'Icon' section");
+            Debug.LogError("4. Add a 1024x1024 PNG icon to the largest icon slot");
+            Debug.LogError("");
+            Debug.LogError("The icon must be:");
+            Debug.LogError("- Exactly 1024x1024 pixels");
+            Debug.LogError("- PNG format");
+            Debug.LogError("- High quality without transparency");
+            Debug.LogError("");
+            return false;
+        }
+
+        int[] requiredSizes = [20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180];
+        var iconSizes = allIcons.Where(i => i != null).Select(i => i.width).Distinct().ToArray();
+        
+        var missingSizes = requiredSizes.Where(size => !iconSizes.Contains(size)).ToArray();
+        if (missingSizes.Length > 0)
+        {
+            Debug.LogWarning($"⚠️  Missing recommended icon sizes: {string.Join(", ", missingSizes)}");
+            Debug.LogWarning("While not critical for TestFlight, these may be needed for App Store submission");
+        }
+        
+        Debug.Log("✅ App icon validation passed");
+        return true;
     }
 
     static bool SetBuildProfile(string profileName)
