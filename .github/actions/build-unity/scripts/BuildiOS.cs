@@ -194,10 +194,10 @@ public static class BuildiOS
             return false;
         }
 
-        int[] requiredSizes = [20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180];
+        int[] requiredSizes = new int[] { 20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180 };
         var iconSizes = allIcons.Where(i => i != null).Select(i => i.width).Distinct().ToArray();
-        
         var missingSizes = requiredSizes.Where(size => !iconSizes.Contains(size)).ToArray();
+        
         if (missingSizes.Length > 0)
         {
             Debug.LogWarning($"⚠️  Missing recommended icon sizes: {string.Join(", ", missingSizes)}");
