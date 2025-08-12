@@ -1,21 +1,21 @@
 #!/bin/bash
 
 if [ "$#" -ne 4 ]; then
-    echo "::error::Usage: $0 <file> <api_key_id> <api_issuer_id> <api_private_key>"
+    echo "::error::Usage: $0 <file> <api_key> <api_key_id> <api_issuer_id>"
     exit 1
 fi
 
 file="$1"
-api_key_id="$2"
-api_issuer_id="$3"
-api_private_key="$4"
+api_key="$2"
+api_key_id="$3"
+api_issuer_id="$4"
 
-temp_dir=$(mktemp -d)
-api_key_file="${temp_dir}/AuthKey_${api_key_id}.p8"
+private_keys_dir="${HOME}/.appstoreconnect/private_keys"
+api_key_file="${private_keys_dir}/AuthKey_${api_key_id}.p8"
 
 cleanup() {
     echo "::notice::Cleaning up temporary files..."
-    rm -rf "${temp_dir}" || true
+    rm -f "${api_key_file}" || true
 }
 trap cleanup EXIT
 
@@ -24,13 +24,14 @@ if [ ! -f "${file}" ]; then
     exit 1
 fi
 
-if [ -z "${api_key_id}" ] || [ -z "${api_issuer_id}" ] || [ -z "${api_private_key}" ]; then
+if [ -z "${api_key_id}" ] || [ -z "${api_issuer_id}" ] || [ -z "${api_key}" ]; then
     echo "::error::API key credentials are required"
     exit 1
 fi
 
 echo "::notice::Setting up App Store Connect API authentication"
-if ! echo -n "${api_private_key}" | base64 -d > "${api_key_file}"; then
+mkdir -p "${private_keys_dir}"
+if ! echo -n "${api_key}" | base64 -d > "${api_key_file}"; then
     echo "::error::Failed to decode API private key"
     exit 1
 fi
@@ -45,8 +46,7 @@ if ! xcrun altool --upload-app \
     --type ios \
     --file "${file}" \
     --apiKey "${api_key_id}" \
-    --apiIssuer "${api_issuer_id}" \
-    --apiKeyFilePath "${api_key_file}"; then
+    --apiIssuer "${api_issuer_id}"; then
     echo "::error::TestFlight upload failed"
     exit 1
 fi
