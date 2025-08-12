@@ -24,6 +24,6 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/upload_testflight.sh"
         "${{ github.action_path }}/scripts/upload_testflight.sh" \
         "${{ inputs.file }}" \
+        "${{ inputs.api-key }}" \
         "${{ inputs.api-key-id }}" \
-        "${{ inputs.api-issuer-id }}" \
-        "${{ inputs.api-key }}"
+        "${{ inputs.api-issuer-id }}"
