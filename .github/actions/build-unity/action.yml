@@ -58,6 +58,9 @@ inputs:
   ios-provisioning-profile-uuid:
     description: "The UUID of the iOS provisioning profile to be used during the build process."
     required: false
+  ios-export-method:
+    description: "iOS export method: 'ad-hoc' for Firebase/testing or 'app-store' for App Store/TestFlight"
+    required: false
   build-method:
     description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod). If not specified, uses default build."
     required: false
@@ -90,7 +93,8 @@ runs:
             "ios-certificate=${{ inputs.ios-certificate }}" \
             "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
             "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}"
+            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}" \
+            "ios-export-method=${{ inputs.ios-export-method }}"
             ;;
           *)
             echo "::error::Unsupported platform: ${{ inputs.platform }}"
@@ -151,6 +155,7 @@ runs:
             "${{ inputs.ios-certificate-password }}" \
             "${{ inputs.ios-provisioning-profile }}" \
             "${{ inputs.ios-provisioning-profile-uuid }}" \
+            "${{ inputs.ios-export-method }}" \
             "${{ inputs.build-method }}" \
             "${{ inputs.profile-name }}"
             ;;
