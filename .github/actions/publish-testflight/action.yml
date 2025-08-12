@@ -14,6 +14,12 @@ inputs:
   api-issuer-id:
     description: The App Store Connect API Issuer ID.
     required: true
+  release-notes:
+    description: Notes for this release to be displayed to testers in TestFlight.
+    required: false
+  tester-groups:
+    description: A comma-separated list of internal tester group names to distribute the build to.
+    required: false
 
 runs:
   using: composite
@@ -26,4 +32,6 @@ runs:
         "${{ inputs.file }}" \
         "${{ inputs.api-key }}" \
         "${{ inputs.api-key-id }}" \
-        "${{ inputs.api-issuer-id }}"
+        "${{ inputs.api-issuer-id }}" \
+        "${{ inputs.release-notes }}" \
+        "${{ inputs.tester-groups }}"
