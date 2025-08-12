@@ -1,0 +1,29 @@
+name: Publish to TestFlight
+description: Uploads an IPA file to TestFlight using App Store Connect API.
+
+inputs:
+  file:
+    description: The path to the IPA file to be uploaded to TestFlight.
+    required: true
+  api-key-id:
+    description: The App Store Connect API Key ID.
+    required: true
+  api-issuer-id:
+    description: The App Store Connect API Issuer ID.
+    required: true
+  api-private-key:
+    description: The base64-encoded App Store Connect API private key (.p8 file).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 🚀 Upload to TestFlight
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/upload_testflight.sh"
+        "${{ github.action_path }}/scripts/upload_testflight.sh" \
+        "${{ inputs.file }}" \
+        "${{ inputs.api-key-id }}" \
+        "${{ inputs.api-issuer-id }}" \
+        "${{ inputs.api-private-key }}"
