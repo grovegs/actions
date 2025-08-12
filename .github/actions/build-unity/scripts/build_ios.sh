@@ -2,7 +2,7 @@
 
 validate_args() {
     if [ $# -ne 14 ]; then
-        echo "::error::Expected 14 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile provisioning_profile_uuid build_method profile_name"
+        echo "::error::Expected 15 arguments: project_dir version configuration filename unity_email unity_password unity_license_key team_id certificate certificate_password provisioning_profile provisioning_profile_uuid export_method build_method profile_name"
         echo "::error::Got $# arguments"
         exit 1
     fi
@@ -52,8 +52,9 @@ certificate="${9}"
 certificate_password="${10}"
 provisioning_profile="${11}"
 provisioning_profile_uuid="${12}"
-build_method="${13}"
-profile_name="${14}"
+export_method="${13}"
+build_method="${14}"
+profile_name="${15}"
 
 validate_inputs "$@"
 
@@ -231,17 +232,6 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     
     echo "::notice::Detected bundle ID: ${bundle_id}"
     echo "::notice::Using provisioning profile UUID: ${provisioning_profile_uuid}"
-    
-    if [ "$configuration" = "Development" ]; then
-        export_method="ad-hoc"
-        echo "::notice::Using ad-hoc export method for Development configuration"
-    elif [ "$configuration" = "Production" ]; then
-        export_method="app-store"
-        echo "::notice::Using app-store export method for Production configuration"
-    else
-        echo "::error::Unsupported configuration: $configuration. Use 'Development' or 'Production'"
-        exit 1
-    fi
     
     {
         cat << EOF
