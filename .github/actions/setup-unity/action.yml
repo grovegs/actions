@@ -1,37 +1,22 @@
 name: Setup Unity
-description: Downloads, installs, and caches Unity for macOS and Linux platforms.
+description: Downloads, installs, and caches Unity for macOS and Linux platforms with iOS and Android support.
 inputs:
+  project:
+    description: Path to the Unity project directory.
+    required: false
+    default: "."
   unity-version:
     description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
     required: false
   unity-modules:
-    description: Comma-separated list of target modules to install (e.g., "ios,android,webgl").
+    description: Comma-separated list of target modules to install (e.g., "ios,android").
     required: false
     default: ""
   cache:
     description: Whether to use caching for the downloaded installers.
     required: false
     default: "true"
-  project-path:
-    description: Path to the Unity project directory.
-    required: false
-    default: "."
-  unity-username:
-    description: "Your Unity account email address."
-    required: false
-  unity-password:
-    description: "Your Unity account password."
-    required: false
-  unity-serial:
-    description: "Your Unity license serial key (Pro/Plus)."
-    required: false
-outputs:
-  download-cache-hit:
-    description: "A boolean value to indicate if the download cache was hit."
-    value: ${{ steps.cache_downloads.outputs.cache-hit }}
-  unity-path:
-    description: "The path to the Unity executable."
-    value: ${{ steps.install_unity.outputs.unity_path }}
+
 runs:
   using: composite
   steps:
@@ -49,7 +34,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
-        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project-path }}" "${{ inputs.unity-version }}"
+        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project }}" "${{ inputs.unity-version }}"
 
     - name: 🔧 Prepare Paths and Module ID
       id: prepare_paths
@@ -98,12 +83,26 @@ runs:
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
-    - name: 🔑 Activate Unity License
-      if: inputs.unity-username != '' && inputs.unity-password != '' && inputs.unity-serial != ''
+    - name: ☕ Setup JDK for Android
+      if: contains(inputs.unity-modules, 'android')
+      uses: actions/setup-java@v4
+      with:
+        java-version: "17"
+        distribution: "temurin"
+
+    - name: 🛠️ Setup Android SDK
+      if: contains(inputs.unity-modules, 'android')
+      uses: android-actions/setup-android@v3
+      with:
+        packages: platform-tools build-tools;34.0.0 platforms;android-34 cmake;3.22.1 ndk;27.2.12479018
+
+    - name: 📱 Install Android Tools
+      if: contains(inputs.unity-modules, 'android')
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/activate_unity.sh"
-        "${{ github.action_path }}/scripts/activate_unity.sh" \
-          "${{ inputs.unity-username }}" \
-          "${{ inputs.unity-password }}" \
-          "${{ inputs.unity-serial }}"
+        chmod +x "${{ github.action_path }}/scripts/install_android_tools.sh"
+        "${{ github.action_path }}/scripts/install_android_tools.sh" \
+        "${{ steps.get_unity_info.outputs.version }}" \
+        "$JAVA_HOME" \
+        "$ANDROID_SDK_ROOT" \
+        "$ANDROID_SDK_ROOT/ndk/27.2.12479018"
