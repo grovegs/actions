@@ -217,7 +217,31 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     
     echo "::notice::Creating export options plist..."
     
-    bundle_id=$(grep -r "PRODUCT_BUNDLE_IDENTIFIER" "${xcodeproj_file}" | head -1 | sed 's/.*= "\([^"]*\)".*/\1/' || echo "com.defaultcompany.${scheme_name}")
+    if [ ! -f "${xcodeproj_file}/project.pbxproj" ]; then
+        echo "::error::project.pbxproj not found in ${xcodeproj_file}"
+        exit 1
+    fi
+    
+    bundle_id=$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*' "${xcodeproj_file}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
+    
+    if [ -z "$bundle_id" ]; then
+        echo "::error::Could not extract bundle ID from project.pbxproj"
+        exit 1
+    fi
+    
+    echo "::notice::Detected bundle ID: ${bundle_id}"
+    echo "::notice::Using provisioning profile UUID: ${provisioning_profile_uuid}"
+    
+    if [ "$configuration" = "Development" ]; then
+        export_method="ad-hoc"
+        echo "::notice::Using ad-hoc export method for Development configuration"
+    elif [ "$configuration" = "Production" ]; then
+        export_method="app-store"
+        echo "::notice::Using app-store export method for Production configuration"
+    else
+        echo "::error::Unsupported configuration: $configuration. Use 'Development' or 'Production'"
+        exit 1
+    fi
     
     {
         cat << EOF
@@ -226,7 +250,7 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>ad-hoc</string>
+    <string>${export_method}</string>
     <key>teamID</key>
     <string>${team_id}</string>
     <key>provisioningProfiles</key>
