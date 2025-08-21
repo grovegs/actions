@@ -83,6 +83,12 @@ runs:
         "${{ inputs.unity-modules }}" \
         "${{ steps.prepare_paths.outputs.download_dir }}"
 
+    - name: 🍎 Setup Xcode
+      if: contains(inputs.unity-modules, 'ios')
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/setup_xcode.sh"
+
     - name: ☕ Setup JDK for Android
       if: contains(inputs.unity-modules, 'android')
       uses: actions/setup-java@v4
