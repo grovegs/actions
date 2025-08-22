@@ -6,7 +6,7 @@ if [ "$#" -ne 0 ]; then
     exit 1
 fi
 
-echo "::group::🍎 Setting up Xcode for Unity iOS builds"
+echo "::group::🍎 Setting up Xcode"
 
 setup_xcode_for_unity() {
     local xcode_path=""
