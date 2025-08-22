@@ -88,6 +88,7 @@ runs:
       shell: bash
       run: |
         chmod +x "${{ github.action_path }}/scripts/setup_xcode.sh"
+        "${{ github.action_path }}/scripts/setup_xcode.sh"
 
     - name: ☕ Setup JDK for Android
       if: contains(inputs.unity-modules, 'android')
