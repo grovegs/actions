@@ -1,5 +1,5 @@
 name: Build Unity
-description: Build Unity project for Android and iOS platforms using Build Profiles.
+description: Build Unity project for Android and iOS platforms using Build.
 
 inputs:
   project:
@@ -65,9 +65,10 @@ inputs:
     description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod)."
     required: false
   cache:
-    description: "Cache Unity Library, packages, and build tools (Gradle/Xcode)."
+    description: "Cache Unity Library, packages, and build tools (Gradle/Xcode) for faster builds."
     required: false
     default: "true"
+
 
 outputs:
   file:
@@ -94,8 +95,12 @@ runs:
       id: cache-key
       shell: bash
       run: |
-        project_hash=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" | sort | xargs cat | sha256sum | cut -d' ' -f1)
-
+        project_hash=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort | xargs -r cat 2>/dev/null | if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -d' ' -f1)
+        
+        if [ -z "$project_hash" ]; then
+          project_hash=$(echo "${{ inputs.project }}" | if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -d' ' -f1)
+        fi
+        
         cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
         echo "key=$cache_key" >> $GITHUB_OUTPUT
         echo "::notice::Cache key: $cache_key"
@@ -151,7 +156,7 @@ runs:
       shell: bash
       run: |
         echo "::notice::Cache hit - checking integrity..."
-
+        
         if [ -f "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" ]; then
           if grep -q "corrupted\|error\|failed" "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" 2>/dev/null; then
             echo "::warning::Detected corrupted cache, cleaning..."
@@ -159,7 +164,7 @@ runs:
             rm -rf "${{ inputs.project }}/Temp"
           fi
         fi
-
+        
         if [ -d "${{ inputs.project }}/Library" ] && [ -z "$(ls -A "${{ inputs.project }}/Library" 2>/dev/null)" ]; then
           echo "::warning::Empty Library folder detected, removing..."
           rm -rf "${{ inputs.project }}/Library"
@@ -213,7 +218,7 @@ runs:
         if [ -n "${{ inputs.ios-certificate-password }}" ]; then
           echo "::add-mask::${{ inputs.ios-certificate-password }}"
         fi
-
+        
         if [ "${{ inputs.cache }}" == "true" ]; then
           if [ "${{ steps.cache-unity-library.outputs.cache-hit }}" == "true" ]; then
             echo "::notice::✅ Using cached Unity Library - this should speed up the build significantly"
@@ -223,7 +228,7 @@ runs:
         else
           echo "::notice::🚫 Caching disabled - build will not use or create cache"
         fi
-
+        
         case "${{ inputs.platform }}" in
           "Android")
             chmod +x "${{ github.action_path }}/scripts/build_android.sh"
@@ -272,15 +277,15 @@ runs:
       run: |
         echo "::notice::=== Build Statistics ==="
         echo "::notice::Caching enabled: ${{ inputs.cache }}"
-
+        
         if [ "${{ inputs.cache }}" == "true" ]; then
           echo "::notice::Cache hit: ${{ steps.cache-unity-library.outputs.cache-hit }}"
           echo "::notice::Cache key: ${{ steps.cache-key.outputs.key }}"
         fi
-
+        
         echo "::notice::Unity version: ${{ steps.unity-version.outputs.version }}"
         echo "::notice::Platform: ${{ inputs.platform }}"
-
+        
         if [ -d "${{ inputs.project }}/Library" ]; then
           lib_size=$(du -sh "${{ inputs.project }}/Library" 2>/dev/null | cut -f1 || echo "unknown")
           echo "::notice::Library folder size: $lib_size"
