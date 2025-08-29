@@ -65,7 +65,7 @@ inputs:
     description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod)."
     required: false
   cache:
-    description: "Cache Unity Library, packages, and build tools (Gradle/Xcode)."
+    description: "Cache Unity Library, packages, and build tools."
     required: false
     default: "true"
 
@@ -91,10 +91,27 @@ runs:
         fi
 
     - name: 🔑 Create Cache Key
+      if: inputs.cache == 'true'
       id: cache-key
       shell: bash
       run: |
-        project_hash=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        echo "::notice::Generating cache key for ${{ inputs.project }}..."
+
+        project_files=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
+
+        if [ -n "$project_files" ]; then
+          if command -v sha256sum >/dev/null 2>&1; then
+            project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
+          else
+            project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
+          fi
+        else
+          if command -v sha256sum >/dev/null 2>&1; then
+            project_hash=$(echo "${{ inputs.project }}" | sha256sum | cut -d' ' -f1)
+          else
+            project_hash=$(echo "${{ inputs.project }}" | shasum -a 256 | cut -d' ' -f1)
+          fi
+        fi
 
         cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
         echo "key=$cache_key" >> $GITHUB_OUTPUT
