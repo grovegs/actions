@@ -324,20 +324,15 @@ main() {
             echo "::notice::✅ No Xcode version change needed"
             echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
             return 0
-        elif [ "$comparison" -gt 0 ]; then
-            echo "::notice::⬆️  Current iOS SDK $current_sdk is newer than target $target_ios_sdk_version"
-            echo "::notice::✅ Using current Xcode (compatible with target)"
-            echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
-            return 0
         else
-            echo "::warning::⚠️  Current iOS SDK $current_sdk is older than target $target_ios_sdk_version"
-            echo "::warning::⚠️  Need to find Xcode with iOS SDK $target_ios_sdk_version+"
+            echo "::notice::📋 Current iOS SDK $current_sdk does not match target $target_ios_sdk_version"
+            echo "::notice::🔍 Searching for exact target version first..."
         fi
     else
         echo "::warning::⚠️  Could not detect current iOS SDK version"
     fi
     
-    echo "::notice::🔄 Searching for compatible Xcode installation..."
+    echo "::notice::🔄 Searching for Xcode with target versions..."
     
     local best_xcode_info
     if ! best_xcode_info="$(select_best_xcode "$target_ios_sdk_version")"; then
