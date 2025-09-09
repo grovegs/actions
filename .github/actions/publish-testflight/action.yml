@@ -18,6 +18,16 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: 🔍 Validate Upload Requirements
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/validate_upload.sh"
+        "${{ github.action_path }}/scripts/validate_upload.sh" \
+        "${{ inputs.file }}" \
+        "${{ inputs.api-key }}" \
+        "${{ inputs.api-key-id }}" \
+        "${{ inputs.api-issuer-id }}"
+
     - name: 🚀 Upload to TestFlight
       shell: bash
       run: |
