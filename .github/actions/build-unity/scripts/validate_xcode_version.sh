@@ -1,0 +1,292 @@
+#!/bin/bash
+
+set -euo pipefail
+
+MIN_IOS_SDK_VERSION="18.0"
+MIN_XCODE_VERSION="16.0"
+
+validate_args() {
+    if [ "$#" -gt 1 ]; then
+        echo "::error::Usage: $0 [min_sdk_version]"
+        echo "::error::  min_sdk_version: Minimum iOS SDK version (default: ${MIN_IOS_SDK_VERSION})"
+        exit 1
+    fi
+}
+
+compare_versions() {
+    local version1="$1"
+    local version2="$2"
+    
+    local v1_major
+    local v1_minor
+    local v1_patch
+    local v2_major
+    local v2_minor
+    local v2_patch
+    
+    v1_major=$(echo "$version1" | cut -d. -f1 | sed 's/^0*//')
+    v1_minor=$(echo "$version1" | cut -d. -f2 2>/dev/null | sed 's/^0*//' || echo "0")
+    v1_patch=$(echo "$version1" | cut -d. -f3 2>/dev/null | sed 's/^0*//' || echo "0")
+    
+    v2_major=$(echo "$version2" | cut -d. -f1 | sed 's/^0*//')
+    v2_minor=$(echo "$version2" | cut -d. -f2 2>/dev/null | sed 's/^0*//' || echo "0")
+    v2_patch=$(echo "$version2" | cut -d. -f3 2>/dev/null | sed 's/^0*//' || echo "0")
+    
+    v1_major=${v1_major:-0}
+    v1_minor=${v1_minor:-0}
+    v1_patch=${v1_patch:-0}
+    v2_major=${v2_major:-0}
+    v2_minor=${v2_minor:-0}
+    v2_patch=${v2_patch:-0}
+    
+    local v1_numeric=$((v1_major * 10000 + v1_minor * 100 + v1_patch))
+    local v2_numeric=$((v2_major * 10000 + v2_minor * 100 + v2_patch))
+    
+    if [ "$v1_numeric" -gt "$v2_numeric" ]; then
+        echo "1"
+    elif [ "$v1_numeric" -lt "$v2_numeric" ]; then
+        echo "-1"
+    else
+        echo "0"
+    fi
+}
+
+get_current_xcode_info() {
+    local xcode_path
+    local xcode_version
+    local ios_sdk_version
+    
+    xcode_path=$(xcode-select -p 2>/dev/null || echo "unknown")
+    
+    if command -v xcodebuild >/dev/null 2>&1; then
+        xcode_version=$(xcodebuild -version 2>/dev/null | head -n1 | sed 's/Xcode //' || echo "unknown")
+    else
+        xcode_version="unknown"
+    fi
+    
+    if command -v xcrun >/dev/null 2>&1; then
+        ios_sdk_version=$(xcrun --show-sdk-version --sdk iphoneos 2>/dev/null || echo "0.0")
+    else
+        ios_sdk_version="0.0"
+    fi
+    
+    echo "${xcode_path}|${xcode_version}|${ios_sdk_version}"
+}
+
+find_xcode_installations() {
+    echo "::notice::🔍 Scanning for Xcode installations..."
+    
+    local installations=()
+    
+    for xcode_path in /Applications/Xcode*.app; do
+        if [ -d "${xcode_path}" ] && [ -d "${xcode_path}/Contents/Developer" ]; then
+            local xcode_name
+            local developer_path
+            local xcode_version="unknown"
+            local ios_sdk_version="0.0"
+            
+            xcode_name=$(basename "${xcode_path}")
+            developer_path="${xcode_path}/Contents/Developer"
+            
+            if [ -x "${developer_path}/usr/bin/xcodebuild" ]; then
+                xcode_version=$("${developer_path}/usr/bin/xcodebuild" -version 2>/dev/null | head -n1 | sed 's/Xcode //' || echo "unknown")
+            fi
+            
+            if [ -x "${developer_path}/usr/bin/xcrun" ]; then
+                ios_sdk_version=$("${developer_path}/usr/bin/xcrun" --show-sdk-version --sdk iphoneos 2>/dev/null || echo "0.0")
+            fi
+            
+            installations+=("${xcode_path}|${xcode_name}|${xcode_version}|${ios_sdk_version}")
+            echo "::notice::  📱 ${xcode_name}: Xcode ${xcode_version}, iOS SDK ${ios_sdk_version}"
+        fi
+    done
+    
+    if [ "${#installations[@]}" -eq 0 ]; then
+        echo "::warning::⚠️  No Xcode installations found in /Applications/"
+        return 1
+    fi
+    
+    printf '%s\n' "${installations[@]}"
+    return 0
+}
+
+select_best_xcode() {
+    local min_sdk_version="$1"
+    local installations
+    
+    if ! installations=$(find_xcode_installations); then
+        echo "::error::❌ No Xcode installations found"
+        return 1
+    fi
+    
+    local best_xcode=""
+    local best_sdk_version="0.0"
+    local best_xcode_name=""
+    local best_xcode_version=""
+    
+    echo "::notice::🎯 Looking for Xcode with iOS SDK ${min_sdk_version}+"
+    
+    while IFS='|' read -r xcode_path xcode_name xcode_version ios_sdk_version; do
+        if [ -n "${xcode_path}" ] && [ -n "${ios_sdk_version}" ]; then
+            local comparison
+            comparison=$(compare_versions "${ios_sdk_version}" "${min_sdk_version}")
+            
+            if [ "$comparison" -ge 0 ]; then
+                echo "::notice::  ✅ ${xcode_name} (SDK ${ios_sdk_version}) meets requirements"
+                
+                local sdk_comparison
+                sdk_comparison=$(compare_versions "${ios_sdk_version}" "${best_sdk_version}")
+                if [ "$sdk_comparison" -gt 0 ]; then
+                    best_xcode="${xcode_path}"
+                    best_sdk_version="${ios_sdk_version}"
+                    best_xcode_name="${xcode_name}"
+                    best_xcode_version="${xcode_version}"
+                fi
+            else
+                echo "::notice::  ❌ ${xcode_name} (SDK ${ios_sdk_version}) is too old"
+            fi
+        fi
+    done <<< "$installations"
+    
+    if [ -z "$best_xcode" ]; then
+        echo "::error::💀 No compatible Xcode installation found!"
+        echo "::error::Required: iOS SDK ${min_sdk_version}+ (Xcode ${MIN_XCODE_VERSION}+)"
+        echo "::error::"
+        echo "::error::Please install Xcode ${MIN_XCODE_VERSION} or later on this build agent."
+        echo "::error::You can download it from:"
+        echo "::error::  • https://developer.apple.com/download/"
+        echo "::error::  • Mac App Store"
+        return 1
+    fi
+    
+    echo "${best_xcode}|${best_xcode_name}|${best_xcode_version}|${best_sdk_version}"
+    return 0
+}
+
+switch_xcode() {
+    local target_xcode="$1"
+    local target_name="$2"
+    local target_version="$3"
+    local target_sdk="$4"
+    
+    echo "::notice::🔄 Switching to ${target_name}..."
+    echo "::notice::  Xcode: ${target_version}"
+    echo "::notice::  iOS SDK: ${target_sdk}"
+    echo "::notice::  Path: ${target_xcode}"
+    
+    if ! sudo xcode-select -s "${target_xcode}/Contents/Developer"; then
+        echo "::error::❌ Failed to switch to ${target_name}"
+        return 1
+    fi
+    
+    local new_info
+    local new_version
+    local new_sdk
+    
+    new_info=$(get_current_xcode_info)
+    IFS='|' read -r _ new_version new_sdk <<< "$new_info"
+    
+    if [ "$new_sdk" = "0.0" ] || [ "$new_sdk" = "unknown" ]; then
+        echo "::error::❌ Failed to verify Xcode switch - SDK detection failed"
+        return 1
+    fi
+    
+    local sdk_comparison
+    sdk_comparison=$(compare_versions "${new_sdk}" "${MIN_IOS_SDK_VERSION}")
+    if [ "$sdk_comparison" -lt 0 ]; then
+        echo "::error::❌ After switching, iOS SDK is still incompatible: ${new_sdk}"
+        return 1
+    fi
+    
+    echo "::notice::✅ Successfully switched to Xcode ${new_version}"
+    echo "::notice::✅ Now using iOS SDK ${new_sdk}"
+    return 0
+}
+
+main() {
+    local min_sdk_version="${1:-$MIN_IOS_SDK_VERSION}"
+    
+    echo "::notice::🔍 Validating Xcode and iOS SDK for TestFlight compatibility..."
+    echo "::notice::Required: iOS SDK ${min_sdk_version}+ for TestFlight uploads"
+    echo "::notice::"
+    
+    local current_info
+    local current_path
+    local current_version
+    local current_sdk
+    
+    current_info=$(get_current_xcode_info)
+    IFS='|' read -r current_path current_version current_sdk <<< "$current_info"
+    
+    echo "::notice::📱 Current build environment:"
+    echo "::notice::  Xcode Path: ${current_path}"
+    echo "::notice::  Xcode Version: ${current_version}"
+    echo "::notice::  iOS SDK: ${current_sdk}"
+    echo "::notice::"
+    
+    if [ "$current_sdk" != "unknown" ] && [ "$current_sdk" != "0.0" ]; then
+        local comparison
+        comparison=$(compare_versions "${current_sdk}" "${min_sdk_version}")
+        
+        if [ "$comparison" -ge 0 ]; then
+            echo "::notice::✅ Current iOS SDK ${current_sdk} meets TestFlight requirements!"
+            echo "::notice::✅ No Xcode version change needed"
+            
+            {
+                echo "xcode-version=${current_version}"
+                echo "ios-sdk-version=${current_sdk}"
+                echo "xcode-path=${current_path}"
+                echo "switched=false"
+            } >> "${GITHUB_OUTPUT:-/dev/null}"
+            
+            return 0
+        else
+            echo "::warning::⚠️  Current iOS SDK ${current_sdk} is incompatible with TestFlight"
+            echo "::warning::⚠️  Need iOS SDK ${min_sdk_version}+ for uploads"
+        fi
+    else
+        echo "::warning::⚠️  Could not detect current iOS SDK version"
+    fi
+    
+    echo "::notice::🔄 Searching for compatible Xcode installation..."
+    
+    local best_xcode_info
+    if ! best_xcode_info=$(select_best_xcode "${min_sdk_version}"); then
+        exit 1
+    fi
+    
+    local best_path
+    local best_name
+    local best_version
+    local best_sdk
+    IFS='|' read -r best_path best_name best_version best_sdk <<< "$best_xcode_info"
+    
+    if ! switch_xcode "$best_path" "$best_name" "$best_version" "$best_sdk"; then
+        exit 1
+    fi
+    
+    local final_info
+    local final_path
+    local final_version
+    local final_sdk
+    
+    final_info=$(get_current_xcode_info)
+    IFS='|' read -r final_path final_version final_sdk <<< "$final_info"
+    
+    echo "::notice::"
+    echo "::notice::🎉 Xcode environment ready for TestFlight!"
+    echo "::notice::  Final Xcode: ${final_version}"
+    echo "::notice::  Final iOS SDK: ${final_sdk}"
+    echo "::notice::  Final Path: ${final_path}"
+    
+    {
+        echo "xcode-version=${final_version}"
+        echo "ios-sdk-version=${final_sdk}"
+        echo "xcode-path=${final_path}"
+        echo "switched=true"
+        echo "previous-sdk=${current_sdk}"
+    } >> "${GITHUB_OUTPUT:-/dev/null}"
+}
+
+validate_args "$@"
+main "$@"
