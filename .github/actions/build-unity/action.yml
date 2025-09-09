@@ -211,41 +211,6 @@ runs:
             ;;
         esac
 
-    - name: 🍎 Validate Xcode Version
-      if: inputs.platform == 'iOS'
-      id: xcode-validation
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/validate_xcode_version.sh"
-        "${{ github.action_path }}/scripts/validate_xcode_version.sh"
-
-    - name: 📋 Xcode Environment Summary
-      if: inputs.platform == 'iOS'
-      shell: bash
-      run: |
-        echo "::notice::=== iOS Build Environment Summary ==="
-        echo "::notice::Xcode Version: ${{ steps.xcode-validation.outputs.xcode-version }}"
-        echo "::notice::iOS SDK Version: ${{ steps.xcode-validation.outputs.ios-sdk-version }}"
-        echo "::notice::Xcode Path: ${{ steps.xcode-validation.outputs.xcode-path }}"
-        echo "::notice::Version Switched: ${{ steps.xcode-validation.outputs.switched }}"
-
-        if [ "${{ steps.xcode-validation.outputs.switched }}" = "true" ]; then
-          echo "::notice::Previous SDK: ${{ steps.xcode-validation.outputs.previous-sdk }}"
-          echo "::notice::✅ Automatically upgraded to compatible Xcode version"
-        else
-          echo "::notice::✅ Current Xcode version already compatible"
-        fi
-
-        sdk_version="${{ steps.xcode-validation.outputs.ios-sdk-version }}"
-        sdk_major=$(echo "${sdk_version}" | cut -d. -f1)
-
-        if [ "${sdk_major}" -ge 18 ] 2>/dev/null; then
-          echo "::notice::✅ Ready for TestFlight upload (iOS SDK ${sdk_version})"
-        else
-          echo "::error::❌ Still not ready for TestFlight (iOS SDK ${sdk_version} < 18.0)"
-          exit 1
-        fi
-
     - name: 🏗️ Build Project
       id: build_project
       shell: bash
