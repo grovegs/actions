@@ -21,13 +21,20 @@ compare_versions() {
     local v2_minor
     local v2_patch
     
-    v1_major=$(echo "$version1" | cut -d. -f1 | sed 's/^0*//')
-    v1_minor=$(echo "$version1" | cut -d. -f2 2>/dev/null | sed 's/^0*//' || echo "0")
-    v1_patch=$(echo "$version1" | cut -d. -f3 2>/dev/null | sed 's/^0*//' || echo "0")
+    v1_major=$(echo "$version1" | cut -d. -f1)
+    v1_minor=$(echo "$version1" | cut -d. -f2 2>/dev/null || echo "0")
+    v1_patch=$(echo "$version1" | cut -d. -f3 2>/dev/null || echo "0")
     
-    v2_major=$(echo "$version2" | cut -d. -f1 | sed 's/^0*//')
-    v2_minor=$(echo "$version2" | cut -d. -f2 2>/dev/null | sed 's/^0*//' || echo "0")
-    v2_patch=$(echo "$version2" | cut -d. -f3 2>/dev/null | sed 's/^0*//' || echo "0")
+    v2_major=$(echo "$version2" | cut -d. -f1)
+    v2_minor=$(echo "$version2" | cut -d. -f2 2>/dev/null || echo "0")
+    v2_patch=$(echo "$version2" | cut -d. -f3 2>/dev/null || echo "0")
+    
+    v1_major=${v1_major#0}
+    v1_minor=${v1_minor#0}
+    v1_patch=${v1_patch#0}
+    v2_major=${v2_major#0}
+    v2_minor=${v2_minor#0}
+    v2_patch=${v2_patch#0}
     
     v1_major=${v1_major:-0}
     v1_minor=${v1_minor:-0}
@@ -56,20 +63,58 @@ get_current_xcode_info() {
     xcode_path=$(xcode-select -p 2>/dev/null || echo "unknown")
     
     if command -v xcodebuild >/dev/null 2>&1; then
-        xcode_version=$(xcodebuild -version 2>/dev/null | head -n1 | sed 's/Xcode //' || echo "unknown")
+        xcode_version=$(xcodebuild -version 2>/dev/null | head -n1)
+        xcode_version=${xcode_version#Xcode }
+        xcode_version=${xcode_version:-unknown}
     else
         xcode_version="unknown"
     fi
     
+    ios_sdk_version="0.0"
+    
     if command -v xcrun >/dev/null 2>&1; then
         ios_sdk_version=$(xcrun --show-sdk-version --sdk iphoneos 2>/dev/null || echo "0.0")
-        
-        # Fallback detection method if xcrun fails
-        if [ "$ios_sdk_version" = "0.0" ] && command -v xcodebuild >/dev/null 2>&1; then
-            ios_sdk_version=$(xcodebuild -showsdks 2>/dev/null | grep -E "iphoneos[0-9]" | tail -n1 | sed 's/.*iphoneos\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' || echo "0.0")
+    fi
+    
+    if [ "$ios_sdk_version" = "0.0" ] && command -v xcodebuild >/dev/null 2>&1; then
+        local sdk_output
+        sdk_output=$(xcodebuild -showsdks 2>/dev/null | grep -i "iOS" | tail -n1)
+        if [ -n "$sdk_output" ]; then
+            ios_sdk_version=$(echo "$sdk_output" | grep -oE "iOS [0-9]+\.[0-9]+")
+            ios_sdk_version=${ios_sdk_version#iOS }
+            ios_sdk_version=${ios_sdk_version:-0.0}
         fi
-    else
-        ios_sdk_version="0.0"
+    fi
+    
+    if [ "$ios_sdk_version" = "0.0" ] && command -v xcodebuild >/dev/null 2>&1; then
+        local iphoneos_sdk
+        iphoneos_sdk=$(xcodebuild -showsdks 2>/dev/null | grep -oE "iphoneos[0-9]+\.[0-9]+" | tail -n1)
+        if [ -n "$iphoneos_sdk" ]; then
+            ios_sdk_version=${iphoneos_sdk#iphoneos}
+            ios_sdk_version=${ios_sdk_version:-0.0}
+        fi
+    fi
+    
+    if [ "$ios_sdk_version" = "0.0" ] && [ "$xcode_path" != "unknown" ]; then
+        local sdk_path="${xcode_path}/Platforms/iPhoneOS.platform/Developer/SDKs"
+        if [ -d "$sdk_path" ]; then
+            local latest_sdk=""
+            for sdk_file in "$sdk_path"/iPhoneOS*.sdk; do
+                if [ -d "$sdk_file" ]; then
+                    local sdk_name
+                    sdk_name=$(basename "$sdk_file")
+                    if [[ "$sdk_name" =~ iPhoneOS([0-9]+\.[0-9]+)\.sdk ]]; then
+                        local version="${BASH_REMATCH[1]}"
+                        if [ -z "$latest_sdk" ] || [ "$(compare_versions "$version" "$latest_sdk")" = "1" ]; then
+                            latest_sdk="$version"
+                        fi
+                    fi
+                fi
+            done
+            if [ -n "$latest_sdk" ]; then
+                ios_sdk_version="$latest_sdk"
+            fi
+        fi
     fi
     
     echo "${xcode_path}|${xcode_version}|${ios_sdk_version}"
@@ -91,15 +136,53 @@ find_xcode_installations() {
             developer_path="${xcode_path}/Contents/Developer"
             
             if [ -x "${developer_path}/usr/bin/xcodebuild" ]; then
-                xcode_version=$("${developer_path}/usr/bin/xcodebuild" -version 2>/dev/null | head -n1 | sed 's/Xcode //' || echo "unknown")
+                xcode_version=$("${developer_path}/usr/bin/xcodebuild" -version 2>/dev/null | head -n1)
+                xcode_version=${xcode_version#Xcode }
+                xcode_version=${xcode_version:-unknown}
             fi
             
             if [ -x "${developer_path}/usr/bin/xcrun" ]; then
                 ios_sdk_version=$("${developer_path}/usr/bin/xcrun" --show-sdk-version --sdk iphoneos 2>/dev/null || echo "0.0")
-                
-                # Fallback detection method
-                if [ "$ios_sdk_version" = "0.0" ] && [ -x "${developer_path}/usr/bin/xcodebuild" ]; then
-                    ios_sdk_version=$("${developer_path}/usr/bin/xcodebuild" -showsdks 2>/dev/null | grep -E "iphoneos[0-9]" | tail -n1 | sed 's/.*iphoneos\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' || echo "0.0")
+            fi
+            
+            if [ "$ios_sdk_version" = "0.0" ] && [ -x "${developer_path}/usr/bin/xcodebuild" ]; then
+                local sdk_output
+                sdk_output=$("${developer_path}/usr/bin/xcodebuild" -showsdks 2>/dev/null | grep -i "iOS" | tail -n1)
+                if [ -n "$sdk_output" ]; then
+                    ios_sdk_version=$(echo "$sdk_output" | grep -oE "iOS [0-9]+\.[0-9]+")
+                    ios_sdk_version=${ios_sdk_version#iOS }
+                    ios_sdk_version=${ios_sdk_version:-0.0}
+                fi
+            fi
+            
+            if [ "$ios_sdk_version" = "0.0" ] && [ -x "${developer_path}/usr/bin/xcodebuild" ]; then
+                local iphoneos_sdk
+                iphoneos_sdk=$("${developer_path}/usr/bin/xcodebuild" -showsdks 2>/dev/null | grep -oE "iphoneos[0-9]+\.[0-9]+" | tail -n1)
+                if [ -n "$iphoneos_sdk" ]; then
+                    ios_sdk_version=${iphoneos_sdk#iphoneos}
+                    ios_sdk_version=${ios_sdk_version:-0.0}
+                fi
+            fi
+            
+            if [ "$ios_sdk_version" = "0.0" ]; then
+                local sdk_path="${developer_path}/Platforms/iPhoneOS.platform/Developer/SDKs"
+                if [ -d "$sdk_path" ]; then
+                    local latest_sdk=""
+                    for sdk_file in "$sdk_path"/iPhoneOS*.sdk; do
+                        if [ -d "$sdk_file" ]; then
+                            local sdk_name
+                            sdk_name=$(basename "$sdk_file")
+                            if [[ "$sdk_name" =~ iPhoneOS([0-9]+\.[0-9]+)\.sdk ]]; then
+                                local version="${BASH_REMATCH[1]}"
+                                if [ -z "$latest_sdk" ] || [ "$(compare_versions "$version" "$latest_sdk")" = "1" ]; then
+                                    latest_sdk="$version"
+                                fi
+                            fi
+                        fi
+                    done
+                    if [ -n "$latest_sdk" ]; then
+                        ios_sdk_version="$latest_sdk"
+                    fi
                 fi
             fi
             
@@ -236,15 +319,6 @@ main() {
         if [ "$comparison" -ge 0 ]; then
             echo "::notice::✅ Current iOS SDK ${current_sdk} meets requirements!"
             echo "::notice::✅ No Xcode version change needed"
-            
-            {
-                echo "xcode-version=${current_version}"
-                echo "ios-sdk-version=${current_sdk}"
-                echo "xcode-path=${current_path}"
-                echo "switched=false"
-                echo "previous-sdk=${current_sdk}"
-            } >> "${GITHUB_OUTPUT}"
-            
             return 0
         else
             echo "::warning::⚠️  Current iOS SDK ${current_sdk} is incompatible"
@@ -271,27 +345,8 @@ main() {
         exit 1
     fi
     
-    local final_info
-    local final_path
-    local final_version
-    local final_sdk
-    
-    final_info=$(get_current_xcode_info)
-    IFS='|' read -r final_path final_version final_sdk <<< "$final_info"
-    
     echo "::notice::"
-    echo "::notice::🎉 Xcode environment ready!"
-    echo "::notice::  Final Xcode: ${final_version}"
-    echo "::notice::  Final iOS SDK: ${final_sdk}"
-    echo "::notice::  Final Path: ${final_path}"
-    
-    {
-        echo "xcode-version=${final_version}"
-        echo "ios-sdk-version=${final_sdk}"
-        echo "xcode-path=${final_path}"
-        echo "switched=true"
-        echo "previous-sdk=${current_sdk}"
-    } >> "${GITHUB_OUTPUT}"
+    echo "::notice::🎉 Xcode selection completed successfully!"
 }
 
 main "$@"

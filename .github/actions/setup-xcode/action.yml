@@ -1,0 +1,28 @@
+name: Setup Xcode
+description: Validates and selects the appropriate Xcode version with iOS SDK compatibility.
+
+inputs:
+  min-ios-sdk-version:
+    description: "Minimum iOS SDK version required (e.g., 18.0)"
+    required: true
+  min-xcode-version:
+    description: "Minimum Xcode version required (e.g., 16.0)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 🎯 Select Xcode
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/select_xcode.sh"
+        "${{ github.action_path }}/scripts/select_xcode.sh" \
+        "${{ inputs.min-ios-sdk-version }}" \
+        "${{ inputs.min-xcode-version }}"
+
+    - name: 📥 Install Platforms
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/install_platforms.sh"
+        "${{ github.action_path }}/scripts/install_platforms.sh" \
+        "${{ inputs.min-ios-sdk-version }}"
