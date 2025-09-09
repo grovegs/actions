@@ -3,12 +3,12 @@
 set -euo pipefail
 
 if [ $# -ne 2 ]; then
-    echo "::error::Usage: $0 <min_ios_sdk_version> <min_xcode_version>"
+    echo "::error::Usage: $0 <target_ios_sdk_version> <target_xcode_version>"
     exit 1
 fi
 
-min_ios_sdk_version="$1"
-min_xcode_version="$2"
+target_ios_sdk_version="$1"
+target_xcode_version="$2"
 
 compare_versions() {
     local version1="$1"
@@ -240,11 +240,11 @@ select_best_xcode() {
     
     if [ -z "$best_xcode" ]; then
         echo "::error::💀 No compatible Xcode installation found!"
-        echo "::error::Required: iOS SDK $min_sdk_version+ (Xcode $min_xcode_version+)"
+        echo "::error::Required: iOS SDK $min_sdk_version+ (Xcode $target_xcode_version+)"
         echo "::error::"
         echo "::error::Solutions:"
         echo "::error::  • Use 'macos-latest' runner image"
-        echo "::error::  • Install Xcode $min_xcode_version+ manually"
+        echo "::error::  • Install Xcode $target_xcode_version+ manually"
         echo "::error::  • Check Apple Developer downloads"
         return 1
     fi
@@ -282,7 +282,7 @@ switch_xcode() {
     fi
     
     local sdk_comparison
-    sdk_comparison="$(compare_versions "$new_sdk" "$min_ios_sdk_version")"
+    sdk_comparison="$(compare_versions "$new_sdk" "$target_ios_sdk_version")"
     if [ "$sdk_comparison" -lt 0 ]; then
         echo "::error::❌ After switching, iOS SDK is still incompatible: $new_sdk"
         return 1
@@ -291,14 +291,14 @@ switch_xcode() {
     echo "::notice::✅ Successfully switched to Xcode $new_version"
     echo "::notice::✅ Now using iOS SDK $new_sdk"
     
-    echo "detected-ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
+    echo "ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
     
     return 0
 }
 
 main() {
     echo "::notice::🔍 Validating Xcode and iOS SDK compatibility..."
-    echo "::notice::Required: iOS SDK $min_ios_sdk_version+ (Xcode $min_xcode_version+)"
+    echo "::notice::Target: iOS SDK $target_ios_sdk_version (Xcode $target_xcode_version)"
     echo "::notice::"
     
     local current_info
@@ -317,16 +317,21 @@ main() {
     
     if [ "$current_sdk" != "unknown" ] && [ "$current_sdk" != "0.0" ]; then
         local comparison
-        comparison="$(compare_versions "$current_sdk" "$min_ios_sdk_version")"
+        comparison="$(compare_versions "$current_sdk" "$target_ios_sdk_version")"
         
-        if [ "$comparison" -ge 0 ]; then
-            echo "::notice::✅ Current iOS SDK $current_sdk meets requirements!"
+        if [ "$comparison" -eq 0 ]; then
+            echo "::notice::🎯 Current iOS SDK $current_sdk is EXACT MATCH!"
             echo "::notice::✅ No Xcode version change needed"
-            echo "detected-ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
+            echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
+            return 0
+        elif [ "$comparison" -gt 0 ]; then
+            echo "::notice::⬆️  Current iOS SDK $current_sdk is newer than target $target_ios_sdk_version"
+            echo "::notice::✅ Using current Xcode (compatible with target)"
+            echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
             return 0
         else
-            echo "::warning::⚠️  Current iOS SDK $current_sdk is incompatible"
-            echo "::warning::⚠️  Need iOS SDK $min_ios_sdk_version+ for compatibility"
+            echo "::warning::⚠️  Current iOS SDK $current_sdk is older than target $target_ios_sdk_version"
+            echo "::warning::⚠️  Need to find Xcode with iOS SDK $target_ios_sdk_version+"
         fi
     else
         echo "::warning::⚠️  Could not detect current iOS SDK version"
@@ -335,7 +340,7 @@ main() {
     echo "::notice::🔄 Searching for compatible Xcode installation..."
     
     local best_xcode_info
-    if ! best_xcode_info="$(select_best_xcode "$min_ios_sdk_version")"; then
+    if ! best_xcode_info="$(select_best_xcode "$target_ios_sdk_version")"; then
         exit 1
     fi
     
