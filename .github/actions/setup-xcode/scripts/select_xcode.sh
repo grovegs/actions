@@ -201,56 +201,79 @@ find_xcode_installations() {
 }
 
 select_best_xcode() {
-    local min_sdk_version="$1"
+    local target_sdk_version="$1"
     local installations
     
     if ! installations="$(find_xcode_installations)"; then
-        echo "::error::❌ No Xcode installations found"
+        echo "::error::❌ No Xcode installations found" >&2
         return 1
     fi
     
-    local best_xcode=""
-    local best_sdk_version="0.0"
-    local best_xcode_name=""
-    local best_xcode_version=""
+    local exact_match_xcode=""
+    local exact_match_sdk_version=""
+    local exact_match_xcode_name=""
+    local exact_match_xcode_version=""
     
-    echo "::notice::🎯 Looking for Xcode with iOS SDK $min_sdk_version+"
+    local fallback_xcode=""
+    local fallback_sdk_version=""
+    local fallback_xcode_name=""
+    local fallback_xcode_version=""
+    
+    echo "::notice::🎯 Looking for Xcode with iOS SDK $target_sdk_version (exact match preferred)" >&2
     
     while IFS='|' read -r xcode_path xcode_name xcode_version ios_sdk_version; do
         if [ -n "$xcode_path" ] && [ -n "$ios_sdk_version" ]; then
             local comparison
-            comparison="$(compare_versions "$ios_sdk_version" "$min_sdk_version")"
+            comparison="$(compare_versions "$ios_sdk_version" "$target_sdk_version")"
             
-            if [ "$comparison" -ge 0 ]; then
-                echo "::notice::  ✅ $xcode_name (SDK $ios_sdk_version) meets requirements"
-                
-                local sdk_comparison
-                sdk_comparison="$(compare_versions "$ios_sdk_version" "$best_sdk_version")"
-                if [ "$sdk_comparison" -gt 0 ]; then
-                    best_xcode="$xcode_path"
-                    best_sdk_version="$ios_sdk_version"
-                    best_xcode_name="$xcode_name"
-                    best_xcode_version="$xcode_version"
+            if [ "$comparison" -eq 0 ]; then
+                echo "::notice::  🎯 $xcode_name (SDK $ios_sdk_version) - EXACT MATCH!" >&2
+                exact_match_xcode="$xcode_path"
+                exact_match_sdk_version="$ios_sdk_version"
+                exact_match_xcode_name="$xcode_name"
+                exact_match_xcode_version="$xcode_version"
+                break
+            elif [ "$comparison" -gt 0 ]; then
+                echo "::notice::  ✅ $xcode_name (SDK $ios_sdk_version) - newer version available" >&2
+                if [ -z "$fallback_xcode" ]; then
+                    fallback_xcode="$xcode_path"
+                    fallback_sdk_version="$ios_sdk_version"
+                    fallback_xcode_name="$xcode_name"
+                    fallback_xcode_version="$xcode_version"
+                else
+                    local fallback_comparison
+                    fallback_comparison="$(compare_versions "$ios_sdk_version" "$fallback_sdk_version")"
+                    if [ "$fallback_comparison" -lt 0 ]; then
+                        fallback_xcode="$xcode_path"
+                        fallback_sdk_version="$ios_sdk_version"
+                        fallback_xcode_name="$xcode_name"
+                        fallback_xcode_version="$xcode_version"
+                    fi
                 fi
             else
-                echo "::notice::  ❌ $xcode_name (SDK $ios_sdk_version) is too old"
+                echo "::notice::  ❌ $xcode_name (SDK $ios_sdk_version) - too old" >&2
             fi
         fi
     done <<< "$installations"
     
-    if [ -z "$best_xcode" ]; then
-        echo "::error::💀 No compatible Xcode installation found!"
-        echo "::error::Required: iOS SDK $min_sdk_version+ (Xcode $target_xcode_version+)"
-        echo "::error::"
-        echo "::error::Solutions:"
-        echo "::error::  • Use 'macos-latest' runner image"
-        echo "::error::  • Install Xcode $target_xcode_version+ manually"
-        echo "::error::  • Check Apple Developer downloads"
+    if [ -n "$exact_match_xcode" ]; then
+        echo "::notice::🎯 Using exact match: $exact_match_xcode_name" >&2
+        echo "$exact_match_xcode|$exact_match_xcode_name|$exact_match_xcode_version|$exact_match_sdk_version"
+        return 0
+    elif [ -n "$fallback_xcode" ]; then
+        echo "::notice::⬆️  Using newer version as fallback: $fallback_xcode_name (SDK $fallback_sdk_version)" >&2
+        echo "$fallback_xcode|$fallback_xcode_name|$fallback_xcode_version|$fallback_sdk_version"
+        return 0
+    else
+        echo "::error::💀 No compatible Xcode installation found!" >&2
+        echo "::error::Target: iOS SDK $target_sdk_version (Xcode $target_xcode_version)" >&2
+        echo "::error::" >&2
+        echo "::error::Solutions:" >&2
+        echo "::error::  • Use 'macos-latest' runner image" >&2
+        echo "::error::  • Install Xcode $target_xcode_version+ manually" >&2
+        echo "::error::  • Check Apple Developer downloads" >&2
         return 1
     fi
-    
-    echo "$best_xcode|$best_xcode_name|$best_xcode_version|$best_sdk_version"
-    return 0
 }
 
 switch_xcode() {
