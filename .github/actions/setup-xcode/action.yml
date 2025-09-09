@@ -14,6 +14,7 @@ runs:
   steps:
     - name: 🎯 Select Xcode
       shell: bash
+      id: select-xcode
       run: |
         chmod +x "${{ github.action_path }}/scripts/select_xcode.sh"
         "${{ github.action_path }}/scripts/select_xcode.sh" \
@@ -23,6 +24,6 @@ runs:
     - name: 📥 Install Platforms
       shell: bash
       run: |
+        ios_sdk="${{ steps.select-xcode.outputs.detected-ios-sdk }}"
         chmod +x "${{ github.action_path }}/scripts/install_platforms.sh"
-        "${{ github.action_path }}/scripts/install_platforms.sh" \
-        "${{ inputs.min-ios-sdk-version }}"
+        "${{ github.action_path }}/scripts/install_platforms.sh" "$ios_sdk"
