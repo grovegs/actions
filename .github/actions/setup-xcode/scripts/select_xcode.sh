@@ -287,10 +287,42 @@ switch_xcode() {
     echo "::notice::  iOS SDK: $target_sdk"
     echo "::notice::  Path: $target_xcode"
     
-    if ! sudo xcode-select -s "$target_xcode/Contents/Developer"; then
+    local new_dev_path="$target_xcode/Contents/Developer"
+    
+    echo "::notice::🔧 Before switch - Current developer directory:"
+    xcode-select -p || echo "  (none set)"
+    
+    if ! sudo xcode-select -s "$new_dev_path"; then
         echo "::error::❌ Failed to switch to $target_name"
         return 1
     fi
+    
+    echo "::notice::🔧 After switch - New developer directory:"
+    xcode-select -p || echo "  (failed to verify)"
+    
+    if [ "$(xcode-select -p)" != "$new_dev_path" ]; then
+        echo "::warning::⚠️  xcode-select switch verification failed"
+        echo "::notice::🔧 Attempting alternative switch method..."
+        
+        sudo xcode-select --switch "$new_dev_path"
+        sudo xcode-select --reset
+        sudo xcode-select -s "$new_dev_path"
+        
+        echo "::notice::🔧 After alternative method:"
+        xcode-select -p || echo "  (still failed)"
+    fi
+    
+    hash -r
+    
+    {
+        echo "DEVELOPER_DIR=$new_dev_path"
+        echo "XCODE_ROOT=$target_xcode"
+        echo "PATH=$new_dev_path/usr/bin:$new_dev_path/Toolchains/XcodeDefault.xctoolchain/usr/bin:\$PATH"
+    } >> "$GITHUB_ENV"
+    
+    sudo xcodebuild -runFirstLaunch || true
+    
+    xcodebuild -downloadAllDocumentation || true
     
     local new_info
     local new_version
@@ -314,7 +346,43 @@ switch_xcode() {
     echo "::notice::✅ Successfully switched to Xcode $new_version"
     echo "::notice::✅ Now using iOS SDK $new_sdk"
     
-    echo "ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
+    echo "::notice::🔧 Verifying tool paths..."
+    echo "::notice::🔧 DEVELOPER_DIR: $new_dev_path"
+    echo "::notice::🔧 Active xcode-select path: $(xcode-select -p)"
+    
+    local ibtool_path="$new_dev_path/usr/bin/ibtool"
+    local xcodebuild_path="$new_dev_path/usr/bin/xcodebuild"
+    
+    if [ -x "$ibtool_path" ]; then
+        echo "::notice::🔧 ibtool available at: $ibtool_path"
+    else
+        echo "::warning::⚠️  ibtool not found at: $ibtool_path"
+    fi
+    
+    if [ -x "$xcodebuild_path" ]; then
+        echo "::notice::🔧 xcodebuild available at: $xcodebuild_path"
+        
+        echo "::notice::🔧 Verifying iOS 18.0 platform availability..."
+        if "$xcodebuild_path" -showsdks | grep -q "iphoneos18.0"; then
+            echo "::notice::✅ iOS 18.0 device platform confirmed"
+        else
+            echo "::warning::⚠️  iOS 18.0 device platform not found"
+        fi
+        
+        if "$xcodebuild_path" -showsdks | grep -q "iphonesimulator18.0"; then
+            echo "::notice::✅ iOS 18.0 simulator platform confirmed"
+        else
+            echo "::warning::⚠️  iOS 18.0 simulator platform not found"
+        fi
+    else
+        echo "::warning::⚠️  xcodebuild not found at: $xcodebuild_path"
+    fi
+    
+    echo "::notice::🔧 Final verification - which tools will be used:"
+    echo "::notice::🔧 which xcodebuild: $(which xcodebuild 2>/dev/null || echo 'not found')"
+    echo "::notice::🔧 which ibtool: $(which ibtool 2>/dev/null || echo 'not found')"
+    
+    echo "detected-ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
     
     return 0
 }
@@ -345,7 +413,7 @@ main() {
         if [ "$comparison" -eq 0 ]; then
             echo "::notice::🎯 Current iOS SDK $current_sdk is EXACT MATCH!"
             echo "::notice::✅ No Xcode version change needed"
-            echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
+            echo "detected-ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
             return 0
         else
             echo "::notice::📋 Current iOS SDK $current_sdk does not match target $target_ios_sdk_version"
