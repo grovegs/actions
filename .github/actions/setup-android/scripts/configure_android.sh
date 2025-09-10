@@ -11,7 +11,6 @@ android_packages="$1"
 
 echo "::notice::Configuring Android environment variables and PATH"
 
-# Set Android SDK paths
 if [[ "$RUNNER_OS" == "macOS" ]]; then
     android_home="$HOME/Library/Android/sdk"
 elif [[ "$RUNNER_OS" == "Linux" ]]; then
@@ -21,20 +20,17 @@ else
     exit 1
 fi
 
-# Set Android SDK environment variables
 {
     echo "ANDROID_HOME=$android_home"
     echo "ANDROID_SDK_ROOT=$android_home"
 } >> "$GITHUB_ENV"
 
-# Add Android tools to PATH
 {
     echo "$android_home/platform-tools"
     echo "$android_home/cmdline-tools/latest/bin"
     echo "$android_home/tools/bin"
 } >> "$GITHUB_PATH"
 
-# Set NDK environment if NDK package was specified
 if echo "$android_packages" | grep -q "ndk;"; then
     ndk_version=$(echo "$android_packages" | grep -o "ndk;[^[:space:]]*" | cut -d';' -f2)
     ndk_home="$android_home/ndk/$ndk_version"
@@ -49,7 +45,6 @@ if echo "$android_packages" | grep -q "ndk;"; then
     fi
 fi
 
-# Add CMake to PATH if CMake package was specified
 if echo "$android_packages" | grep -q "cmake;"; then
     cmake_version=$(echo "$android_packages" | grep -o "cmake;[^[:space:]]*" | cut -d';' -f2)
     cmake_home="$android_home/cmake/$cmake_version"

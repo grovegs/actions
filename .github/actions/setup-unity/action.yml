@@ -89,7 +89,4 @@ runs:
       run: |
         chmod +x "${{ github.action_path }}/scripts/install_android_tools.sh"
         "${{ github.action_path }}/scripts/install_android_tools.sh" \
-        "${{ steps.get_unity_info.outputs.version }}" \
-        "$JAVA_HOME" \
-        "$ANDROID_SDK_ROOT" \
-        "$ANDROID_SDK_ROOT/ndk/27.2.12479018"
+        "${{ steps.get_unity_info.outputs.version }}"

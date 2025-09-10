@@ -1,35 +1,39 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ "$#" -ne 4 ]; then
-    echo "::error::Usage: $0 <unity_version> <jdk_path> <sdk_path> <ndk_path>"
+if [ "$#" -ne 1 ]; then
+    echo "::error::Usage: $0 <unity_version>"
     exit 1
 fi
 
 unity_version="$1"
-jdk_path="$2"
-sdk_path="$3"
-ndk_path="$4"
+
+jdk_path="${JAVA_HOME:-}"
+sdk_path="${ANDROID_HOME:-}"
+ndk_path="${NDK_HOME:-}"
 
 validate_paths() {
-    echo "::notice::Validating input paths..."
+    echo "::notice::Validating environment paths..."
 
-    if [ ! -d "${jdk_path}" ]; then
-        echo "::error::JDK path does not exist: ${jdk_path}"
+    if [ -z "${jdk_path}" ] || [ ! -d "${jdk_path}" ]; then
+        echo "::error::JAVA_HOME not set or path does not exist: ${jdk_path}"
+        echo "::error::Make sure to run setup-android action before setup-unity"
         exit 1
     fi
 
-    if [ ! -d "${sdk_path}" ]; then
-        echo "::error::SDK path does not exist: ${sdk_path}"
+    if [ -z "${sdk_path}" ] || [ ! -d "${sdk_path}" ]; then
+        echo "::error::ANDROID_HOME not set or path does not exist: ${sdk_path}"
+        echo "::error::Make sure to run setup-android action before setup-unity"
         exit 1
     fi
 
-    if [ ! -d "${ndk_path}" ]; then
-        echo "::error::NDK path does not exist: ${ndk_path}"
+    if [ -z "${ndk_path}" ] || [ ! -d "${ndk_path}" ]; then
+        echo "::error::NDK_HOME not set or path does not exist: ${ndk_path}"
+        echo "::error::Make sure to run setup-android action before setup-unity"
         exit 1
     fi
 
-    echo "::notice::Input paths validated successfully"
+    echo "::notice::Environment paths validated successfully"
     echo "::notice::JDK: ${jdk_path}"
     echo "::notice::SDK: ${sdk_path}"
     echo "::notice::NDK: ${ndk_path}"
