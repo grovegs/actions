@@ -68,6 +68,20 @@ archive_path="${builds_dir}/${filename}.xcarchive"
 export_path="${builds_dir}/${filename}.ipa"
 export_options_plist="${builds_dir}/export.plist"
 
+if [ -n "$DEVELOPER_DIR" ]; then
+    echo "::notice::Using DEVELOPER_DIR: $DEVELOPER_DIR"
+    XCODEBUILD_CMD="${DEVELOPER_DIR}/usr/bin/xcodebuild"
+    if [ ! -x "$XCODEBUILD_CMD" ]; then
+        echo "::warning::xcodebuild not found at $XCODEBUILD_CMD, falling back to xcrun"
+        XCODEBUILD_CMD="xcrun xcodebuild"
+    fi
+else
+    echo "::notice::DEVELOPER_DIR not set, using xcrun to find xcodebuild"
+    XCODEBUILD_CMD="xcrun xcodebuild"
+fi
+
+echo "::notice::Using xcodebuild command: $XCODEBUILD_CMD"
+
 cleanup() {
     echo "::notice::Cleaning up sensitive files..."
     security delete-keychain "${keychain_file}" 2>/dev/null || true
@@ -205,8 +219,11 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
     cp "${provisioning_file}" "$HOME/Library/MobileDevice/Provisioning Profiles/"
     
     echo "::notice::Building Xcode project..."
+    echo "::notice::Using xcodebuild: $XCODEBUILD_CMD"
+    echo "::notice::Xcode version check:"
+    $XCODEBUILD_CMD -version
     
-    if ! xcodebuild -project "${xcodeproj_file}" \
+    if ! $XCODEBUILD_CMD -project "${xcodeproj_file}" \
         -scheme "${scheme_name}" \
         -configuration "${configuration}" \
         -destination "generic/platform=iOS" \
@@ -267,7 +284,7 @@ EOF
     
     echo "::notice::Exporting IPA..."
     
-    if ! xcodebuild -exportArchive \
+    if ! $XCODEBUILD_CMD -exportArchive \
         -archivePath "${archive_path}" \
         -exportPath "${builds_dir}" \
         -exportOptionsPlist "${export_options_plist}"; then
