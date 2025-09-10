@@ -2,9 +2,6 @@ name: Setup Xcode
 description: Validates and selects the appropriate Xcode version with iOS SDK compatibility.
 
 inputs:
-  ios-sdk-version:
-    description: "Target iOS SDK version (e.g., 18.0)"
-    required: true
   xcode-version:
     description: "Target Xcode version (e.g., 16.0)"
     required: true
@@ -17,13 +14,10 @@ runs:
       id: select-xcode
       run: |
         chmod +x "${{ github.action_path }}/scripts/select_xcode.sh"
-        "${{ github.action_path }}/scripts/select_xcode.sh" \
-        "${{ inputs.ios-sdk-version }}" \
-        "${{ inputs.xcode-version }}"
+        "${{ github.action_path }}/scripts/select_xcode.sh" "${{ inputs.xcode-version }}"
 
     - name: 📥 Install Platforms
       shell: bash
       run: |
-        ios_sdk="${{ steps.select-xcode.outputs.ios-sdk }}"
         chmod +x "${{ github.action_path }}/scripts/install_platforms.sh"
-        "${{ github.action_path }}/scripts/install_platforms.sh" "$ios_sdk"
+        "${{ github.action_path }}/scripts/install_platforms.sh"

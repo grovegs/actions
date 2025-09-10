@@ -2,15 +2,14 @@
 
 set -euo pipefail
 
-if [ $# -ne 2 ]; then
-    echo "::error::Usage: $0 <target_ios_sdk_version> <target_xcode_version>"
+if [ $# -ne 1 ]; then
+    echo "::error::Usage: $0 <target_xcode_version>"
     exit 1
 fi
 
-target_ios_sdk_version="$1"
-target_xcode_version="$2"
+target_xcode_version="$1"
 
-echo "::notice::Selecting Xcode $target_xcode_version for iOS SDK $target_ios_sdk_version"
+echo "::notice::Selecting Xcode $target_xcode_version"
 
 xcode_path="/Applications/Xcode_${target_xcode_version}.app"
 
@@ -30,8 +29,5 @@ echo "::notice::Setting environment variables..."
     echo "XCODE_ROOT=$xcode_path"
 } >> "$GITHUB_ENV"
 
-ios_sdk_version="$(xcrun --show-sdk-version --sdk iphoneos 2>/dev/null || echo "$target_ios_sdk_version")"
-echo "::notice::Using iOS SDK version: $ios_sdk_version"
-echo "ios-sdk=$ios_sdk_version" >> "$GITHUB_OUTPUT"
 
 echo "::notice::Xcode selection completed successfully"
