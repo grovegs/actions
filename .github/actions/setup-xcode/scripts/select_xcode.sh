@@ -317,12 +317,10 @@ switch_xcode() {
     {
         echo "DEVELOPER_DIR=$new_dev_path"
         echo "XCODE_ROOT=$target_xcode"
-        echo "PATH=$new_dev_path/usr/bin:$new_dev_path/Toolchains/XcodeDefault.xctoolchain/usr/bin:\$PATH"
+        echo "PATH=$new_dev_path/usr/bin:$new_dev_path/Toolchains/XcodeDefault.xctoolchain/usr/bin:/usr/bin:/bin"
     } >> "$GITHUB_ENV"
     
     sudo xcodebuild -runFirstLaunch || true
-    
-    xcodebuild -downloadAllDocumentation || true
     
     local new_info
     local new_version
@@ -378,11 +376,11 @@ switch_xcode() {
         echo "::warning::⚠️  xcodebuild not found at: $xcodebuild_path"
     fi
     
-    echo "::notice::🔧 Final verification - which tools will be used:"
-    echo "::notice::🔧 which xcodebuild: $(which xcodebuild 2>/dev/null || echo 'not found')"
-    echo "::notice::🔧 which ibtool: $(which ibtool 2>/dev/null || echo 'not found')"
+    echo "::notice::🔧 Environment will be available for subsequent workflow steps"
+    echo "::notice::🔧 Next step will use: $ibtool_path"
+    echo "::notice::🔧 Next step will use: $xcodebuild_path"
     
-    echo "detected-ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
+    echo "ios-sdk=$new_sdk" >> "$GITHUB_OUTPUT"
     
     return 0
 }
@@ -413,7 +411,7 @@ main() {
         if [ "$comparison" -eq 0 ]; then
             echo "::notice::🎯 Current iOS SDK $current_sdk is EXACT MATCH!"
             echo "::notice::✅ No Xcode version change needed"
-            echo "detected-ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
+            echo "ios-sdk=$current_sdk" >> "$GITHUB_OUTPUT"
             return 0
         else
             echo "::notice::📋 Current iOS SDK $current_sdk does not match target $target_ios_sdk_version"
