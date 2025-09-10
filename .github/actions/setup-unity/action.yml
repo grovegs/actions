@@ -85,10 +85,10 @@ runs:
 
     - name: 🍎 Setup Xcode
       if: contains(inputs.unity-modules, 'ios')
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/setup_xcode.sh"
-        "${{ github.action_path }}/scripts/setup_xcode.sh"
+      uses: grovegs/actions/.github/actions/setup-xcode@main
+      with:
+        ios-sdk-version: "18.0"
+        xcode-version: "16.0"
 
     - name: ☕ Setup JDK for Android
       if: contains(inputs.unity-modules, 'android')
