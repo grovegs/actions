@@ -312,12 +312,10 @@ switch_xcode() {
         xcode-select -p || echo "  (still failed)"
     fi
     
-    hash -r
-    
     {
         echo "DEVELOPER_DIR=$new_dev_path"
         echo "XCODE_ROOT=$target_xcode"
-        echo "PATH=$new_dev_path/usr/bin:$new_dev_path/Toolchains/XcodeDefault.xctoolchain/usr/bin:/usr/bin:/bin"
+        echo "PATH=$new_dev_path/usr/bin:$new_dev_path/Toolchains/XcodeDefault.xctoolchain/usr/bin:$PATH"
     } >> "$GITHUB_ENV"
     
     sudo xcodebuild -runFirstLaunch || true
