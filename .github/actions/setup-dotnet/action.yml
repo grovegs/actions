@@ -25,41 +25,19 @@ runs:
         chmod +x "${{ github.action_path }}/scripts/get_dotnet_version.sh"
         "${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}"
 
-    - name: 🔍 Check .NET SDK Installed
-      id: check_dotnet_sdk
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/check_dotnet_sdk.sh"
-        "${{ github.action_path }}/scripts/check_dotnet_sdk.sh" "${{ steps.get_dotnet_version.outputs.dotnet_version }}"
-
-    - name: 📦 Cache .NET SDK
-      if: ${{ inputs.cache == 'true' && steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.dotnet
-          /usr/local/share/dotnet
-          /usr/share/dotnet
-          /opt/hostedtoolcache/dotnet
-        key: dotnet-${{ steps.get_dotnet_version.outputs.dotnet_version }}-${{ runner.os }}
-
     - name: 🛠️ Setup .NET SDK
-      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
       uses: actions/setup-dotnet@v4
       env:
         DOTNET_CLI_TELEMETRY_OPTOUT: true
         DOTNET_NOLOGO: true
       with:
         dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+        cache: ${{ inputs.cache }}
 
-    - name: 🔎 Verify .NET SDK Installation
-      if: ${{ steps.check_dotnet_sdk.outputs.is_installed == 'false' }}
+    - name: 🔎 Verify Installation
       shell: bash
       run: |
-        echo "::notice::Verifying .NET SDK installation"
-        if ! command -v dotnet &> /dev/null; then
-            echo "::error::dotnet command not found after installation"
-            exit 1
-        fi
-        dotnet --list-sdks
+        echo "::notice::Installed .NET SDK version:"
         dotnet --version
+        echo "::notice::Available SDKs:"
+        dotnet --list-sdks
