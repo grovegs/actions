@@ -13,6 +13,9 @@ on:
                     - minor
                     - patch
 
+permissions:
+    contents: write
+
 jobs:
     shared:
         runs-on: ubuntu-latest
