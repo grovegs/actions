@@ -1,5 +1,5 @@
 name: Generate Changelog
-description: Generate a changelog between two Git tags.
+description: Generate structured changelog and format in multiple formats.
 
 inputs:
   next-version:
@@ -7,16 +7,36 @@ inputs:
     required: true
 
 outputs:
-  changelog:
-    description: The generated changelog between the latest tag and the latest commit.
-    value: ${{ steps.generate_changelog.outputs.changelog }}
+  changelog-raw:
+    description: Raw structured changelog (categories and commits).
+    value: ${{ steps.generate_raw.outputs.changelog_raw }}
+  changelog-plain:
+    description: Formatted changelog in plain text format.
+    value: ${{ steps.format_plain.outputs.changelog_plain }}
+  changelog-markdown:
+    description: Formatted changelog in markdown format.
+    value: ${{ steps.format_markdown.outputs.changelog_markdown }}
 
 runs:
   using: composite
   steps:
-    - name: ⚙️ Generate Changelog
-      id: generate_changelog
+    - name: Generate Raw Structured Changelog
+      id: generate_raw
       shell: bash
       run: |
-        chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
-        "${{ github.action_path }}/scripts/generate_changelog.sh" "${{ inputs.next-version }}"
+        chmod +x "${{ github.action_path }}/scripts/generate_raw.sh"
+        "${{ github.action_path }}/scripts/generate_raw.sh"
+
+    - name: Format to Plain Text
+      id: format_plain
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/format_plain.sh"
+        "${{ github.action_path }}/scripts/format_plain.sh" "${{ steps.generate_raw.outputs.changelog_raw }}" "${{ inputs.next-version }}"
+
+    - name: Format to Markdown
+      id: format_markdown
+      shell: bash
+      run: |
+        chmod +x "${{ github.action_path }}/scripts/format_markdown.sh"
+        "${{ github.action_path }}/scripts/format_markdown.sh" "${{ steps.generate_raw.outputs.changelog_raw }}" "${{ inputs.next-version }}"
