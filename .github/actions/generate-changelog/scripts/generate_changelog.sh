@@ -6,14 +6,30 @@ if [ "$#" -ne 1 ]; then
 fi
 
 next_version=$1
+current_branch=$(git rev-parse --abbrev-ref HEAD)
 
-if ! latest_version=$(git describe --tags --abbrev=0); then
-    echo "::error::Failed to get latest version tag"
-    exit 1
+latest_version=$(git describe --tags --abbrev=0 HEAD 2>/dev/null || echo "")
+
+if [ -z "$latest_version" ]; then
+    echo "::notice::No tags found in current branch history. Generating changelog from initial commit."
+    commits=$(git log --pretty=format:"%s")
+    comparison_range="initial commit to HEAD"
+else
+    echo "::notice::Generating changelog from ${latest_version} to ${next_version} on branch ${current_branch}"
+    commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
+    comparison_range="${latest_version} to HEAD"
 fi
 
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-echo "::notice::Generating changelog from ${latest_version} to ${next_version} on branch ${current_branch}"
+if [ -z "$commits" ]; then
+    echo "::warning::No commits found in range: ${comparison_range}"
+    changelog="## 📝 Changelog (${current_branch})"$'\n\n'"No changes in this release."
+    {
+        echo "changelog<<EOF"
+        echo "$changelog"
+        echo "EOF"
+    } >>"$GITHUB_OUTPUT"
+    exit 0
+fi
 
 categories=("🚀 Features" "🐞 Bug Fixes" "🧹 Chores" "🔨 Refactors" "🧪 Tests" "🔧 CI/CD" "⏪ Reverts" "📚 Documentations")
 commits_by_category=()
@@ -21,11 +37,6 @@ commits_by_category=()
 for i in "${!categories[@]}"; do
     commits_by_category[i]=""
 done
-
-commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
-if [ -z "$commits" ]; then
-    echo "::warning::No commits found between ${latest_version} and HEAD"
-fi
 
 while IFS= read -r commit; do
     commit=$(echo "${commit}" | sed -E 's/ \(#[0-9]+\)$//')
