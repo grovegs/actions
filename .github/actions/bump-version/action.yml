@@ -1,11 +1,9 @@
 name: Bump Version
 description: Calculates and bumps the next version based on the latest Git tag.
-
 inputs:
   version-type:
     description: Type of version bump (major, minor, patch).
     required: true
-
 outputs:
   latest-version:
     description: The latest version, derived from the latest Git tag.
@@ -13,19 +11,41 @@ outputs:
   next-version:
     description: The calculated next version based on the latest version.
     value: ${{ steps.bump_version.outputs.next_version }}
-
 runs:
   using: composite
   steps:
+    - name: ✅ Validate Input
+      shell: bash
+      run: |
+        valid_types="major minor patch"
+        if [[ ! " $valid_types " =~ " ${{ inputs.version-type }} " ]]; then
+          echo "❌ Error: Invalid version-type '${{ inputs.version-type }}'"
+          echo "Valid options: $valid_types"
+          exit 1
+        fi
+
     - name: 🔖 Fetch Version
       shell: bash
       id: fetch_version
       run: |
-        git fetch --tags 2>/dev/null || true
-        latest_version=$(git tag --sort=-v:refname | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+$" | head -n 1 | sed 's/^v//') || true
+        if ! git fetch --tags --quiet 2>/dev/null; then
+          echo "⚠️  Warning: Could not fetch tags from remote"
+        fi
 
-        if [ -z "$latest_version" ]; then
+        all_tags=$(git tag -l 2>/dev/null || echo "")
+
+        if [ -z "$all_tags" ]; then
           latest_version="0.0.0"
+        else
+          latest_version=$(echo "$all_tags" | \
+            grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+$" | \
+            sed 's/^v//' | \
+            sort -V | \
+            tail -n 1) || true
+          
+          if [ -z "$latest_version" ]; then
+            latest_version="0.0.0"
+          fi
         fi
 
         echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
@@ -34,13 +54,28 @@ runs:
       shell: bash
       id: bump_version
       run: |
-        IFS='.' read -r major minor patch <<< "${{ steps.fetch_version.outputs.latest_version }}"
+        current_version="${{ steps.fetch_version.outputs.latest_version }}"
+        version_type="${{ inputs.version-type }}"
 
-        case "${{ inputs.version-type }}" in
-          major) major=$((major + 1)); minor=0; patch=0 ;;
-          minor) minor=$((minor + 1)); patch=0 ;;
-          patch) patch=$((patch + 1)) ;;
+        if [[ "$current_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+        else
+          echo "❌ Error: Invalid version format: $current_version"
+          exit 1
+        fi
+
+        case "$version_type" in
+          major)
+            next_version="$((major + 1)).0.0"
+            ;;
+          minor)
+            next_version="$major.$((minor + 1)).0"
+            ;;
+          patch)
+            next_version="$major.$minor.$((patch + 1))"
+            ;;
         esac
 
-        next_version="${major}.${minor}.${patch}"
         echo "next_version=$next_version" >> $GITHUB_OUTPUT
