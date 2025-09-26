@@ -27,12 +27,6 @@ runs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
 
-    - name: 🔖 Create Tag and Push
-      shell: bash
-      run: |
-        git tag -a "${{ inputs.version }}" -m "Release ${{ inputs.version }}"
-        git push origin "${{ inputs.version }}"
-
     - name: 📝 Create GitHub Release
       shell: bash
       env:
