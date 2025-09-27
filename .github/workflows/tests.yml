@@ -30,24 +30,29 @@ jobs:
       - name: 🧪 Test .NET Project
         uses: ./.github/actions/test-dotnet
         with:
-          project: sandbox/ConsoleApp/ConsoleApp.csproj
+          project: sandbox/ConsoleApp
+          configuration: Debug
 
       - name: 🎨 Format .NET Project
         uses: ./.github/actions/format-dotnet
         with:
-          project: sandbox/ConsoleApp/ConsoleApp.csproj
+          project: sandbox/ConsoleApp
 
       - name: 🏗️ Build .NET Project
         uses: ./.github/actions/build-dotnet
         with:
-          project: sandbox/ConsoleApp/ConsoleApp.csproj
+          project: sandbox/ConsoleApp
+          configuration: Release
           version: 1.0.0-test
+          define-symbols: TEST_BUILD
 
       - name: 📦 Pack .NET Project
         uses: ./.github/actions/pack-dotnet
         with:
-          project: sandbox/ConsoleApp/ConsoleApp.csproj
+          project: sandbox/ConsoleApp
+          configuration: Release
           version: 1.0.0-test
+          filename: ConsoleApp-test
 
   test-godot-actions:
     name: Test Godot Actions
@@ -57,10 +62,17 @@ jobs:
       - name: 📂 Checkout Code
         uses: actions/checkout@v4
 
+      - name: 🔧 Setup .NET
+        uses: ./.github/actions/setup-dotnet
+        with:
+          global-json-file: sandbox/GodotApplication/global.json
+
       - name: 🎮 Setup Godot
         uses: ./.github/actions/setup-godot
         with:
           global-json-file: sandbox/GodotApplication/global.json
+          target-platforms: Android
+          cache: true
 
       - name: 🧪 Test Godot Project
         uses: ./.github/actions/test-godot
@@ -76,12 +88,18 @@ jobs:
       - name: 📂 Checkout Code
         uses: actions/checkout@v4
 
+      - name: 🤖 Setup Android
+        uses: ./.github/actions/setup-android
+        with:
+          java-version: 17
+          android-packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
+
       - name: 🎮 Setup Unity
         uses: ./.github/actions/setup-unity
         with:
           project: sandbox/UnityApplication
-          unity-version: 2023.3.0f1
           unity-modules: android
+          cache: true
 
   test-android-setup:
     name: Test Android Setup
@@ -95,7 +113,7 @@ jobs:
         uses: ./.github/actions/setup-android
         with:
           java-version: 17
-          android-packages: platform-tools platforms;android-34
+          android-packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
   test-xcode-setup:
     name: Test Xcode Setup
@@ -108,7 +126,7 @@ jobs:
       - name: 🍎 Setup Xcode
         uses: ./.github/actions/setup-xcode
         with:
-          xcode-version: 15.4
+          xcode-version: "15.4"
 
   test-utility-actions:
     name: Test Utility Actions
@@ -142,11 +160,6 @@ jobs:
       - name: 📦 Pack Godot Addon
         uses: ./.github/actions/pack-godot-addon
         with:
-          addon: sandbox/GodotApplication/addons/test_addon
+          addon: sandbox/GodotApplication/addons/TestAddon
           version: 1.0.0-test
-
-      - name: 📦 Pack Unity Package
-        uses: ./.github/actions/pack-unity-package
-        with:
-          package: sandbox/UnityApplication/Packages/com.grovegames.test
-          version: 1.0.0-test
+          filename: TestAddon-test
