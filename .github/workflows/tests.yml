@@ -126,7 +126,7 @@ jobs:
       - name: 🍎 Setup Xcode
         uses: ./.github/actions/setup-xcode
         with:
-          xcode-version: "15.4"
+          xcode-version: "16.2"
 
   test-utility-actions:
     name: Test Utility Actions
