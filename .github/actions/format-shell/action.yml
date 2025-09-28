@@ -25,9 +25,21 @@ runs:
               if ! command -v shfmt &> /dev/null; then
                   echo "Installing shfmt via npm..."
                   npm install -g shfmt
-                  echo "shfmt installed successfully"
+
+                  export PATH="$(npm prefix -g)/bin:$PATH"
+                  echo "$(npm prefix -g)/bin" >> $GITHUB_PATH
+
+                  if command -v shfmt &> /dev/null; then
+                      echo "shfmt installed successfully at: $(which shfmt)"
+                      shfmt --version
+                  else
+                      echo "shfmt installation failed or not in PATH"
+                      echo "Checking npm global bin directory:"
+                      ls -la "$(npm prefix -g)/bin/"
+                      exit 1
+                  fi
               else
-                  echo "shfmt is already installed"
+                  echo "shfmt is already installed at: $(which shfmt)"
               fi
 
         - name: 🎨 Format Shell Scripts
