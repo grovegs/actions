@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [ $# -lt 3 ]; then
-    echo "::error::Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
-    echo "::notice::Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"
-    exit 1
+  echo "::error::Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
+  echo "::notice::Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"
+  exit 1
 fi
 
 presets_file="$1"
@@ -11,8 +11,8 @@ preset_name="$2"
 shift 2
 
 if [ ! -f "${presets_file}" ]; then
-    echo "::error::File ${presets_file} does not exist."
-    exit 1
+  echo "::error::File ${presets_file} does not exist."
+  exit 1
 fi
 
 preset_section=$(awk -v preset_name="$preset_name" '
@@ -22,18 +22,18 @@ preset_section=$(awk -v preset_name="$preset_name" '
 ' "$presets_file")
 
 if [ -z "$preset_section" ]; then
-    echo "::error::Preset with name '${preset_name}' not found in ${presets_file}."
-    exit 1
+  echo "::error::Preset with name '${preset_name}' not found in ${presets_file}."
+  exit 1
 fi
 
 temp_file=$(mktemp)
 cp "${presets_file}" "${temp_file}"
 
 for pair in "$@"; do
-    key="${pair%%=*}"
-    value="${pair#*=}"
+  key="${pair%%=*}"
+  value="${pair#*=}"
 
-    awk -v section="$preset_section" -v key="$key" -v value="$value" '
+  awk -v section="$preset_section" -v key="$key" -v value="$value" '
     BEGIN { in_section = 0 }
     $0 ~ section { in_section = 1 }
     in_section && /^\[/ && $0 != section { in_section = 0 }
@@ -50,7 +50,7 @@ for pair in "$@"; do
         }
     }
     { print }
-    ' "$temp_file" >"${temp_file}.tmp" && mv "${temp_file}.tmp" "$temp_file"
+    ' "$temp_file" > "${temp_file}.tmp" && mv "${temp_file}.tmp" "$temp_file"
 done
 
 mv "${temp_file}" "${presets_file}"
