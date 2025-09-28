@@ -1,0 +1,31 @@
+name: Format Files
+description: Formats various file types using Prettier (YAML, JSON, Markdown, CSS, HTML, JavaScript, TypeScript, etc.).
+
+inputs:
+    files:
+        description: File patterns to format (e.g., "**/*.{yml,yaml,json,md,js,ts,css,html}")
+        required: false
+        default: "**/*.{yml,yaml,json,md}"
+    ignore-path:
+        description: Path to ignore file
+        required: false
+        default: ".gitignore"
+
+runs:
+    using: composite
+    steps:
+        - name: 🔧 Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+              node-version: "20"
+              cache: "npm"
+
+        - name: 📦 Install Prettier
+          shell: bash
+          run: npm install -g prettier
+
+        - name: 🎨 Format Files
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/format_files.sh"
+              "${{ github.action_path }}/scripts/format_files.sh" "${{ inputs.files }}" "${{ inputs.ignore-path }}"

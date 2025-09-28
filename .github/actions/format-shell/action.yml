@@ -1,0 +1,28 @@
+name: Format Shell
+description: Formats shell scripts using shfmt.
+
+inputs:
+    path:
+        description: "Path to search for shell scripts"
+        required: false
+        default: "."
+    exclude-paths:
+        description: "Comma-separated paths to exclude"
+        required: false
+        default: "./sandbox"
+
+runs:
+    using: composite
+    steps:
+        - name: 🔧 Install shfmt
+          shell: bash
+          run: |
+              curl -L -o shfmt https://github.com/mvdan/sh/releases/latest/download/shfmt_v3.8.0_linux_amd64
+              chmod +x shfmt
+              sudo mv shfmt /usr/local/bin/
+
+        - name: 🎨 Format Shell Scripts
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/format_shell.sh"
+              "${{ github.action_path }}/scripts/format_shell.sh" "${{ inputs.path }}" "${{ inputs.exclude-paths }}"

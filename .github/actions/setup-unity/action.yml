@@ -1,92 +1,92 @@
 name: Setup Unity
 description: Downloads, installs, and caches Unity for macOS and Linux platforms with iOS and Android support.
 inputs:
-  project:
-    description: Path to the Unity project directory.
-    required: false
-    default: "."
-  unity-version:
-    description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
-    required: false
-  unity-modules:
-    description: Comma-separated list of target modules to install (e.g., "ios,android").
-    required: false
-    default: ""
-  cache:
-    description: Whether to use caching for the downloaded installers.
-    required: false
-    default: "true"
+    project:
+        description: Path to the Unity project directory.
+        required: false
+        default: "."
+    unity-version:
+        description: The Unity version to install with revision (e.g., "6000.1.9f1 (ed7b183fd33d)").
+        required: false
+    unity-modules:
+        description: Comma-separated list of target modules to install (e.g., "ios,android").
+        required: false
+        default: ""
+    cache:
+        description: Whether to use caching for the downloaded installers.
+        required: false
+        default: "true"
 
 runs:
-  using: composite
-  steps:
-    - name: ✅ Validate Platform Support
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" != "macOS" && "$RUNNER_OS" != "Linux" ]]; then
-          echo "::error::This action only supports macOS and Linux. Unsupported platform: $RUNNER_OS"
-          exit 1
-        fi
-        echo "::notice::Platform validation passed for $RUNNER_OS"
+    using: composite
+    steps:
+        - name: ✅ Validate Platform Support
+          shell: bash
+          run: |
+              if [[ "$RUNNER_OS" != "macOS" && "$RUNNER_OS" != "Linux" ]]; then
+                echo "::error::This action only supports macOS and Linux. Unsupported platform: $RUNNER_OS"
+                exit 1
+              fi
+              echo "::notice::Platform validation passed for $RUNNER_OS"
 
-    - name: 📖 Get Unity Info
-      id: get_unity_info
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
-        "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project }}" "${{ inputs.unity-version }}"
+        - name: 📖 Get Unity Info
+          id: get_unity_info
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
+              "${{ github.action_path }}/scripts/get_unity_info.sh" "${{ inputs.project }}" "${{ inputs.unity-version }}"
 
-    - name: 🔧 Prepare Paths and Module ID
-      id: prepare_paths
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/get_modules_id.sh"
-        VERSION="${{ steps.get_unity_info.outputs.version }}"
-        MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
-        DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
-        if [[ "$RUNNER_OS" == "macOS" ]]; then 
-          ARCH="arm64"
-        else 
-          ARCH="x64"
-        fi
-        echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
-        echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}" >> $GITHUB_OUTPUT
-        echo "::notice::Download directory: ${DOWNLOAD_DIR}"
-        echo "::notice::Cache key: unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}"
+        - name: 🔧 Prepare Paths and Module ID
+          id: prepare_paths
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/get_modules_id.sh"
+              VERSION="${{ steps.get_unity_info.outputs.version }}"
+              MODULES_ID=$("${{ github.action_path }}/scripts/get_modules_id.sh" "${{ inputs.unity-modules }}")
+              DOWNLOAD_DIR="$HOME/.unity/${VERSION}"
+              if [[ "$RUNNER_OS" == "macOS" ]]; then 
+                ARCH="arm64"
+              else 
+                ARCH="x64"
+              fi
+              echo "download_dir=${DOWNLOAD_DIR}" >> $GITHUB_OUTPUT
+              echo "cache_key=unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}" >> $GITHUB_OUTPUT
+              echo "::notice::Download directory: ${DOWNLOAD_DIR}"
+              echo "::notice::Cache key: unity-download-${VERSION}-${RUNNER_OS}-${ARCH}-${MODULES_ID}"
 
-    - name: 💾 Cache Downloaded Installers
-      id: cache_downloads
-      if: inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.prepare_paths.outputs.download_dir }}
-        key: ${{ steps.prepare_paths.outputs.cache_key }}
+        - name: 💾 Cache Downloaded Installers
+          id: cache_downloads
+          if: inputs.cache == 'true'
+          uses: actions/cache@v4
+          with:
+              path: ${{ steps.prepare_paths.outputs.download_dir }}
+              key: ${{ steps.prepare_paths.outputs.cache_key }}
 
-    - name: ⬇️ Download Unity
-      if: steps.cache_downloads.outputs.cache-hit != 'true' || inputs.cache != 'true'
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/download_unity.sh"
-        "${{ github.action_path }}/scripts/download_unity.sh" \
-        "${{ steps.get_unity_info.outputs.version }}" \
-        "${{ steps.get_unity_info.outputs.changeset }}" \
-        "${{ inputs.unity-modules }}" \
-        "${{ steps.prepare_paths.outputs.download_dir }}"
+        - name: ⬇️ Download Unity
+          if: steps.cache_downloads.outputs.cache-hit != 'true' || inputs.cache != 'true'
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/download_unity.sh"
+              "${{ github.action_path }}/scripts/download_unity.sh" \
+              "${{ steps.get_unity_info.outputs.version }}" \
+              "${{ steps.get_unity_info.outputs.changeset }}" \
+              "${{ inputs.unity-modules }}" \
+              "${{ steps.prepare_paths.outputs.download_dir }}"
 
-    - name: ⚙️ Install Unity
-      id: install_unity
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
-        "${{ github.action_path }}/scripts/install_unity.sh" \
-        "${{ steps.get_unity_info.outputs.version }}" \
-        "${{ inputs.unity-modules }}" \
-        "${{ steps.prepare_paths.outputs.download_dir }}"
+        - name: ⚙️ Install Unity
+          id: install_unity
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
+              "${{ github.action_path }}/scripts/install_unity.sh" \
+              "${{ steps.get_unity_info.outputs.version }}" \
+              "${{ inputs.unity-modules }}" \
+              "${{ steps.prepare_paths.outputs.download_dir }}"
 
-    - name: 📱 Install Android Tools
-      if: contains(inputs.unity-modules, 'android')
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/install_android_tools.sh"
-        "${{ github.action_path }}/scripts/install_android_tools.sh" \
-        "${{ steps.get_unity_info.outputs.version }}"
+        - name: 📱 Install Android Tools
+          if: contains(inputs.unity-modules, 'android')
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/install_android_tools.sh"
+              "${{ github.action_path }}/scripts/install_android_tools.sh" \
+              "${{ steps.get_unity_info.outputs.version }}"

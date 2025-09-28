@@ -2,30 +2,30 @@ name: Pack Unity Package
 description: Packages the Unity package as a local tarball.
 
 inputs:
-  package:
-    description: Path to the Unity package, relative to the repository root.
-    required: true
-  version:
-    description: Version number to apply to the package.
-    required: true
-  filename:
-    description: The name of the output file of the package.
-    required: true
+    package:
+        description: Path to the Unity package, relative to the repository root.
+        required: true
+    version:
+        description: Version number to apply to the package.
+        required: true
+    filename:
+        description: The name of the output file of the package.
+        required: true
 
 outputs:
-  file:
-    description: "The path to the packed package file."
-    value: ${{ steps.pack_package.outputs.file }}
+    file:
+        description: "The path to the packed package file."
+        value: ${{ steps.pack_package.outputs.file }}
 
 runs:
-  using: composite
-  steps:
-    - name: 📦 Pack Unity Package
-      id: pack_package
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/pack_package.sh"
-        "${{ github.action_path }}/scripts/pack_package.sh" \
-        "${{ inputs.package }}" \
-        "${{ inputs.version }}" \
-        "${{ inputs.filename }}"
+    using: composite
+    steps:
+        - name: 📦 Pack Unity Package
+          id: pack_package
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/pack_package.sh"
+              "${{ github.action_path }}/scripts/pack_package.sh" \
+              "${{ inputs.package }}" \
+              "${{ inputs.version }}" \
+              "${{ inputs.filename }}"

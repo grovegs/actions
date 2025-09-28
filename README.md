@@ -35,6 +35,8 @@ Add any of these actions to your GitHub workflow:
 - `build-unity` - Build Unity projects using Build Profiles
 - `bump-version` - Automatic version management
 - `format-dotnet` - Code formatting for .NET projects
+- `format-files` - Format YAML, JSON, Markdown and other files using Prettier
+- `format-shell` - Format shell scripts using shfmt
 - `generate-changelog` - Create structured release notes
 - `pack-dotnet` - Package .NET projects
 - `pack-godot-addon` - Package Godot addons
