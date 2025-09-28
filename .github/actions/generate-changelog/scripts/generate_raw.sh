@@ -178,7 +178,6 @@ ${commits_by_category[i]}"
         else
             changelog="${changelog}
 
-## ${category_name}
 ${commits_by_category[i]}"
         fi
     fi

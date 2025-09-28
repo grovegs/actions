@@ -17,9 +17,24 @@ runs:
         - name: 🔧 Install shfmt
           shell: bash
           run: |
-              curl -L -o shfmt https://github.com/mvdan/sh/releases/latest/download/shfmt_v3.8.0_linux_amd64
-              chmod +x shfmt
-              sudo mv shfmt /usr/local/bin/
+              if ! command -v shfmt &> /dev/null; then
+                  echo "Installing shfmt..."
+
+                  LATEST_URL=$(curl -s https://api.github.com/repos/mvdan/sh/releases/latest | grep "browser_download_url.*linux_amd64" | cut -d '"' -f 4)
+
+                  if [ -z "$LATEST_URL" ]; then
+                      echo "Error: Failed to get latest release URL from GitHub API"
+                      exit 1
+                  fi
+
+                  echo "Downloading shfmt from: $LATEST_URL"
+                  curl -L -o shfmt "$LATEST_URL"
+                  chmod +x shfmt
+                  sudo mv shfmt /usr/local/bin/
+                  echo "shfmt installed successfully"
+              else
+                  echo "shfmt is already installed"
+              fi
 
         - name: 🎨 Format Shell Scripts
           shell: bash

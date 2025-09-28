@@ -47,7 +47,7 @@ dotnet format sandbox/ConsoleApp
 prettier --write "**/*.{yml,yaml,json,md}" --ignore-path .gitignore
 
 # Format shell scripts
-shfmt -w -i 2 -ci $(find . -name "*.sh" -not -path "./sandbox/*")
+find . -name "*.sh" -not -path "./sandbox/*" -exec shfmt -w -i 2 -ci {} \;
 
 # Run all formatting via GitHub workflow
 gh workflow run .github/workflows/format.yml

@@ -40,7 +40,6 @@ if [ ! -f "${downloaded_file}" ]; then
 fi
 
 echo "::notice::Extracting templates with patterns: ${platform_patterns}"
-# shellcheck disable=SC2086
 if ! unzip -o "${downloaded_file}" "templates/version.txt" ${platform_patterns} -d "${templates_dir}"; then
     echo "::error::Extraction failed for ${downloaded_file} with patterns ${platform_patterns}"
     exit 1

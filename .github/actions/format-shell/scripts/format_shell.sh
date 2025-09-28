@@ -8,13 +8,11 @@ EXCLUDE_PATHS="$2"
 echo "Formatting shell scripts in: $SEARCH_PATH"
 echo "Excluding paths: $EXCLUDE_PATHS"
 
-# Check if shfmt is installed
 if ! command -v shfmt &> /dev/null; then
     echo "Error: shfmt is not installed"
     exit 1
 fi
 
-# Build find command with exclusions
 FIND_CMD="find $SEARCH_PATH -name '*.sh'"
 
 if [ -n "$EXCLUDE_PATHS" ]; then
@@ -24,7 +22,6 @@ if [ -n "$EXCLUDE_PATHS" ]; then
     done
 fi
 
-# Find and format shell scripts
 eval "$FIND_CMD" | while read -r file; do
     echo "Formatting: $file"
     shfmt -w -i 2 -ci "$file"
