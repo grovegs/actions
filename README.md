@@ -1,281 +1,116 @@
 # Actions
 
+[![Build Status](https://github.com/grovegs/actions/actions/workflows/release.yml/badge.svg)](https://github.com/grovegs/actions/actions/workflows/release.yml)
 [![Tests](https://github.com/grovegs/actions/actions/workflows/tests.yml/badge.svg)](https://github.com/grovegs/actions/actions/workflows/tests.yml)
-
-Grove Games Composite GitHub Actions for development workflows.
-
-## Table of Contents
-
-- [build-dotnet](#build-dotnet)
-- [build-godot](#build-godot)
-- [build-unity](#build-unity)
-- [bump-version](#bump-version)
-- [format-dotnet](#format-dotnet)
-- [generate-changelog](#generate-changelog)
-- [pack-dotnet](#pack-dotnet)
-- [pack-godot-addon](#pack-godot-addon)
-- [pack-unity-package](#pack-unity-package)
-- [publish-firebase](#publish-firebase)
-- [publish-github](#publish-github)
-- [publish-nuget](#publish-nuget)
-- [publish-testflight](#publish-testflight)
-- [setup-android](#setup-android)
-- [setup-dotnet](#setup-dotnet)
-- [setup-godot](#setup-godot)
-- [setup-unity](#setup-unity)
-- [setup-xcode](#setup-xcode)
-- [test-dotnet](#test-dotnet)
-- [test-godot](#test-godot)
-
-## build-dotnet
-
-Build a .NET project.
-
-**Inputs:**
-
-- `project` (required): Path to the project file
-- `configuration`: Build configuration (default: Release)
-- `version`: Version to build with
-- `define-symbols`: Define symbols for compilation
-
-## build-godot
-
-Build Godot project for selected platforms.
-
-**Inputs:**
-
-- `project` (required): Path to the Godot project
-- `global-json-file`: Path to global.json file
-- `version`: Version to build with
-- `platform` (required): Target platform (Android, iOS)
-- `preset` (required): Export preset name
-- `configuration`: Build configuration
-- `filename`: Output filename
-
-**Platform-specific inputs:**
-
-- Android: `android-keystore-base64`, `android-keystore-password`, `android-keystore-alias`
-- iOS: `ios-certificate-base64`, `ios-certificate-password`, `ios-provisioning-profile-base64`
-
-**Outputs:**
-
-- `file`: Path to the generated build
-
-## build-unity
-
-Build Unity project for Android and iOS platforms using Build Profiles.
-
-**Inputs:**
-
-- `project` (required): Path to the Unity project
-- `version`: Version to build with
-- `platform` (required): Target platform (Android, iOS)
-- `configuration`: Build configuration
-- `filename`: Output filename
-- `unity-email` (required): Unity account email
-- `unity-password` (required): Unity account password
-- `unity-license-key` (required): Unity license key
-
-**Platform-specific inputs:**
-
-- Android: `android-keystore-base64`, `android-keystore-password`, `android-keystore-alias`
-- iOS: `ios-certificate-base64`, `ios-certificate-password`, `ios-provisioning-profile-base64`
-
-**Outputs:**
-
-- `file`: Path to the generated build
-
-## bump-version
-
-Calculate and bump the next version based on the latest Git tag.
-
-**Inputs:**
-
-- `version-type`: Version bump type (major, minor, patch)
-
-**Outputs:**
-
-- `latest-version`: Current latest version
-- `next-version`: Next calculated version
-
-## format-dotnet
-
-Format a .NET project.
-
-**Inputs:**
-
-- `project` (required): Path to the project file
-
-## generate-changelog
-
-Generate structured changelog and format in multiple formats.
-
-**Inputs:**
-
-- `next-version` (required): Next version for changelog
-
-**Outputs:**
-
-- `changelog-raw`: Raw changelog data
-- `changelog-plain`: Plain text changelog
-- `changelog-markdown`: Markdown formatted changelog
-
-## pack-dotnet
-
-Package a .NET project.
-
-**Inputs:**
-
-- `project` (required): Path to the project file
-- `configuration`: Build configuration (default: Release)
-- `version`: Version to package with
-- `filename`: Output filename
-
-**Outputs:**
-
-- `file`: Path to the generated package
-
-## pack-godot-addon
-
-Package the Godot addon.
-
-**Inputs:**
-
-- `addon` (required): Path to the addon
-- `version`: Version to package with
-- `filename`: Output filename
-
-**Outputs:**
-
-- `file`: Path to the generated package
-
-## pack-unity-package
-
-Package the Unity package as a local tarball.
-
-**Inputs:**
-
-- `package` (required): Path to the package
-- `version`: Version to package with
-- `filename`: Output filename
-
-**Outputs:**
-
-- `file`: Path to the generated package
-
-## publish-firebase
-
-Upload a build file to Firebase App Distribution.
-
-**Inputs:**
-
-- `file` (required): Path to the build file
-- `app-id` (required): Firebase app ID
-- `credentials` (required): Firebase service account credentials (base64)
-- `release-notes`: Release notes for the build
-- `tester-groups`: Comma-separated list of tester groups
-
-## publish-github
-
-Create a GitHub release and upload specified artifacts.
-
-**Inputs:**
-
-- `title` (required): Release title
-- `version` (required): Release version/tag
-- `changelog`: Release changelog/notes
-- `github-token` (required): GitHub token for API access
-- `assets`: Comma-separated list of assets to upload
-
-## publish-nuget
-
-Upload NuGet package to nuget.org.
-
-**Inputs:**
-
-- `file` (required): Path to the NuGet package
-- `api-key` (required): NuGet API key
-
-## publish-testflight
-
-Upload an IPA file to TestFlight using App Store Connect API.
-
-**Inputs:**
-
-- `file` (required): Path to the IPA file
-- `api-key` (required): App Store Connect API key (base64)
-- `api-key-id` (required): API key ID
-- `api-issuer-id` (required): API issuer ID
-
-## setup-android
-
-Set up Java and Android SDK with specified packages.
-
-**Inputs:**
-
-- `java-version`: Java version to install (default: 17)
-- `java-distribution`: Java distribution (default: temurin)
-- `android-packages`: Android SDK packages to install
-
-## setup-dotnet
-
-Setup a .NET project.
-
-**Inputs:**
-
-- `global-json-file`: Path to global.json file
-- `cache`: Enable caching (default: true)
-
-**Outputs:**
-
-- `dotnet-version`: Installed .NET version
-
-## setup-godot
-
-Download, install, and cache Godot for the specified platform.
-
-**Inputs:**
-
-- `global-json-file`: Path to global.json file
-- `target-platforms`: Target platforms for export templates
-- `cache`: Enable caching (default: true)
-
-## setup-unity
-
-Download, install, and cache Unity for macOS and Linux platforms with iOS and Android support.
-
-**Inputs:**
-
-- `project`: Path to the Unity project
-- `unity-version`: Unity version to install
-- `unity-modules`: Unity modules to install (e.g., 'android ios')
-- `cache`: Enable caching (default: true)
-
-## setup-xcode
-
-Validate and select the appropriate Xcode version with iOS SDK compatibility.
-
-**Inputs:**
-
-- `xcode-version` (required): Xcode version to select
-
-## test-dotnet
-
-Test a .NET project.
-
-**Inputs:**
-
-- `project` (required): Path to the project file
-- `configuration`: Test configuration (default: Release)
-
-## test-godot
-
-Test a Godot project.
-
-**Inputs:**
-
-- `project` (required): Path to the Godot project
-- `global-json-file`: Path to global.json file
+[![Latest Release](https://img.shields.io/github/v/release/grovegs/actions)](https://github.com/grovegs/actions/releases/latest)
+
+A collection of reusable GitHub Actions for development workflows, supporting .NET, Unity, and Godot projects.
+
+## Features
+
+- **Cross-platform builds** - Build for Android, iOS, and desktop platforms
+- **Multiple engines** - Support for Unity, Godot, and .NET projects
+- **Automated workflows** - Version bumping, changelog generation, and publishing
+- **Easy setup** - Pre-configured actions for common development tasks
+
+## Quick Start
+
+Add any of these actions to your GitHub workflow:
+
+```yaml
+- name: Build Unity Project
+  uses: grovegs/actions/build-unity@v1.0.0
+  with:
+    project: ./MyGame
+    platform: Android
+    unity-email: ${{ secrets.UNITY_EMAIL }}
+    unity-password: ${{ secrets.UNITY_PASSWORD }}
+    unity-license-key: ${{ secrets.UNITY_LICENSE }}
+```
+
+## Available Actions
+
+- `build-dotnet` - Build .NET projects
+- `build-godot` - Build Godot projects for mobile platforms
+- `build-unity` - Build Unity projects using Build Profiles
+- `bump-version` - Automatic version management
+- `format-dotnet` - Code formatting for .NET projects
+- `generate-changelog` - Create structured release notes
+- `pack-dotnet` - Package .NET projects
+- `pack-godot-addon` - Package Godot addons
+- `pack-unity-package` - Package Unity packages as tarballs
+- `publish-firebase` - Upload to Firebase App Distribution
+- `publish-github` - Create GitHub releases with assets
+- `publish-nuget` - Publish to NuGet
+- `publish-testflight` - Upload to TestFlight
+- `setup-android` - Configure Android SDK and Java
+- `setup-dotnet` - Setup .NET environment
+- `setup-godot` - Install Godot engine with export templates
+- `setup-unity` - Install Unity editor with modules
+- `setup-xcode` - Configure Xcode for iOS builds
+- `test-dotnet` - Run .NET tests
+- `test-godot` - Run Godot tests
+
+## Usage Examples
+
+### Building a Unity Project
+
+```yaml
+- uses: grovegs/actions/build-unity@v1.0.0
+  with:
+    project: ./MyGame
+    platform: Android
+    unity-email: ${{ secrets.UNITY_EMAIL }}
+    unity-password: ${{ secrets.UNITY_PASSWORD }}
+    unity-license-key: ${{ secrets.UNITY_LICENSE }}
+```
+
+### Publishing to GitHub Releases
+
+```yaml
+- uses: grovegs/actions/publish-github@v1.0.0
+  with:
+    title: "v1.0.0 Release"
+    version: "1.0.0"
+    changelog: ${{ steps.changelog.outputs.changelog-markdown }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    assets: "builds/game.apk,builds/game.ipa"
+```
+
+### Complete Workflow Example
+
+```yaml
+name: Build and Release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: grovegs/actions/setup-unity@v1.0.0
+        with:
+          project: ./MyGame
+          unity-modules: android ios
+
+      - uses: grovegs/actions/build-unity@v1.0.0
+        with:
+          project: ./MyGame
+          platform: Android
+          unity-email: ${{ secrets.UNITY_EMAIL }}
+          unity-password: ${{ secrets.UNITY_PASSWORD }}
+          unity-license-key: ${{ secrets.UNITY_LICENSE }}
+
+      - uses: grovegs/actions/publish-github@v1.0.0
+        with:
+          title: "Release ${{ github.ref_name }}"
+          version: ${{ github.ref_name }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          assets: ${{ steps.build.outputs.file }}
+```
 
 ## License
 
