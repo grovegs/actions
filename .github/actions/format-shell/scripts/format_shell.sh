@@ -9,8 +9,24 @@ echo "Formatting shell scripts in: $SEARCH_PATH"
 echo "Excluding paths: $EXCLUDE_PATHS"
 
 if ! command -v shfmt &> /dev/null; then
-    echo "Error: shfmt is not installed"
-    exit 1
+    echo "shfmt not found in PATH, checking npm global bin..."
+
+    if command -v npm &> /dev/null; then
+        NPM_BIN="$(npm prefix -g)/bin"
+        if [ -x "$NPM_BIN/shfmt" ]; then
+            echo "Found shfmt in npm global bin: $NPM_BIN/shfmt"
+            export PATH="$NPM_BIN:$PATH"
+        fi
+    fi
+
+    if ! command -v shfmt &> /dev/null; then
+        echo "Error: shfmt is not installed or not accessible"
+        echo "PATH: $PATH"
+        echo "Checking common locations:"
+        ls -la /usr/local/bin/shfmt 2>/dev/null || echo "  Not in /usr/local/bin/"
+        ls -la "$(npm prefix -g 2>/dev/null)/bin/shfmt" 2>/dev/null || echo "  Not in npm global bin"
+        exit 1
+    fi
 fi
 
 FIND_CMD="find $SEARCH_PATH -name '*.sh'"
