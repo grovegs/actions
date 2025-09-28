@@ -21,7 +21,11 @@ runs:
 
         - name: 📦 Install Prettier and Plugins
           shell: bash
-          run: npm install -g prettier prettier-plugin-sh
+          run: |
+              npm install -g prettier@latest prettier-plugin-sh@latest
+
+              echo "Installed packages:"
+              npm list -g prettier prettier-plugin-sh
 
         - name: 🎨 Format Files
           shell: bash

@@ -14,9 +14,9 @@ if ! command -v prettier &> /dev/null; then
 fi
 
 if [ -f "$IGNORE_PATH" ]; then
-    prettier --write "$FILES_PATTERN" --ignore-path "$IGNORE_PATH"
+    prettier --write "$FILES_PATTERN" --ignore-path "$IGNORE_PATH" --plugin prettier-plugin-sh
 else
-    prettier --write "$FILES_PATTERN"
+    prettier --write "$FILES_PATTERN" --plugin prettier-plugin-sh
 fi
 
 echo "File formatting completed successfully"
