@@ -180,14 +180,8 @@ jobs:
             - name: 🎨 Test Format Files Action
               uses: ./.github/actions/format-files
               with:
-                  files: "**/*.{yml,yaml,json,md}"
+                  files: "**/*.{yml,yaml,json,md,sh}"
                   ignore-path: ".gitignore"
-
-            - name: 🎨 Test Format Shell Action
-              uses: ./.github/actions/format-shell
-              with:
-                  path: "."
-                  exclude-paths: "./sandbox"
 
             - name: 🎨 Test Format .NET Action
               uses: ./.github/actions/format-dotnet

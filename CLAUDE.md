@@ -20,7 +20,7 @@ This repository contains composite GitHub Actions by Grove Games for game develo
 - **Setup Actions**: `setup-unity`, `setup-godot`, `setup-dotnet`, `setup-xcode` - Install and configure development environments
 - **Build Actions**: `build-unity`, `build-godot`, `build-dotnet` - Compile projects for various platforms (Android, iOS, etc.)
 - **Test Actions**: `test-unity`, `test-godot`, `test-dotnet` - Run automated tests
-- **Format Actions**: `format-dotnet`, `format-files`, `format-shell` - Code formatting and style consistency
+- **Format Actions**: `format-dotnet`, `format-files` - Code formatting and style consistency
 - **Package Actions**: `pack-dotnet`, `pack-godot-addon` - Create distributable packages
 - **Publish Actions**: `publish-firebase`, `publish-testflight`, `publish-nuget`, `publish-github` - Deploy to various platforms
 
@@ -43,11 +43,8 @@ act -j test-basic-setup
 # Format .NET projects
 dotnet format sandbox/ConsoleApp
 
-# Format YAML, JSON, Markdown files
-prettier --write "**/*.{yml,yaml,json,md}" --ignore-path .gitignore
-
-# Format shell scripts
-find . -name "*.sh" -not -path "./sandbox/*" -exec shfmt -w -i 2 -ci {} \;
+# Format YAML, JSON, Markdown, Shell files
+prettier --write "**/*.{yml,yaml,json,md,sh}" --ignore-path .gitignore
 
 # Run all formatting via GitHub workflow
 gh workflow run .github/workflows/format.yml
@@ -89,9 +86,9 @@ gh workflow run .github/workflows/format.yml
 
 - **EditorConfig**: `.editorconfig` defines consistent formatting rules across all editors
 - **VS Code Settings**: `.vscode/settings.json` provides format-on-save and editor-specific configuration
-- **Prettier**: Uses EditorConfig for formatting YAML (4 spaces), JSON/Markdown (2 spaces)
+- **Prettier**: Uses EditorConfig for formatting YAML (4 spaces), JSON/Markdown (2 spaces), and shell scripts
+- **prettier-plugin-sh**: Shell script formatting plugin for Prettier with consistent indentation
 - **dotnet format**: Automatic C# code formatting following .NET conventions
-- **shfmt**: Shell script formatting with 2-space indentation and case indentation
 
 ## Script Execution Patterns
 

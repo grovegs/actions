@@ -45,22 +45,8 @@ jobs:
             - name: 📂 Checkout Code
               uses: actions/checkout@v4
 
-            - name: 🎨 Format YAML, JSON, Markdown
+            - name: 🎨 Format Files (YAML, JSON, Markdown, Shell)
               uses: ./.github/actions/format-files
               with:
-                  files: "**/*.{yml,yaml,json,md}"
+                  files: "**/*.{yml,yaml,json,md,sh}"
                   ignore-path: ".gitignore"
-
-    format-shell:
-        name: Format Shell Scripts
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: 📂 Checkout Code
-              uses: actions/checkout@v4
-
-            - name: 🎨 Format Shell Scripts
-              uses: ./.github/actions/format-shell
-              with:
-                  path: "."
-                  exclude-paths: "./sandbox"
