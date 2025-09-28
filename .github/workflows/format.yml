@@ -1,0 +1,52 @@
+name: 📝 Format
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+            - main
+            - develop
+
+permissions:
+    contents: read
+
+jobs:
+    format-dotnet:
+        name: Format .NET Files
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
+
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/ConsoleApp/global.json
+
+            - name: 🎨 Format .NET ConsoleApp
+              uses: ./.github/actions/format-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+
+            - name: 🎨 Format .NET GodotApplication
+              uses: ./.github/actions/format-dotnet
+              with:
+                  project: sandbox/GodotApplication
+
+    format-files:
+        name: Format Files
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
+
+            - name: 🎨 Format Files (YAML, JSON, Markdown, Shell)
+              uses: ./.github/actions/format-files
+              with:
+                  files: "**/*.{yml,yaml,json,md,sh}"
+                  ignore-path: ".gitignore"

@@ -2,39 +2,39 @@ name: Publish to Github
 description: Creates a GitHub release and uploads specified artifacts.
 
 inputs:
-  title:
-    description: The title for the GitHub release.
-    required: true
-  version:
-    description: The version number for the release.
-    required: true
-  changelog:
-    description: The changelog for the release.
-    required: true
-  github-token:
-    description: The GitHub token for authentication.
-    required: true
-  assets:
-    description: The assets to include in the release.
-    required: false
+    title:
+        description: The title for the GitHub release.
+        required: true
+    version:
+        description: The version number for the release.
+        required: true
+    changelog:
+        description: The changelog for the release.
+        required: true
+    github-token:
+        description: The GitHub token for authentication.
+        required: true
+    assets:
+        description: The assets to include in the release.
+        required: false
 
 runs:
-  using: composite
-  steps:
-    - name: 🔖 Configure Git
-      shell: bash
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
+    using: composite
+    steps:
+        - name: 🔖 Configure Git
+          shell: bash
+          run: |
+              git config user.name "GitHub Actions"
+              git config user.email "actions@github.com"
 
-    - name: 📝 Create GitHub Release
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github-token }}
-      run: |
-        if [[ -n "${{ inputs.assets }}" ]]; then
-          assets=(${{ inputs.assets }})
-          gh release create "${{ inputs.version }}" "${assets[@]}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
-        else
-          gh release create "${{ inputs.version }}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
-        fi
+        - name: 📝 Create GitHub Release
+          shell: bash
+          env:
+              GH_TOKEN: ${{ inputs.github-token }}
+          run: |
+              if [[ -n "${{ inputs.assets }}" ]]; then
+                assets=(${{ inputs.assets }})
+                gh release create "${{ inputs.version }}" "${assets[@]}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+              else
+                gh release create "${{ inputs.version }}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+              fi

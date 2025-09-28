@@ -2,18 +2,18 @@ name: Test Godot
 description: Tests a Godot project.
 
 inputs:
-  project:
-    description: The relative path to the Godot project folder containing the `project.godot` file.
-    required: true
-  global-json-file:
-    description: The file path to `global.json`, which specifies the Godot version for the build.
-    required: true
+    project:
+        description: The relative path to the Godot project folder containing the `project.godot` file.
+        required: true
+    global-json-file:
+        description: The file path to `global.json`, which specifies the Godot version for the build.
+        required: true
 
 runs:
-  using: composite
-  steps:
-    - name: 🧪 Test Project
-      shell: bash
-      run: |
-        chmod +x "${{ github.action_path }}/scripts/test_project.sh"
-        "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}"
+    using: composite
+    steps:
+        - name: 🧪 Test Project
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/test_project.sh"
+              "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}"

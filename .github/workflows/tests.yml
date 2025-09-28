@@ -1,165 +1,189 @@
 name: 🧪 Tests
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+            - main
+            - develop
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  test-dotnet-actions:
-    name: Test .NET Actions
-    runs-on: ubuntu-latest
+    test-dotnet-actions:
+        name: Test .NET Actions
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 🔧 Setup .NET
-        uses: ./.github/actions/setup-dotnet
-        with:
-          global-json-file: sandbox/ConsoleApp/global.json
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/ConsoleApp/global.json
 
-      - name: 🧪 Test .NET Project
-        uses: ./.github/actions/test-dotnet
-        with:
-          project: sandbox/ConsoleApp
-          configuration: Debug
+            - name: 🧪 Test .NET Project
+              uses: ./.github/actions/test-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+                  configuration: Debug
 
-      - name: 🎨 Format .NET Project
-        uses: ./.github/actions/format-dotnet
-        with:
-          project: sandbox/ConsoleApp
+            - name: 🎨 Format .NET Project
+              uses: ./.github/actions/format-dotnet
+              with:
+                  project: sandbox/ConsoleApp
 
-      - name: 🏗️ Build .NET Project
-        uses: ./.github/actions/build-dotnet
-        with:
-          project: sandbox/ConsoleApp
-          configuration: Release
-          version: 1.0.0-test
-          define-symbols: TEST_BUILD
+            - name: 🏗️ Build .NET Project
+              uses: ./.github/actions/build-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+                  configuration: Release
+                  version: 1.0.0-test
+                  define-symbols: TEST_BUILD
 
-      - name: 📦 Pack .NET Project
-        uses: ./.github/actions/pack-dotnet
-        with:
-          project: sandbox/ConsoleApp
-          configuration: Release
-          version: 1.0.0-test
-          filename: ConsoleApp-test
+            - name: 📦 Pack .NET Project
+              uses: ./.github/actions/pack-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+                  configuration: Release
+                  version: 1.0.0-test
+                  filename: ConsoleApp-test
 
-  test-godot-actions:
-    name: Test Godot Actions
-    runs-on: ubuntu-latest
+    test-godot-actions:
+        name: Test Godot Actions
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 🔧 Setup .NET
-        uses: ./.github/actions/setup-dotnet
-        with:
-          global-json-file: sandbox/GodotApplication/global.json
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/GodotApplication/global.json
 
-      - name: 🎮 Setup Godot
-        uses: ./.github/actions/setup-godot
-        with:
-          global-json-file: sandbox/GodotApplication/global.json
-          target-platforms: Android
-          cache: true
+            - name: 🎮 Setup Godot
+              uses: ./.github/actions/setup-godot
+              with:
+                  global-json-file: sandbox/GodotApplication/global.json
+                  target-platforms: Android
+                  cache: true
 
-      - name: 🧪 Test Godot Project
-        uses: ./.github/actions/test-godot
-        with:
-          project: sandbox/GodotApplication
-          global-json-file: sandbox/GodotApplication/global.json
+            - name: 🧪 Test Godot Project
+              uses: ./.github/actions/test-godot
+              with:
+                  project: sandbox/GodotApplication
+                  global-json-file: sandbox/GodotApplication/global.json
 
-  test-unity-actions:
-    name: Test Unity Actions
-    runs-on: macos-latest
+    test-unity-actions:
+        name: Test Unity Actions
+        runs-on: macos-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 🤖 Setup Android
-        uses: ./.github/actions/setup-android
-        with:
-          java-version: 17
-          android-packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
+            - name: 🤖 Setup Android
+              uses: ./.github/actions/setup-android
+              with:
+                  java-version: 17
+                  android-packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
 
-      - name: 🎮 Setup Unity
-        uses: ./.github/actions/setup-unity
-        with:
-          project: sandbox/UnityApplication
-          unity-modules: android
-          cache: true
+            - name: 🎮 Setup Unity
+              uses: ./.github/actions/setup-unity
+              with:
+                  project: sandbox/UnityApplication
+                  unity-modules: android
+                  cache: true
 
-  test-android-setup:
-    name: Test Android Setup
-    runs-on: ubuntu-latest
+    test-android-setup:
+        name: Test Android Setup
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 🤖 Setup Android
-        uses: ./.github/actions/setup-android
-        with:
-          java-version: 17
-          android-packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+            - name: 🤖 Setup Android
+              uses: ./.github/actions/setup-android
+              with:
+                  java-version: 17
+                  android-packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
-  test-xcode-setup:
-    name: Test Xcode Setup
-    runs-on: macos-latest
+    test-xcode-setup:
+        name: Test Xcode Setup
+        runs-on: macos-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 🍎 Setup Xcode
-        uses: ./.github/actions/setup-xcode
-        with:
-          xcode-version: "16.2"
+            - name: 🍎 Setup Xcode
+              uses: ./.github/actions/setup-xcode
+              with:
+                  xcode-version: "16.2"
 
-  test-utility-actions:
-    name: Test Utility Actions
-    runs-on: ubuntu-latest
+    test-utility-actions:
+        name: Test Utility Actions
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      - name: 🆙 Bump Version
-        id: bump_version
-        uses: ./.github/actions/bump-version
-        with:
-          version-type: patch
+            - name: 🆙 Bump Version
+              id: bump_version
+              uses: ./.github/actions/bump-version
+              with:
+                  version-type: patch
 
-      - name: 📝 Generate Changelog
-        uses: ./.github/actions/generate-changelog
-        with:
-          next-version: ${{ steps.bump_version.outputs.next-version }}
+            - name: 📝 Generate Changelog
+              uses: ./.github/actions/generate-changelog
+              with:
+                  next-version: ${{ steps.bump_version.outputs.next-version }}
 
-  test-package-actions:
-    name: Test Package Actions
-    runs-on: ubuntu-latest
+    test-package-actions:
+        name: Test Package Actions
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📂 Checkout Code
-        uses: actions/checkout@v4
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
 
-      - name: 📦 Pack Godot Addon
-        uses: ./.github/actions/pack-godot-addon
-        with:
-          addon: sandbox/GodotApplication/addons/TestAddon
-          version: 1.0.0-test
-          filename: TestAddon-test
+            - name: 📦 Pack Godot Addon
+              uses: ./.github/actions/pack-godot-addon
+              with:
+                  addon: sandbox/GodotApplication/addons/TestAddon
+                  version: 1.0.0-test
+                  filename: TestAddon-test
+
+    test-format-actions:
+        name: Test Format Actions
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v4
+
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/ConsoleApp/global.json
+
+            - name: 🎨 Test Format Files Action
+              uses: ./.github/actions/format-files
+              with:
+                  files: "**/*.{yml,yaml,json,md,sh}"
+                  ignore-path: ".gitignore"
+
+            - name: 🎨 Test Format .NET Action
+              uses: ./.github/actions/format-dotnet
+              with:
+                  project: sandbox/ConsoleApp

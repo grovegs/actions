@@ -2,303 +2,303 @@ name: Build Unity
 description: Build Unity project for Android and iOS platforms using Build Profiles.
 
 inputs:
-  project:
-    description: The relative path to the Unity project folder.
-    required: true
-  version:
-    description: The version number for the build output.
-    required: true
-  platform:
-    description: "The target platform for the build. Supported values: `Android`, `iOS`."
-    required: true
-  configuration:
-    description: The build configuration (e.g., `Release` or `Debug`).
-    required: false
-    default: "Release"
-  filename:
-    description: The name of the output file of the build.
-    required: true
-  profile-name:
-    description: "The name of the Unity Build Profile to use. If not specified, defaults to platform name."
-    required: false
-  unity-email:
-    description: "The Unity account email."
-    required: true
-  unity-password:
-    description: "The Unity account password."
-    required: true
-  unity-license-key:
-    description: "The Unity license serial key."
-    required: true
-  android-keystore:
-    description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
-    required: false
-  android-keystore-user:
-    description: The alias name in the Android keystore.
-    required: false
-  android-keystore-password:
-    description: The password for the Android keystore.
-    required: false
-  android-format:
-    description: "The Android build format to use. Supported values: `apk` or `aab`."
-    required: false
-    default: "apk"
-  ios-team-id:
-    description: "The Apple Developer Team ID."
-    required: false
-  ios-certificate:
-    description: "The Base64-encoded iOS distribution certificate (.p12 file)."
-    required: false
-  ios-certificate-password:
-    description: "The password for the iOS distribution certificate."
-    required: false
-  ios-provisioning-profile:
-    description: "The Base64-encoded iOS provisioning profile (.mobileprovision file)."
-    required: false
-  ios-provisioning-profile-uuid:
-    description: "The UUID of the iOS provisioning profile."
-    required: false
-  ios-export-method:
-    description: "iOS export method: 'ad-hoc' for Firebase/testing or 'app-store' for App Store/TestFlight"
-    required: false
-  build-method:
-    description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod)."
-    required: false
-  cache:
-    description: "Cache Unity Library, packages, and build tools."
-    required: false
-    default: "true"
+    project:
+        description: The relative path to the Unity project folder.
+        required: true
+    version:
+        description: The version number for the build output.
+        required: true
+    platform:
+        description: "The target platform for the build. Supported values: `Android`, `iOS`."
+        required: true
+    configuration:
+        description: The build configuration (e.g., `Release` or `Debug`).
+        required: false
+        default: "Release"
+    filename:
+        description: The name of the output file of the build.
+        required: true
+    profile-name:
+        description: "The name of the Unity Build Profile to use. If not specified, defaults to platform name."
+        required: false
+    unity-email:
+        description: "The Unity account email."
+        required: true
+    unity-password:
+        description: "The Unity account password."
+        required: true
+    unity-license-key:
+        description: "The Unity license serial key."
+        required: true
+    android-keystore:
+        description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
+        required: false
+    android-keystore-user:
+        description: The alias name in the Android keystore.
+        required: false
+    android-keystore-password:
+        description: The password for the Android keystore.
+        required: false
+    android-format:
+        description: "The Android build format to use. Supported values: `apk` or `aab`."
+        required: false
+        default: "apk"
+    ios-team-id:
+        description: "The Apple Developer Team ID."
+        required: false
+    ios-certificate:
+        description: "The Base64-encoded iOS distribution certificate (.p12 file)."
+        required: false
+    ios-certificate-password:
+        description: "The password for the iOS distribution certificate."
+        required: false
+    ios-provisioning-profile:
+        description: "The Base64-encoded iOS provisioning profile (.mobileprovision file)."
+        required: false
+    ios-provisioning-profile-uuid:
+        description: "The UUID of the iOS provisioning profile."
+        required: false
+    ios-export-method:
+        description: "iOS export method: 'ad-hoc' for Firebase/testing or 'app-store' for App Store/TestFlight"
+        required: false
+    build-method:
+        description: "Custom build method to use (e.g., MyNamespace.MyClass.MyBuildMethod)."
+        required: false
+    cache:
+        description: "Cache Unity Library, packages, and build tools."
+        required: false
+        default: "true"
 
 outputs:
-  file:
-    description: "The path to the exported project file."
-    value: ${{ steps.build_project.outputs.file }}
+    file:
+        description: "The path to the exported project file."
+        value: ${{ steps.build_project.outputs.file }}
 
 runs:
-  using: composite
-  steps:
-    - name: 📋 Get Unity Version
-      id: unity-version
-      shell: bash
-      run: |
-        if [ -f "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" ]; then
-          version=$(grep "m_EditorVersion:" "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2)
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "::notice::Detected Unity version: $version"
-        else
-          echo "version=unknown" >> $GITHUB_OUTPUT
-          echo "::warning::Could not detect Unity version"
-        fi
+    using: composite
+    steps:
+        - name: 📋 Get Unity Version
+          id: unity-version
+          shell: bash
+          run: |
+              if [ -f "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" ]; then
+                version=$(grep "m_EditorVersion:" "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2)
+                echo "version=$version" >> $GITHUB_OUTPUT
+                echo "::notice::Detected Unity version: $version"
+              else
+                echo "version=unknown" >> $GITHUB_OUTPUT
+                echo "::warning::Could not detect Unity version"
+              fi
 
-    - name: 🔑 Create Cache Key
-      if: inputs.cache == 'true'
-      id: cache-key
-      shell: bash
-      run: |
-        echo "::notice::Generating cache key for ${{ inputs.project }}..."
+        - name: 🔑 Create Cache Key
+          if: inputs.cache == 'true'
+          id: cache-key
+          shell: bash
+          run: |
+              echo "::notice::Generating cache key for ${{ inputs.project }}..."
 
-        project_files=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
+              project_files=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
 
-        if [ -n "$project_files" ]; then
-          if command -v sha256sum >/dev/null 2>&1; then
-            project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
-          else
-            project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
-          fi
-        else
-          if command -v sha256sum >/dev/null 2>&1; then
-            project_hash=$(echo "${{ inputs.project }}" | sha256sum | cut -d' ' -f1)
-          else
-            project_hash=$(echo "${{ inputs.project }}" | shasum -a 256 | cut -d' ' -f1)
-          fi
-        fi
+              if [ -n "$project_files" ]; then
+                if command -v sha256sum >/dev/null 2>&1; then
+                  project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
+                else
+                  project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
+                fi
+              else
+                if command -v sha256sum >/dev/null 2>&1; then
+                  project_hash=$(echo "${{ inputs.project }}" | sha256sum | cut -d' ' -f1)
+                else
+                  project_hash=$(echo "${{ inputs.project }}" | shasum -a 256 | cut -d' ' -f1)
+                fi
+              fi
 
-        cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
-        echo "key=$cache_key" >> $GITHUB_OUTPUT
-        echo "::notice::Cache key: $cache_key"
+              cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
+              echo "key=$cache_key" >> $GITHUB_OUTPUT
+              echo "::notice::Cache key: $cache_key"
 
-    - name: 📚 Cache Unity Library
-      if: inputs.cache == 'true'
-      id: cache-unity-library
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ inputs.project }}/Library
-          ${{ inputs.project }}/Temp/UnityLockfile
-        key: ${{ steps.cache-key.outputs.key }}
-        restore-keys: |
-          unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-
-          unity-${{ steps.unity-version.outputs.version }}-
-          unity-
+        - name: 📚 Cache Unity Library
+          if: inputs.cache == 'true'
+          id: cache-unity-library
+          uses: actions/cache@v4
+          with:
+              path: |
+                  ${{ inputs.project }}/Library
+                  ${{ inputs.project }}/Temp/UnityLockfile
+              key: ${{ steps.cache-key.outputs.key }}
+              restore-keys: |
+                  unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-
+                  unity-${{ steps.unity-version.outputs.version }}-
+                  unity-
 
-    - name: 📦 Cache Unity Packages
-      if: inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/Library/Unity/Asset Store-5.x
-          ~/.config/unity3d
-        key: unity-packages-${{ runner.os }}-${{ steps.unity-version.outputs.version }}
-        restore-keys: |
-          unity-packages-${{ runner.os }}-
+        - name: 📦 Cache Unity Packages
+          if: inputs.cache == 'true'
+          uses: actions/cache@v4
+          with:
+              path: |
+                  ~/Library/Unity/Asset Store-5.x
+                  ~/.config/unity3d
+              key: unity-packages-${{ runner.os }}-${{ steps.unity-version.outputs.version }}
+              restore-keys: |
+                  unity-packages-${{ runner.os }}-
 
-    - name: 🤖 Cache Gradle
-      if: inputs.platform == 'Android' && inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          gradle-${{ runner.os }}-
+        - name: 🤖 Cache Gradle
+          if: inputs.platform == 'Android' && inputs.cache == 'true'
+          uses: actions/cache@v4
+          with:
+              path: |
+                  ~/.gradle/caches
+                  ~/.gradle/wrapper
+              key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+              restore-keys: |
+                  gradle-${{ runner.os }}-
 
-    - name: 🍎 Cache Derived Data
-      if: inputs.platform == 'iOS' && inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/Library/Developer/Xcode/DerivedData
-        key: xcode-derived-${{ runner.os }}-${{ hashFiles('**/project.pbxproj') }}
-        restore-keys: |
-          xcode-derived-${{ runner.os }}-
+        - name: 🍎 Cache Derived Data
+          if: inputs.platform == 'iOS' && inputs.cache == 'true'
+          uses: actions/cache@v4
+          with:
+              path: |
+                  ~/Library/Developer/Xcode/DerivedData
+              key: xcode-derived-${{ runner.os }}-${{ hashFiles('**/project.pbxproj') }}
+              restore-keys: |
+                  xcode-derived-${{ runner.os }}-
 
-    - name: 🧹 Clean Corrupted Cache
-      if: inputs.cache == 'true' && steps.cache-unity-library.outputs.cache-hit == 'true'
-      shell: bash
-      run: |
-        echo "::notice::Cache hit - checking integrity..."
+        - name: 🧹 Clean Corrupted Cache
+          if: inputs.cache == 'true' && steps.cache-unity-library.outputs.cache-hit == 'true'
+          shell: bash
+          run: |
+              echo "::notice::Cache hit - checking integrity..."
 
-        if [ -f "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" ]; then
-          if grep -q "corrupted\|error\|failed" "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" 2>/dev/null; then
-            echo "::warning::Detected corrupted cache, cleaning..."
-            rm -rf "${{ inputs.project }}/Library"
-            rm -rf "${{ inputs.project }}/Temp"
-          fi
-        fi
+              if [ -f "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" ]; then
+                if grep -q "corrupted\|error\|failed" "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" 2>/dev/null; then
+                  echo "::warning::Detected corrupted cache, cleaning..."
+                  rm -rf "${{ inputs.project }}/Library"
+                  rm -rf "${{ inputs.project }}/Temp"
+                fi
+              fi
 
-        if [ -d "${{ inputs.project }}/Library" ] && [ -z "$(ls -A "${{ inputs.project }}/Library" 2>/dev/null)" ]; then
-          echo "::warning::Empty Library folder detected, removing..."
-          rm -rf "${{ inputs.project }}/Library"
-        fi
+              if [ -d "${{ inputs.project }}/Library" ] && [ -z "$(ls -A "${{ inputs.project }}/Library" 2>/dev/null)" ]; then
+                echo "::warning::Empty Library folder detected, removing..."
+                rm -rf "${{ inputs.project }}/Library"
+              fi
 
-    - name: ✅ Validate Platform Inputs
-      shell: bash
-      run: |
-        case "${{ inputs.platform }}" in
-          "Android")
-            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
-            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
-            "Android" \
-            "android-keystore=${{ inputs.android-keystore }}" \
-            "android-keystore-user=${{ inputs.android-keystore-user }}" \
-            "android-keystore-password=${{ inputs.android-keystore-password }}"
-            ;;
-          "iOS")
-            chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
-            "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
-            "iOS" \
-            "ios-team-id=${{ inputs.ios-team-id }}" \
-            "ios-certificate=${{ inputs.ios-certificate }}" \
-            "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
-            "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
-            "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}" \
-            "ios-export-method=${{ inputs.ios-export-method }}"
-            ;;
-          *)
-            echo "::error::Unsupported platform: ${{ inputs.platform }}"
-            exit 1
-            ;;
-        esac
+        - name: ✅ Validate Platform Inputs
+          shell: bash
+          run: |
+              case "${{ inputs.platform }}" in
+                "Android")
+                  chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+                  "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+                  "Android" \
+                  "android-keystore=${{ inputs.android-keystore }}" \
+                  "android-keystore-user=${{ inputs.android-keystore-user }}" \
+                  "android-keystore-password=${{ inputs.android-keystore-password }}"
+                  ;;
+                "iOS")
+                  chmod +x "${{ github.action_path }}/scripts/validate_platform_inputs.sh"
+                  "${{ github.action_path }}/scripts/validate_platform_inputs.sh" \
+                  "iOS" \
+                  "ios-team-id=${{ inputs.ios-team-id }}" \
+                  "ios-certificate=${{ inputs.ios-certificate }}" \
+                  "ios-certificate-password=${{ inputs.ios-certificate-password }}" \
+                  "ios-provisioning-profile=${{ inputs.ios-provisioning-profile }}" \
+                  "ios-provisioning-profile-uuid=${{ inputs.ios-provisioning-profile-uuid }}" \
+                  "ios-export-method=${{ inputs.ios-export-method }}"
+                  ;;
+                *)
+                  echo "::error::Unsupported platform: ${{ inputs.platform }}"
+                  exit 1
+                  ;;
+              esac
 
-    - name: 🏗️ Build Project
-      id: build_project
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.unity-email }}" ]; then
-          echo "::add-mask::${{ inputs.unity-email }}"
-        fi
-        if [ -n "${{ inputs.unity-password }}" ]; then
-          echo "::add-mask::${{ inputs.unity-password }}"
-        fi
-        if [ -n "${{ inputs.unity-license-key }}" ]; then
-          echo "::add-mask::${{ inputs.unity-license-key }}"
-        fi
-        if [ -n "${{ inputs.android-keystore-password }}" ]; then
-          echo "::add-mask::${{ inputs.android-keystore-password }}"
-        fi
-        if [ -n "${{ inputs.ios-certificate-password }}" ]; then
-          echo "::add-mask::${{ inputs.ios-certificate-password }}"
-        fi
+        - name: 🏗️ Build Project
+          id: build_project
+          shell: bash
+          run: |
+              if [ -n "${{ inputs.unity-email }}" ]; then
+                echo "::add-mask::${{ inputs.unity-email }}"
+              fi
+              if [ -n "${{ inputs.unity-password }}" ]; then
+                echo "::add-mask::${{ inputs.unity-password }}"
+              fi
+              if [ -n "${{ inputs.unity-license-key }}" ]; then
+                echo "::add-mask::${{ inputs.unity-license-key }}"
+              fi
+              if [ -n "${{ inputs.android-keystore-password }}" ]; then
+                echo "::add-mask::${{ inputs.android-keystore-password }}"
+              fi
+              if [ -n "${{ inputs.ios-certificate-password }}" ]; then
+                echo "::add-mask::${{ inputs.ios-certificate-password }}"
+              fi
 
-        if [ "${{ inputs.cache }}" == "true" ]; then
-          if [ "${{ steps.cache-unity-library.outputs.cache-hit }}" == "true" ]; then
-            echo "::notice::✅ Using cached Unity Library - this should speed up the build significantly"
-          else
-            echo "::notice::❄️  Cold start - Unity Library will be rebuilt and cached for next time"
-          fi
-        else
-          echo "::notice::🚫 Caching disabled - build will not use or create cache"
-        fi
+              if [ "${{ inputs.cache }}" == "true" ]; then
+                if [ "${{ steps.cache-unity-library.outputs.cache-hit }}" == "true" ]; then
+                  echo "::notice::✅ Using cached Unity Library - this should speed up the build significantly"
+                else
+                  echo "::notice::❄️  Cold start - Unity Library will be rebuilt and cached for next time"
+                fi
+              else
+                echo "::notice::🚫 Caching disabled - build will not use or create cache"
+              fi
 
-        case "${{ inputs.platform }}" in
-          "Android")
-            chmod +x "${{ github.action_path }}/scripts/build_android.sh"
-            "${{ github.action_path }}/scripts/build_android.sh" \
-            "${{ inputs.project }}" \
-            "${{ inputs.version }}" \
-            "${{ inputs.configuration }}" \
-            "${{ inputs.filename }}" \
-            "${{ inputs.unity-email }}" \
-            "${{ inputs.unity-password }}" \
-            "${{ inputs.unity-license-key }}" \
-            "${{ inputs.android-keystore }}" \
-            "${{ inputs.android-keystore-user }}" \
-            "${{ inputs.android-keystore-password }}" \
-            "${{ inputs.android-format }}" \
-            "${{ inputs.build-method }}" \
-            "${{ inputs.profile-name }}"
-            ;;
-          "iOS")
-            chmod +x "${{ github.action_path }}/scripts/build_ios.sh"
-            "${{ github.action_path }}/scripts/build_ios.sh" \
-            "${{ inputs.project }}" \
-            "${{ inputs.version }}" \
-            "${{ inputs.configuration }}" \
-            "${{ inputs.filename }}" \
-            "${{ inputs.unity-email }}" \
-            "${{ inputs.unity-password }}" \
-            "${{ inputs.unity-license-key }}" \
-            "${{ inputs.ios-team-id }}" \
-            "${{ inputs.ios-certificate }}" \
-            "${{ inputs.ios-certificate-password }}" \
-            "${{ inputs.ios-provisioning-profile }}" \
-            "${{ inputs.ios-provisioning-profile-uuid }}" \
-            "${{ inputs.ios-export-method }}" \
-            "${{ inputs.build-method }}" \
-            "${{ inputs.profile-name }}"
-            ;;
-          *)
-            echo "::error::Unsupported platform: ${{ inputs.platform }}"
-            exit 1
-            ;;
-        esac
+              case "${{ inputs.platform }}" in
+                "Android")
+                  chmod +x "${{ github.action_path }}/scripts/build_android.sh"
+                  "${{ github.action_path }}/scripts/build_android.sh" \
+                  "${{ inputs.project }}" \
+                  "${{ inputs.version }}" \
+                  "${{ inputs.configuration }}" \
+                  "${{ inputs.filename }}" \
+                  "${{ inputs.unity-email }}" \
+                  "${{ inputs.unity-password }}" \
+                  "${{ inputs.unity-license-key }}" \
+                  "${{ inputs.android-keystore }}" \
+                  "${{ inputs.android-keystore-user }}" \
+                  "${{ inputs.android-keystore-password }}" \
+                  "${{ inputs.android-format }}" \
+                  "${{ inputs.build-method }}" \
+                  "${{ inputs.profile-name }}"
+                  ;;
+                "iOS")
+                  chmod +x "${{ github.action_path }}/scripts/build_ios.sh"
+                  "${{ github.action_path }}/scripts/build_ios.sh" \
+                  "${{ inputs.project }}" \
+                  "${{ inputs.version }}" \
+                  "${{ inputs.configuration }}" \
+                  "${{ inputs.filename }}" \
+                  "${{ inputs.unity-email }}" \
+                  "${{ inputs.unity-password }}" \
+                  "${{ inputs.unity-license-key }}" \
+                  "${{ inputs.ios-team-id }}" \
+                  "${{ inputs.ios-certificate }}" \
+                  "${{ inputs.ios-certificate-password }}" \
+                  "${{ inputs.ios-provisioning-profile }}" \
+                  "${{ inputs.ios-provisioning-profile-uuid }}" \
+                  "${{ inputs.ios-export-method }}" \
+                  "${{ inputs.build-method }}" \
+                  "${{ inputs.profile-name }}"
+                  ;;
+                *)
+                  echo "::error::Unsupported platform: ${{ inputs.platform }}"
+                  exit 1
+                  ;;
+              esac
 
-    - name: 📊 Build Statistics
-      shell: bash
-      run: |
-        echo "::notice::=== Build Statistics ==="
-        echo "::notice::Caching enabled: ${{ inputs.cache }}"
+        - name: 📊 Build Statistics
+          shell: bash
+          run: |
+              echo "::notice::=== Build Statistics ==="
+              echo "::notice::Caching enabled: ${{ inputs.cache }}"
 
-        if [ "${{ inputs.cache }}" == "true" ]; then
-          echo "::notice::Cache hit: ${{ steps.cache-unity-library.outputs.cache-hit }}"
-          echo "::notice::Cache key: ${{ steps.cache-key.outputs.key }}"
-        fi
+              if [ "${{ inputs.cache }}" == "true" ]; then
+                echo "::notice::Cache hit: ${{ steps.cache-unity-library.outputs.cache-hit }}"
+                echo "::notice::Cache key: ${{ steps.cache-key.outputs.key }}"
+              fi
 
-        echo "::notice::Unity version: ${{ steps.unity-version.outputs.version }}"
-        echo "::notice::Platform: ${{ inputs.platform }}"
+              echo "::notice::Unity version: ${{ steps.unity-version.outputs.version }}"
+              echo "::notice::Platform: ${{ inputs.platform }}"
 
-        if [ -d "${{ inputs.project }}/Library" ]; then
-          lib_size=$(du -sh "${{ inputs.project }}/Library" 2>/dev/null | cut -f1 || echo "unknown")
-          echo "::notice::Library folder size: $lib_size"
-        fi
+              if [ -d "${{ inputs.project }}/Library" ]; then
+                lib_size=$(du -sh "${{ inputs.project }}/Library" 2>/dev/null | cut -f1 || echo "unknown")
+                echo "::notice::Library folder size: $lib_size"
+              fi

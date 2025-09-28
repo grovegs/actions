@@ -2,16 +2,16 @@ name: Publish Nuget
 description: Uploads NuGet package to nuget.org.
 
 inputs:
-  file:
-    description: The NuGet file to be published.
-    required: true
-  api-key:
-    description: NuGet API key used for authenticating and publishing the package.
-    required: true
+    file:
+        description: The NuGet file to be published.
+        required: true
+    api-key:
+        description: NuGet API key used for authenticating and publishing the package.
+        required: true
 
 runs:
-  using: composite
-  steps:
-    - name: 🚀 Publish NuGet Package
-      shell: bash
-      run: dotnet nuget push ${{ inputs.file }} --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
+    using: composite
+    steps:
+        - name: 🚀 Publish NuGet Package
+          shell: bash
+          run: dotnet nuget push ${{ inputs.file }} --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
