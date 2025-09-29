@@ -44,7 +44,6 @@
     "editor.insertSpaces": true,
     "editor.wordWrap": "on"
   },
-  "dotnet.format.enable": true,
   "omnisharp.enableEditorConfigSupport": true,
   "prettier.tabWidth": 4,
   "prettier.useTabs": false,
