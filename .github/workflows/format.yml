@@ -20,7 +20,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
@@ -43,7 +43,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🎨 Format Files (YAML, JSON, Markdown, Shell)
               uses: ./.github/actions/format-files
