@@ -20,7 +20,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
@@ -60,7 +60,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
@@ -86,7 +86,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
@@ -107,7 +107,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
@@ -121,7 +121,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🍎 Setup Xcode
               uses: ./.github/actions/setup-xcode
@@ -134,7 +134,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
               with:
                   fetch-depth: 0
 
@@ -155,7 +155,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 📦 Pack Godot Addon
               uses: ./.github/actions/pack-godot-addon
@@ -170,7 +170,7 @@ jobs:
 
         steps:
             - name: 📂 Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
