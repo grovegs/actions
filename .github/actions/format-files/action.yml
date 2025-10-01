@@ -4,12 +4,12 @@ description: Formats various file types using Prettier (YAML, JSON, Markdown, CS
 inputs:
     files:
         description: File patterns to format (e.g., "**/*.{yml,yaml,json,md,js,ts,css,html,sh}")
-        required: false
-        default: "**/*.{yml,yaml,json,md,sh}"
+        required: true
+        default: ""
     ignore-path:
         description: Path to ignore file
         required: false
-        default: ".gitignore"
+        default: ""
 
 runs:
     using: composite
