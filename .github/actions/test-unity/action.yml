@@ -1,0 +1,16 @@
+name: Test Unity
+description: Tests a Unity project.
+
+inputs:
+    project:
+        description: The relative path to the Unity project folder.
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: 🧪 Test Project
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/test_project.sh"
+              "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}"
