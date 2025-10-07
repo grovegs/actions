@@ -49,7 +49,7 @@ A comprehensive collection of reusable GitHub Actions designed specifically for 
 **Additional Requirements:**
 
 - Secrets configured for signing (keystores, certificates, provisioning profiles)
-- Unity/Godot license keys for engine-specific builds
+- Unity license keys for engine-specific builds
 
 ---
 
@@ -276,6 +276,9 @@ jobs:
 
 **test-godot** - Run Godot project tests
 - Inputs: `project`, `global-json-file`
+
+**test-unity** - Run Unity project tests
+- Inputs: `project`
 
 ### Format Actions
 
