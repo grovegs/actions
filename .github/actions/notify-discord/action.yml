@@ -1,0 +1,33 @@
+name: Notify Discord
+description: Send notifications to Discord via webhook.
+
+inputs:
+    webhook_url:
+        description: Discord webhook URL.
+        required: true
+    title:
+        description: Notification title.
+        required: false
+        default: ""
+    description:
+        description: Notification description.
+        required: false
+        default: ""
+    color:
+        description: Embed color in decimal format.
+        required: false
+        default: "3447003"
+
+runs:
+    using: composite
+    steps:
+        - name: 📢 Send Discord Notification
+          id: send_notification
+          shell: bash
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/send_notification.sh"
+              "${{ github.action_path }}/scripts/send_notification.sh" \
+                "${{ inputs.webhook_url }}" \
+                "${{ inputs.title }}" \
+                "${{ inputs.description }}" \
+                "${{ inputs.color }}"
