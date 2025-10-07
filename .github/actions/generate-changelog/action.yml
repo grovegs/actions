@@ -32,11 +32,13 @@ runs:
           shell: bash
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_plain.sh"
-              "${{ github.action_path }}/scripts/format_plain.sh" "${{ steps.generate_raw.outputs.changelog_raw }}" "${{ inputs.next-version }}"
+              raw_changelog='${{ steps.generate_raw.outputs.changelog_raw }}'
+              "${{ github.action_path }}/scripts/format_plain.sh" "$raw_changelog" "${{ inputs.next-version }}"
 
         - name: Format to Markdown
           id: format_markdown
           shell: bash
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_markdown.sh"
-              "${{ github.action_path }}/scripts/format_markdown.sh" "${{ steps.generate_raw.outputs.changelog_raw }}" "${{ inputs.next-version }}"
+              raw_changelog='${{ steps.generate_raw.outputs.changelog_raw }}'
+              "${{ github.action_path }}/scripts/format_markdown.sh" "$raw_changelog" "${{ inputs.next-version }}"
