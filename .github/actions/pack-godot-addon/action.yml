@@ -23,9 +23,10 @@ runs:
         - name: 📦 Pack Godot Addon
           id: pack_addon
           shell: bash
+          env:
+              ADDON_PATH: ${{ inputs.addon }}
+              ADDON_VERSION: ${{ inputs.version }}
+              ADDON_FILENAME: ${{ inputs.filename }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
-              "${{ github.action_path }}/scripts/pack_addon.sh" \
-              "${{ inputs.addon }}" \
-              "${{ inputs.version }}" \
-              "${{ inputs.filename }}"
+              "${{ github.action_path }}/scripts/pack_addon.sh"
