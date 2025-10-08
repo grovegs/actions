@@ -34,7 +34,8 @@ else
         "CI/CD") formatted+="### 🔧 CI/CD\n" ;;
         "Reverts") formatted+="### ⏪ Reverts\n" ;;
         "Documentation") formatted+="### 📚 Documentation\n" ;;
-        *) formatted+="### ${line}\n" ;;
+        "Other") formatted+="### 📦 Other\n" ;;
+        *) formatted+="- ${line}\n" ;;
       esac
     elif [ -n "$line" ]; then
       formatted+="- ${line}\n"
