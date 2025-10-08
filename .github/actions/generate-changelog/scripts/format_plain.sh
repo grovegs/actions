@@ -1,15 +1,12 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-  echo "::error::Usage: $0 <raw_changelog> <version>"
+if [ -z "$RAW_CHANGELOG" ]; then
+  echo "::error::Empty changelog provided"
   exit 1
 fi
 
-raw_changelog="$1"
-version="$2"
-
-if [ -z "$raw_changelog" ]; then
-  echo "::error::Empty changelog provided"
+if [ -z "$VERSION" ]; then
+  echo "::error::Version not provided"
   exit 1
 fi
 
@@ -19,10 +16,10 @@ sanitize_text() {
   printf "%s" "$text"
 }
 
-if [[ "$raw_changelog" == "No changes in this release." ]]; then
-  formatted="What's New in v${version}\n\nNo changes in this release."
+if [[ "$RAW_CHANGELOG" == "No changes in this release." ]]; then
+  formatted="What's New in v${VERSION}\n\nNo changes in this release."
 else
-  formatted="What's New in v${version}\n\n"
+  formatted="What's New in v${VERSION}\n\n"
 
   while IFS= read -r line; do
     line=$(sanitize_text "$line")
@@ -32,7 +29,7 @@ else
     elif [ -n "$line" ]; then
       formatted+="• ${line}\n"
     fi
-  done <<< "$raw_changelog"
+  done <<< "$RAW_CHANGELOG"
 fi
 
 {
