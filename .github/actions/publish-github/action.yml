@@ -17,6 +17,7 @@ inputs:
     assets:
         description: The assets to include in the release.
         required: false
+        default: ""
 
 runs:
     using: composite
@@ -31,10 +32,23 @@ runs:
           shell: bash
           env:
               GH_TOKEN: ${{ inputs.github-token }}
+              RELEASE_VERSION: ${{ inputs.version }}
+              RELEASE_TITLE: ${{ inputs.title }}
+              RELEASE_NOTES: ${{ inputs.changelog }}
+              RELEASE_ASSETS: ${{ inputs.assets }}
           run: |
-              if [[ -n "${{ inputs.assets }}" ]]; then
-                assets=(${{ inputs.assets }})
-                gh release create "${{ inputs.version }}" "${assets[@]}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+              NOTES_FILE=$(mktemp)
+              printf '%s' "$RELEASE_NOTES" > "$NOTES_FILE"
+
+              if [[ -n "$RELEASE_ASSETS" ]]; then
+                IFS=' ' read -ra assets <<< "$RELEASE_ASSETS"
+                gh release create "$RELEASE_VERSION" "${assets[@]}" \
+                  --title "$RELEASE_TITLE" \
+                  --notes-file "$NOTES_FILE"
               else
-                gh release create "${{ inputs.version }}" --title "${{ inputs.title }}" --notes "${{ inputs.changelog }}"
+                gh release create "$RELEASE_VERSION" \
+                  --title "$RELEASE_TITLE" \
+                  --notes-file "$NOTES_FILE"
               fi
+
+              rm -f "$NOTES_FILE"
