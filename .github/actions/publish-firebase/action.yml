@@ -14,9 +14,11 @@ inputs:
     release-notes:
         description: Notes for this release to be displayed to testers in Firebase App Distribution.
         required: false
+        default: ""
     tester-groups:
         description: A comma-separated list of tester groups to distribute the build to.
         required: false
+        default: ""
 
 runs:
     using: composite
@@ -27,11 +29,12 @@ runs:
 
         - name: 🚀 Distribute to Firebase
           shell: bash
+          env:
+              FILE: ${{ inputs.file }}
+              APP_ID: ${{ inputs.app-id }}
+              CREDENTIALS: ${{ inputs.credentials }}
+              RELEASE_NOTES: ${{ inputs.release-notes }}
+              TESTER_GROUPS: ${{ inputs.tester-groups }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/distribute_file.sh"
-              "${{ github.action_path }}/scripts/distribute_file.sh" \
-              "${{ inputs.file }}" \
-              "${{ inputs.app-id }}" \
-              "${{ inputs.credentials }}" \
-              "${{ inputs.release-notes }}" \
-              "${{ inputs.tester-groups }}"
+              "${{ github.action_path }}/scripts/distribute_file.sh"

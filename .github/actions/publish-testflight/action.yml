@@ -20,10 +20,11 @@ runs:
     steps:
         - name: 🚀 Upload to TestFlight
           shell: bash
+          env:
+              FILE: ${{ inputs.file }}
+              API_KEY: ${{ inputs.api-key }}
+              API_KEY_ID: ${{ inputs.api-key-id }}
+              API_ISSUER_ID: ${{ inputs.api-issuer-id }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/upload_testflight.sh"
-              "${{ github.action_path }}/scripts/upload_testflight.sh" \
-              "${{ inputs.file }}" \
-              "${{ inputs.api-key }}" \
-              "${{ inputs.api-key-id }}" \
-              "${{ inputs.api-issuer-id }}"
+              "${{ github.action_path }}/scripts/upload_testflight.sh"

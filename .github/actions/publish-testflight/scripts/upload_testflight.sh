@@ -1,17 +1,27 @@
 #!/bin/bash
 
-if [ "$#" -ne 4 ]; then
-  echo "::error::Usage: $0 <file> <api_key> <api_key_id> <api_issuer_id>"
+if [ -z "${FILE}" ]; then
+  echo "::error::IPA file path not specified"
   exit 1
 fi
 
-file="$1"
-api_key="$2"
-api_key_id="$3"
-api_issuer_id="$4"
+if [ -z "${API_KEY}" ]; then
+  echo "::error::API key not specified"
+  exit 1
+fi
+
+if [ -z "${API_KEY_ID}" ]; then
+  echo "::error::API key ID not specified"
+  exit 1
+fi
+
+if [ -z "${API_ISSUER_ID}" ]; then
+  echo "::error::API issuer ID not specified"
+  exit 1
+fi
 
 private_keys_dir="${HOME}/.appstoreconnect/private_keys"
-api_key_file="${private_keys_dir}/AuthKey_${api_key_id}.p8"
+api_key_file="${private_keys_dir}/AuthKey_${API_KEY_ID}.p8"
 
 cleanup() {
   echo "::notice::Cleaning up temporary files..."
@@ -19,28 +29,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ ! -f "${file}" ]; then
-  echo "::error::IPA file not found: ${file}"
-  exit 1
-fi
-
-if [ -z "${api_key_id}" ] || [ -z "${api_issuer_id}" ] || [ -z "${api_key}" ]; then
-  echo "::error::API key credentials are required"
+if [ ! -f "${FILE}" ]; then
+  echo "::error::IPA file not found: ${FILE}"
   exit 1
 fi
 
 echo "::notice::Setting up App Store Connect API authentication"
 mkdir -p "${private_keys_dir}"
-if ! echo -n "${api_key}" | base64 -d > "${api_key_file}"; then
+if ! echo -n "${API_KEY}" | base64 -d > "${api_key_file}"; then
   echo "::error::Failed to decode API private key"
   exit 1
 fi
 
 chmod 600 "${api_key_file}"
 
-file_size=$(stat -f%z "${file}" 2> /dev/null || stat -c%s "${file}" 2> /dev/null || echo "unknown")
-echo "::notice::Uploading IPA to TestFlight: ${file} (${file_size} bytes)"
-echo "::notice::Using API Key ID: ${api_key_id}"
+file_size=$(stat -f%z "${FILE}" 2> /dev/null || stat -c%s "${FILE}" 2> /dev/null || echo "unknown")
+echo "::notice::Uploading IPA to TestFlight: ${FILE} (${file_size} bytes)"
+echo "::notice::Using API Key ID: ${API_KEY_ID}"
 
 is_retryable_error() {
   local exit_code=$1
@@ -83,9 +88,9 @@ while [ $attempt -le $max_attempts ] && [ "$success" = false ]; do
 
   output=$(xcrun altool --upload-app \
     --type ios \
-    --file "${file}" \
-    --apiKey "${api_key_id}" \
-    --apiIssuer "${api_issuer_id}" 2>&1)
+    --file "${FILE}" \
+    --apiKey "${API_KEY_ID}" \
+    --apiIssuer "${API_ISSUER_ID}" 2>&1)
 
   exit_code=$?
 
