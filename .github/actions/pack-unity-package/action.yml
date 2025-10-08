@@ -23,9 +23,10 @@ runs:
         - name: 📦 Pack Unity Package
           id: pack_package
           shell: bash
+          env:
+              PACKAGE_PATH: ${{ inputs.package }}
+              PACKAGE_VERSION: ${{ inputs.version }}
+              PACKAGE_FILENAME: ${{ inputs.filename }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_package.sh"
-              "${{ github.action_path }}/scripts/pack_package.sh" \
-              "${{ inputs.package }}" \
-              "${{ inputs.version }}" \
-              "${{ inputs.filename }}"
+              "${{ github.action_path }}/scripts/pack_package.sh"

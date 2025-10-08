@@ -1,23 +1,26 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-  echo "::error::Usage: $0 <package> <version> <filename>"
+if [[ -z "${PACKAGE_PATH}" ]] || [[ -z "${PACKAGE_VERSION}" ]] || [[ -z "${PACKAGE_FILENAME}" ]]; then
+  echo "::error::Missing required environment variables: PACKAGE_PATH, PACKAGE_VERSION, PACKAGE_FILENAME"
   exit 1
 fi
 
-package="$1"
-version="$2"
-filename="$3"
+echo "::notice::Processing package '${PACKAGE_PATH}' with version '${PACKAGE_VERSION}'"
 
-echo "::notice::Processing package '${package}' with version '${version}'"
-
-if [[ ! -d "${package}" ]]; then
-  echo "::error::Package directory '${package}' does not exist."
+if [[ ! -d "${PACKAGE_PATH}" ]]; then
+  echo "::error::Package directory '${PACKAGE_PATH}' does not exist."
   exit 1
 fi
+
+if [[ ! -f "${PACKAGE_PATH}/package.json" ]]; then
+  echo "::error::package.json file not found in '${PACKAGE_PATH}'."
+  exit 1
+fi
+
+sed -i.bak 's/"version"[[:space:]]*:[[:space:]]*"[^"]*"/"version": "'"${PACKAGE_VERSION}"'"/' "${PACKAGE_PATH}/package.json" && rm -f "${PACKAGE_PATH}/package.json.bak"
 
 packages_dir=~/.unity/packages
-temp="${packages_dir}/${filename}"
+temp="${packages_dir}/${PACKAGE_FILENAME}"
 trap '[[ -d "${temp}" ]] && rm -rf "${temp}"' EXIT
 
 if ! mkdir -p "${temp}"; then
@@ -25,12 +28,12 @@ if ! mkdir -p "${temp}"; then
   exit 1
 fi
 
-if ! cp -r "${package}" "${temp}"; then
-  echo "::error::Failed to copy package '${package}' to '${temp}'."
+if ! cp -r "${PACKAGE_PATH}" "${temp}"; then
+  echo "::error::Failed to copy package '${PACKAGE_PATH}' to '${temp}'."
   exit 1
 fi
 
-package_dir="${temp}/$(basename "${package}")"
+package_dir="${temp}/$(basename "${PACKAGE_PATH}")"
 
 if [[ -f "README.md" ]] && ! cp "README.md" "${package_dir}"; then
   echo "::warning::Failed to copy README.md to '${package_dir}'."
@@ -40,18 +43,11 @@ if [[ -f "LICENSE" ]] && ! cp "LICENSE" "${package_dir}"; then
   echo "::warning::Failed to copy LICENSE to '${package_dir}'."
 fi
 
-if [[ ! -f "${package_dir}/package.json" ]]; then
-  echo "::error::package.json file not found in '${package_dir}'."
-  exit 1
-fi
-
-sed -i.bak 's/"version"[[:space:]]*:[[:space:]]*"[^"]*"/"version": "'"${version}"'"/' "${package_dir}/package.json" && rm -f "${package_dir}/package.json.bak"
-
 cd "${packages_dir}" || exit 1
-tgz_name="${filename}.tgz"
+tgz_name="${PACKAGE_FILENAME}.tgz"
 file="${packages_dir}/${tgz_name}"
 
-if ! tar --create --gzip --file "${tgz_name}" "${filename}"; then
+if ! tar --create --gzip --file "${tgz_name}" "${PACKAGE_FILENAME}"; then
   echo "::error::Failed to create tarball archive '${tgz_name}'."
   exit 1
 fi
