@@ -17,9 +17,9 @@ sanitize_text() {
 }
 
 if [[ "$RAW_CHANGELOG" == "No changes in this release." ]]; then
-  formatted="## 🚀 Release Notes v${VERSION}\n\nNo changes in this release."
+  formatted="## Release Notes v${VERSION}\n\nNo changes in this release."
 else
-  formatted="## 🚀 Release Notes v${VERSION}\n\n"
+  formatted="## Release Notes v${VERSION}\n\n"
 
   while IFS= read -r line; do
     line=$(sanitize_text "$line")
