@@ -13,12 +13,20 @@ if [ -z "$raw_changelog" ]; then
   exit 1
 fi
 
+sanitize_text() {
+  local text="$1"
+  text="${text//\`/\\\`}"
+  printf "%s" "$text"
+}
+
 if [[ "$raw_changelog" == "No changes in this release." ]]; then
   formatted="## 🚀 Release Notes v${version}\n\nNo changes in this release."
 else
   formatted="## 🚀 Release Notes v${version}\n\n"
 
   while IFS= read -r line; do
+    line=$(sanitize_text "$line")
+
     if [[ "$line" =~ ^[A-Z] ]] && [[ ! "$line" =~ ^[A-Za-z]+: ]]; then
       case "$line" in
         "Features") formatted+="### 🚀 Features\n" ;;
@@ -28,7 +36,7 @@ else
         "Tests") formatted+="### 🧪 Tests\n" ;;
         "CI/CD") formatted+="### 🔧 CI/CD\n" ;;
         "Reverts") formatted+="### ⏪ Reverts\n" ;;
-        "Documentations") formatted+="### 📚 Documentations\n" ;;
+        "Documentation") formatted+="### 📚 Documentation\n" ;;
         *) formatted+="### ${line}\n" ;;
       esac
     elif [ -n "$line" ]; then
@@ -39,6 +47,7 @@ fi
 
 {
   echo "changelog_markdown<<EOF"
-  echo -e "$formatted"
+  printf "%b" "$formatted"
+  echo ""
   echo "EOF"
 } >> "$GITHUB_OUTPUT"

@@ -29,15 +29,17 @@ for i in "${!categories[@]}"; do
   commits_by_category[i]=""
 done
 
+sanitize_text() {
+  local text="$1"
+  text="${text//\`/\\\`}"
+  printf "%s" "$text"
+}
+
 clean_commit() {
   local commit="$1"
-
   commit=$(printf "%s" "$commit" | sed 's/^[^a-zA-Z]*//')
-
   commit=$(printf "%s" "$commit" | sed 's/[[:space:]]\{1,\}/ /g')
-
   commit=$(printf "%s" "$commit" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
   printf "%s" "$commit"
 }
 
@@ -157,6 +159,8 @@ while IFS= read -r commit; do
   else
     formatted_commit=$(parse_commit "$clean_commit_msg" "$commit_type")
   fi
+
+  formatted_commit=$(sanitize_text "$formatted_commit")
 
   if [ -n "$formatted_commit" ]; then
     if [ -z "${commits_by_category[category_index]}" ]; then
