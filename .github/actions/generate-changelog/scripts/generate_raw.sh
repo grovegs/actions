@@ -164,10 +164,10 @@ while IFS= read -r commit; do
 
   if [ -n "$formatted_commit" ]; then
     if [ -z "${commits_by_category[category_index]}" ]; then
-      commits_by_category[category_index]="- ${formatted_commit}"
+      commits_by_category[category_index]="${formatted_commit}"
     else
       commits_by_category[category_index]="${commits_by_category[category_index]}
-- ${formatted_commit}"
+${formatted_commit}"
     fi
   fi
 done <<< "$commits"
@@ -177,11 +177,12 @@ for i in "${!categories[@]}"; do
   if [ -n "${commits_by_category[i]}" ]; then
     category_name=${categories[i]}
     if [ -z "$changelog" ]; then
-      changelog="## ${category_name}
+      changelog="${category_name}
 ${commits_by_category[i]}"
     else
       changelog="${changelog}
 
+${category_name}
 ${commits_by_category[i]}"
     fi
   fi
