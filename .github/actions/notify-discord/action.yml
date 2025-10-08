@@ -24,10 +24,11 @@ runs:
         - name: 📢 Send Discord Notification
           id: send_notification
           shell: bash
+          env:
+              WEBHOOK_URL: ${{ inputs.webhook_url }}
+              TITLE: ${{ inputs.title }}
+              DESCRIPTION: ${{ inputs.description }}
+              COLOR: ${{ inputs.color }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/send_notification.sh"
-              "${{ github.action_path }}/scripts/send_notification.sh" \
-                "${{ inputs.webhook_url }}" \
-                "${{ inputs.title }}" \
-                "${{ inputs.description }}" \
-                "${{ inputs.color }}"
+              "${{ github.action_path }}/scripts/send_notification.sh"
