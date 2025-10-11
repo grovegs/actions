@@ -28,7 +28,7 @@ runs:
               "${{ github.action_path }}/scripts/upload_artifact.sh"
 
         - name: 📤 Upload Artifact
-          uses: actions/upload-artifact@v5
+          uses: actions/upload-artifact@v4
           with:
               name: ${{ inputs.name }}
               path: ${{ steps.prepare.outputs.staging-dir }}
