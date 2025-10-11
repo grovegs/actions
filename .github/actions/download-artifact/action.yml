@@ -1,0 +1,29 @@
+name: Download Artifact
+description: Download artifacts with automatic path restoration support.
+
+inputs:
+    name:
+        description: Artifact name to download.
+        required: true
+    path:
+        description: Destination path for download (empty = restore to original paths).
+        required: false
+        default: ""
+
+runs:
+    using: composite
+    steps:
+        - name: 📥 Download Artifact
+          uses: actions/download-artifact@v5
+          with:
+              name: ${{ inputs.name }}
+              path: .artifact-temp-${{ inputs.name }}
+
+        - name: 📂 Restore Paths
+          shell: bash
+          env:
+              ARTIFACT_NAME: ${{ inputs.name }}
+              DOWNLOAD_PATH: ${{ inputs.path }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/download_artifact.sh"
+              "${{ github.action_path }}/scripts/download_artifact.sh"
