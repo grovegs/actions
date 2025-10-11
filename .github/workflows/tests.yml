@@ -187,3 +187,74 @@ jobs:
               uses: ./.github/actions/format-dotnet
               with:
                   project: sandbox/ConsoleApp
+
+    test-artifact-actions:
+        name: Test Artifact Actions
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 📝 Create Test Files
+              shell: bash
+              run: |
+                  mkdir -p test-artifacts/dir1
+                  mkdir -p test-artifacts/dir2
+                  echo "Test file 1" > test-artifacts/dir1/file1.txt
+                  echo "Test file 2" > test-artifacts/dir2/file2.txt
+                  echo "Root file" > test-artifacts/root.txt
+
+            - name: 📤 Upload Test Artifact
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: test-artifact
+                  path: test-artifacts/**
+                  retention-days: 1
+
+            - name: 🧹 Clean Test Files
+              shell: bash
+              run: |
+                  rm -rf test-artifacts
+
+            - name: 📥 Download Test Artifact (with path)
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: test-artifact
+                  path: downloaded-artifacts
+
+            - name: ✅ Verify Downloaded Files (with path)
+              shell: bash
+              run: |
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ]; then
+                      echo "Error: file1.txt not found"
+                      exit 1
+                  fi
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ]; then
+                      echo "Error: file2.txt not found"
+                      exit 1
+                  fi
+                  echo "✅ All files verified in custom path"
+
+            - name: 🧹 Clean Downloaded Files
+              shell: bash
+              run: |
+                  rm -rf downloaded-artifacts
+
+            - name: 📥 Download Test Artifact (restore original paths)
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: test-artifact
+
+            - name: ✅ Verify Restored Files
+              shell: bash
+              run: |
+                  if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
+                      echo "Error: file1.txt not restored to original path"
+                      exit 1
+                  fi
+                  if [ ! -f "test-artifacts/dir2/file2.txt" ]; then
+                      echo "Error: file2.txt not restored to original path"
+                      exit 1
+                  fi
+                  echo "✅ All files verified in original paths"
