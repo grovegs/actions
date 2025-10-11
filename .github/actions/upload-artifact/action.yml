@@ -1,0 +1,36 @@
+name: Upload Artifact
+description: Upload build artifacts with path metadata for restoration support.
+
+inputs:
+    name:
+        description: Artifact name.
+        required: true
+    path:
+        description: Paths to upload.
+        required: true
+    retention-days:
+        description: Number of days to retain artifact (1-90).
+        required: false
+        default: "30"
+
+runs:
+    using: composite
+    steps:
+        - name: 📦 Prepare Artifact
+          id: prepare
+          shell: bash
+          env:
+              ARTIFACT_NAME: ${{ inputs.name }}
+              ARTIFACT_PATH: ${{ inputs.path }}
+              RETENTION_DAYS: ${{ inputs.retention-days }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/upload_artifact.sh"
+              "${{ github.action_path }}/scripts/upload_artifact.sh"
+
+        - name: 📤 Upload Artifact
+          uses: actions/upload-artifact@v5
+          with:
+              name: ${{ inputs.name }}
+              path: ${{ steps.prepare.outputs.staging-dir }}
+              retention-days: ${{ inputs.retention-days }}
+              compression-level: 6
