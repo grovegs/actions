@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TEMP_DIR="${GITHUB_WORKSPACE}/.artifact-temp-${ARTIFACT_NAME}"
-METADATA_FILE="${TEMP_DIR}/.artifact-meta/paths.txt"
+METADATA_FILE="${TEMP_DIR}/.metadata/paths.txt"
 
 if [ ! -f "$METADATA_FILE" ]; then
   echo "::warning::No metadata found, skipping path restoration"
@@ -15,14 +15,13 @@ if [ ! -f "$METADATA_FILE" ]; then
     fi
 
     mkdir -p "$TARGET_PATH"
-    shopt -s nullglob
-    shopt -s dotglob
+
+    shopt -s nullglob dotglob
     for item in "${TEMP_DIR}"/*; do
-      [ "$(basename "$item")" = ".artifact-meta" ] && continue
+      [ "$(basename "$item")" = ".metadata" ] && continue
       cp -r "$item" "$TARGET_PATH/"
     done
-    shopt -u dotglob
-    shopt -u nullglob
+    shopt -u dotglob nullglob
   fi
 
   rm -rf "$TEMP_DIR"
@@ -36,17 +35,15 @@ if [ -n "$DOWNLOAD_PATH" ]; then
     TARGET_PATH="${GITHUB_WORKSPACE}/${DOWNLOAD_PATH}"
   fi
 
-  echo "Extracting to custom path: $TARGET_PATH"
+  echo "Extracting to: $TARGET_PATH"
   mkdir -p "$TARGET_PATH"
 
-  shopt -s nullglob
-  shopt -s dotglob
+  shopt -s nullglob dotglob
   for item in "${TEMP_DIR}"/*; do
-    [ "$(basename "$item")" = ".artifact-meta" ] && continue
+    [ "$(basename "$item")" = ".metadata" ] && continue
     cp -r "$item" "$TARGET_PATH/"
   done
-  shopt -u dotglob
-  shopt -u nullglob
+  shopt -u dotglob nullglob
 else
   echo "Restoring files to original paths"
 
@@ -62,11 +59,9 @@ else
 
       if [ -d "$source_item" ]; then
         rm -rf "$original_path"
-        cp -r "$source_item" "$original_path"
-      else
-        cp "$source_item" "$original_path"
       fi
 
+      cp -r "$source_item" "$original_path"
       echo "Restored: $original_path"
     fi
 
