@@ -2,64 +2,97 @@
 set -euo pipefail
 
 STAGING_DIR="${GITHUB_WORKSPACE}/.artifact-staging-${ARTIFACT_NAME}"
-METADATA_DIR="${STAGING_DIR}/.metadata"
+METADATA_FILE="${STAGING_DIR}/.artifact-meta.json"
+WORKSPACE="${GITHUB_WORKSPACE}"
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
-mkdir -p "$METADATA_DIR"
-
-cd "$GITHUB_WORKSPACE"
 
 echo "Preparing artifact: ${ARTIFACT_NAME}"
-echo "Working directory: $(pwd)"
-echo "Staging directory: ${STAGING_DIR}"
 
 mapfile -t PATHS <<< "$ARTIFACT_PATH"
 
 FILES_FOUND=0
-FILE_INDEX=0
+declare -a FILE_ENTRIES
 
-shopt -s nullglob dotglob globstar
+if [ "$INCLUDE_HIDDEN" = "true" ]; then
+  shopt -s dotglob
+fi
+shopt -s nullglob
 
-for path in "${PATHS[@]}"; do
-  path=$(echo "$path" | xargs)
-  [ -z "$path" ] && continue
-  [[ "$path" == !* ]] && continue
+for path_pattern in "${PATHS[@]}"; do
+  path_pattern=$(echo "$path_pattern" | xargs)
 
-  echo "Processing pattern: $path"
+  [ -z "$path_pattern" ] && continue
 
-  for item in $path; do
+  [[ "$path_pattern" == !* ]] && continue
+
+  cd "$WORKSPACE"
+
+  for item in $path_pattern; do
     [ ! -e "$item" ] && continue
 
-    FILES_FOUND=$((FILES_FOUND + 1))
-
     if [ -f "$item" ]; then
-      abs_path=$(cd "$(dirname "$item")" && pwd)/$(basename "$item")
+      ITEM_DIR=$(cd "$(dirname "$item")" && pwd)
+      ITEM_NAME=$(basename "$item")
+      ABS_PATH="${ITEM_DIR}/${ITEM_NAME}"
+    elif [ -d "$item" ]; then
+      ABS_PATH=$(cd "$item" && pwd)
     else
-      abs_path=$(cd "$item" && pwd)
+      continue
     fi
 
-    echo "$abs_path" >> "${METADATA_DIR}/paths.txt"
+    REL_PATH="${ABS_PATH#"${WORKSPACE}"/}"
 
-    TARGET="${STAGING_DIR}/file-${FILE_INDEX}"
-    echo "Copying: $item -> $TARGET"
-    cp -r "$item" "$TARGET"
-    echo "Copy completed for file-${FILE_INDEX}"
+    if [ "$REL_PATH" = "$ABS_PATH" ]; then
+      echo "::warning::Skipping item outside workspace: $item"
+      continue
+    fi
 
-    FILE_INDEX=$((FILE_INDEX + 1))
+    TARGET_DIR="${STAGING_DIR}/$(dirname "$REL_PATH")"
+    mkdir -p "$TARGET_DIR"
+
+    if [ -f "$item" ]; then
+      cp -p "$item" "${STAGING_DIR}/${REL_PATH}"
+    elif [ -d "$item" ]; then
+      cp -rp "$item" "${STAGING_DIR}/${REL_PATH}"
+    fi
+
+    FILE_ENTRIES+=("$REL_PATH")
+    FILES_FOUND=$((FILES_FOUND + 1))
   done
 done
 
-shopt -u globstar dotglob nullglob
-
-echo "Found $FILES_FOUND file(s)"
-echo "Listing staging directory:"
-ls -laR "$STAGING_DIR" || echo "Failed to list"
-
-if [ "$FILES_FOUND" -eq 0 ]; then
-  echo "::error::No files found matching the specified paths"
-  exit 1
+shopt -u nullglob
+if [ "$INCLUDE_HIDDEN" = "true" ]; then
+  shopt -u dotglob
 fi
 
-echo "staging-dir=$STAGING_DIR" >> "$GITHUB_OUTPUT"
-echo "Output staging-dir: $STAGING_DIR"
+cat > "$METADATA_FILE" << EOF
+{
+  "version": "1.0",
+  "artifact_name": "${ARTIFACT_NAME}",
+  "workspace": "${WORKSPACE}",
+  "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "files_count": ${FILES_FOUND},
+  "files": [
+EOF
+
+FIRST=true
+for entry in "${FILE_ENTRIES[@]}"; do
+  if [ "$FIRST" = true ]; then
+    FIRST=false
+  else
+    echo "," >> "$METADATA_FILE"
+  fi
+  echo -n "    \"${entry}\"" >> "$METADATA_FILE"
+done
+
+cat >> "$METADATA_FILE" << EOF
+
+  ]
+}
+EOF
+
+echo "Files prepared: ${FILES_FOUND}"
+echo "staging-dir=${STAGING_DIR}" >> "$GITHUB_OUTPUT"
