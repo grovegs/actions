@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 STAGING_DIR="${GITHUB_WORKSPACE}/.artifact-staging-${ARTIFACT_NAME}"
