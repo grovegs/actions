@@ -97,4 +97,4 @@ EOF
 
 echo "Files prepared: ${FILES_FOUND}"
 
-echo "staging-dir=${STAGING_DIR_NAME}" >> "$GITHUB_OUTPUT"
+echo "staging-dir=${STAGING_DIR}" >> "$GITHUB_OUTPUT"

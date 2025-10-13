@@ -72,12 +72,21 @@ runs:
               chmod +x "${{ github.action_path }}/scripts/upload_artifact.sh"
               "${{ github.action_path }}/scripts/upload_artifact.sh"
 
+        - name: Debug Staging Directory
+          shell: bash
+          run: |
+              echo "Staging dir: ${{ steps.prepare.outputs.staging-dir }}"
+              echo "Contents:"
+              ls -laR "${{ steps.prepare.outputs.staging-dir }}" || echo "Directory not found"
+              echo "Current directory: $(pwd)"
+              echo "Workspace: $GITHUB_WORKSPACE"
+
         - name: Upload Artifact
           id: upload
           uses: actions/upload-artifact@v4
           with:
               name: ${{ inputs.name }}
-              path: ${{ steps.prepare.outputs.staging-dir }}
+              path: ${{ steps.prepare.outputs.staging-dir }}/**
               if-no-files-found: ${{ inputs.if-no-files-found }}
               retention-days: ${{ inputs.retention-days }}
               compression-level: ${{ inputs.compression-level }}
