@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STAGING_DIR=".artifact-staging-${ARTIFACT_NAME}"
+STAGING_DIR="${GITHUB_WORKSPACE}/.artifact-staging-${ARTIFACT_NAME}"
 METADATA_DIR="${STAGING_DIR}/.artifact-meta"
 
 rm -rf "$STAGING_DIR"
@@ -14,6 +14,8 @@ mapfile -t PATHS <<< "$ARTIFACT_PATH"
 
 FILES_FOUND=0
 FILE_INDEX=0
+
+cd "$GITHUB_WORKSPACE"
 
 shopt -s nullglob
 shopt -s dotglob

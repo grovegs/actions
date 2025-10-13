@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TEMP_DIR=".artifact-temp-${ARTIFACT_NAME}"
+TEMP_DIR="${GITHUB_WORKSPACE}/.artifact-temp-${ARTIFACT_NAME}"
 METADATA_FILE="${TEMP_DIR}/.artifact-meta/paths.txt"
 
 if [ ! -f "$METADATA_FILE" ]; then
   echo "::warning::No metadata found, skipping path restoration"
 
   if [ -n "$DOWNLOAD_PATH" ]; then
-    mkdir -p "$DOWNLOAD_PATH"
+    if [[ "$DOWNLOAD_PATH" = /* ]]; then
+      TARGET_PATH="$DOWNLOAD_PATH"
+    else
+      TARGET_PATH="${GITHUB_WORKSPACE}/${DOWNLOAD_PATH}"
+    fi
+
+    mkdir -p "$TARGET_PATH"
     shopt -s nullglob
     shopt -s dotglob
     for item in "${TEMP_DIR}"/*; do
       [ "$(basename "$item")" = ".artifact-meta" ] && continue
-      cp -r "$item" "$DOWNLOAD_PATH/"
+      cp -r "$item" "$TARGET_PATH/"
     done
     shopt -u dotglob
     shopt -u nullglob
@@ -24,14 +30,20 @@ if [ ! -f "$METADATA_FILE" ]; then
 fi
 
 if [ -n "$DOWNLOAD_PATH" ]; then
-  echo "Extracting to custom path: $DOWNLOAD_PATH"
-  mkdir -p "$DOWNLOAD_PATH"
+  if [[ "$DOWNLOAD_PATH" = /* ]]; then
+    TARGET_PATH="$DOWNLOAD_PATH"
+  else
+    TARGET_PATH="${GITHUB_WORKSPACE}/${DOWNLOAD_PATH}"
+  fi
+
+  echo "Extracting to custom path: $TARGET_PATH"
+  mkdir -p "$TARGET_PATH"
 
   shopt -s nullglob
   shopt -s dotglob
   for item in "${TEMP_DIR}"/*; do
     [ "$(basename "$item")" = ".artifact-meta" ] && continue
-    cp -r "$item" "$DOWNLOAD_PATH/"
+    cp -r "$item" "$TARGET_PATH/"
   done
   shopt -u dotglob
   shopt -u nullglob
