@@ -11,6 +11,8 @@ mkdir -p "$METADATA_DIR"
 cd "$GITHUB_WORKSPACE"
 
 echo "Preparing artifact: ${ARTIFACT_NAME}"
+echo "Working directory: $(pwd)"
+echo "Staging directory: ${STAGING_DIR}"
 
 mapfile -t PATHS <<< "$ARTIFACT_PATH"
 
@@ -23,6 +25,8 @@ for path in "${PATHS[@]}"; do
   path=$(echo "$path" | xargs)
   [ -z "$path" ] && continue
   [[ "$path" == !* ]] && continue
+
+  echo "Processing pattern: $path"
 
   for item in $path; do
     [ ! -e "$item" ] && continue
@@ -37,7 +41,10 @@ for path in "${PATHS[@]}"; do
 
     echo "$abs_path" >> "${METADATA_DIR}/paths.txt"
 
-    cp -r "$item" "${STAGING_DIR}/file-${FILE_INDEX}"
+    TARGET="${STAGING_DIR}/file-${FILE_INDEX}"
+    echo "Copying: $item -> $TARGET"
+    cp -r "$item" "$TARGET"
+    echo "Copy completed for file-${FILE_INDEX}"
 
     FILE_INDEX=$((FILE_INDEX + 1))
   done
@@ -46,6 +53,8 @@ done
 shopt -u globstar dotglob nullglob
 
 echo "Found $FILES_FOUND file(s)"
+echo "Listing staging directory:"
+ls -laR "$STAGING_DIR" || echo "Failed to list"
 
 if [ "$FILES_FOUND" -eq 0 ]; then
   echo "::error::No files found matching the specified paths"
@@ -53,3 +62,4 @@ if [ "$FILES_FOUND" -eq 0 ]; then
 fi
 
 echo "staging-dir=$STAGING_DIR" >> "$GITHUB_OUTPUT"
+echo "Output staging-dir: $STAGING_DIR"
