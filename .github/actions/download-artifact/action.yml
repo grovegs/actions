@@ -49,7 +49,7 @@ runs:
           uses: actions/download-artifact@v4
           with:
               name: ${{ inputs.name }}
-              path: ${{ inputs.path || '.artifact-download-temp' }}
+              path: ${{ inputs.path || format('.artifact-download-{0}', inputs.name || 'temp') }}
               pattern: ${{ inputs.pattern }}
               merge-multiple: ${{ inputs.merge-multiple }}
               github-token: ${{ inputs.github-token }}

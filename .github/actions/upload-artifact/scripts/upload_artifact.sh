@@ -1,9 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-STAGING_DIR="${GITHUB_WORKSPACE}/.artifact-staging-${ARTIFACT_NAME}"
-METADATA_FILE="${STAGING_DIR}/.artifact-meta.json"
 WORKSPACE="${GITHUB_WORKSPACE}"
+STAGING_DIR_NAME=".artifact-staging-${ARTIFACT_NAME}"
+STAGING_DIR="${WORKSPACE}/${STAGING_DIR_NAME}"
+METADATA_FILE="${STAGING_DIR}/.artifact-meta.json"
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
@@ -95,4 +96,5 @@ cat >> "$METADATA_FILE" << EOF
 EOF
 
 echo "Files prepared: ${FILES_FOUND}"
-echo "staging-dir=${STAGING_DIR}" >> "$GITHUB_OUTPUT"
+
+echo "staging-dir=${STAGING_DIR_NAME}" >> "$GITHUB_OUTPUT"
