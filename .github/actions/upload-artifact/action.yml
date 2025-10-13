@@ -6,7 +6,9 @@ inputs:
         description: Artifact name.
         required: true
     path:
-        description: Paths to upload.
+        description: |
+            A file, directory or wildcard pattern that describes what to upload.
+            Supports multiple paths (one per line) and glob patterns.
         required: true
     retention-days:
         description: Number of days to retain artifact (1-90).
@@ -22,7 +24,6 @@ runs:
           env:
               ARTIFACT_NAME: ${{ inputs.name }}
               ARTIFACT_PATH: ${{ inputs.path }}
-              RETENTION_DAYS: ${{ inputs.retention-days }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/upload_artifact.sh"
               "${{ github.action_path }}/scripts/upload_artifact.sh"
@@ -33,4 +34,3 @@ runs:
               name: ${{ inputs.name }}
               path: ${{ steps.prepare.outputs.staging-dir }}
               retention-days: ${{ inputs.retention-days }}
-              compression-level: 6

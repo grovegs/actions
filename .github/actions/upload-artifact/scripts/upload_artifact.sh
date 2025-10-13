@@ -15,6 +15,10 @@ mapfile -t PATHS <<< "$ARTIFACT_PATH"
 FILES_FOUND=0
 FILE_INDEX=0
 
+shopt -s nullglob
+shopt -s dotglob
+shopt -s globstar
+
 for path in "${PATHS[@]}"; do
   path=$(echo "$path" | xargs)
 
@@ -24,14 +28,15 @@ for path in "${PATHS[@]}"; do
     continue
   fi
 
-  shopt -s nullglob
-  shopt -s dotglob
-
   for item in $path; do
     if [ -e "$item" ]; then
       FILES_FOUND=$((FILES_FOUND + 1))
 
-      abs_path=$(cd "$(dirname "$item")" && pwd)/$(basename "$item")
+      if [ -f "$item" ]; then
+        abs_path=$(cd "$(dirname "$item")" && pwd)/$(basename "$item")
+      else
+        abs_path=$(cd "$item" && pwd)
+      fi
 
       echo "$abs_path" >> "${METADATA_DIR}/paths.txt"
 
@@ -44,10 +49,11 @@ for path in "${PATHS[@]}"; do
       FILE_INDEX=$((FILE_INDEX + 1))
     fi
   done
-
-  shopt -u dotglob
-  shopt -u nullglob
 done
+
+shopt -u globstar
+shopt -u dotglob
+shopt -u nullglob
 
 echo "Found $FILES_FOUND file(s)"
 

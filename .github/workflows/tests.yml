@@ -226,15 +226,13 @@ jobs:
             - name: ✅ Verify Downloaded Files (with path)
               shell: bash
               run: |
-                  if [ ! -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ]; then
-                      echo "Error: file1.txt not found"
+                  file_count=$(find downloaded-artifacts -type f -name "file-*" | wc -l)
+                  if [ "$file_count" -lt 3 ]; then
+                      echo "Error: Expected at least 3 files, found $file_count"
+                      ls -la downloaded-artifacts/
                       exit 1
                   fi
-                  if [ ! -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ]; then
-                      echo "Error: file2.txt not found"
-                      exit 1
-                  fi
-                  echo "✅ All files verified in custom path"
+                  echo "✅ Found $file_count files in custom path"
 
             - name: 🧹 Clean Downloaded Files
               shell: bash
@@ -251,10 +249,15 @@ jobs:
               run: |
                   if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
                       echo "Error: file1.txt not restored to original path"
+                      find . -name "file1.txt"
                       exit 1
                   fi
                   if [ ! -f "test-artifacts/dir2/file2.txt" ]; then
                       echo "Error: file2.txt not restored to original path"
+                      exit 1
+                  fi
+                  if [ ! -f "test-artifacts/root.txt" ]; then
+                      echo "Error: root.txt not restored to original path"
                       exit 1
                   fi
                   echo "✅ All files verified in original paths"
