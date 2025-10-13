@@ -17,7 +17,6 @@ jobs:
     test-dotnet-actions:
         name: Test .NET Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -57,7 +56,6 @@ jobs:
     test-godot-actions:
         name: Test Godot Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -83,7 +81,6 @@ jobs:
     test-unity-actions:
         name: Test Unity Actions
         runs-on: macos-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -104,7 +101,6 @@ jobs:
     test-android-setup:
         name: Test Android Setup
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -118,7 +114,6 @@ jobs:
     test-xcode-setup:
         name: Test Xcode Setup
         runs-on: macos-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -131,7 +126,6 @@ jobs:
     test-utility-actions:
         name: Test Utility Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -152,7 +146,6 @@ jobs:
     test-package-actions:
         name: Test Package Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -167,7 +160,6 @@ jobs:
     test-format-actions:
         name: Test Format Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -191,7 +183,6 @@ jobs:
     test-artifact-actions:
         name: Test Artifact Actions
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -214,32 +205,36 @@ jobs:
 
             - name: 🧹 Clean Test Files
               shell: bash
-              run: |
-                  rm -rf test-artifacts
+              run: rm -rf test-artifacts
 
-            - name: 📥 Download Test Artifact (with path)
+            - name: 📥 Download Test Artifact (Custom Path)
               uses: ./.github/actions/download-artifact
               with:
                   name: test-artifact
                   path: downloaded-artifacts
 
-            - name: ✅ Verify Downloaded Files (with path)
+            - name: ✅ Verify Downloaded Files (Custom Path)
               shell: bash
               run: |
-                  file_count=$(find downloaded-artifacts -type f -name "file-*" | wc -l)
-                  if [ "$file_count" -lt 3 ]; then
-                      echo "Error: Expected at least 3 files, found $file_count"
-                      ls -la downloaded-artifacts/
-                      exit 1
-                  fi
-                  echo "✅ Found $file_count files in custom path"
+                  [ -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ] || {
+                    echo "::error::file1.txt not in custom path"
+                    exit 1
+                  }
+                  [ -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ] || {
+                    echo "::error::file2.txt not in custom path"
+                    exit 1
+                  }
+                  [ -f "downloaded-artifacts/test-artifacts/root.txt" ] || {
+                    echo "::error::root.txt not in custom path"
+                    exit 1
+                  }
+                  echo "✅ Files verified in custom path"
 
             - name: 🧹 Clean Downloaded Files
               shell: bash
-              run: |
-                  rm -rf downloaded-artifacts
+              run: rm -rf downloaded-artifacts
 
-            - name: 📥 Download Test Artifact (restore original paths)
+            - name: 📥 Download Test Artifact (Restore Paths)
               uses: ./.github/actions/download-artifact
               with:
                   name: test-artifact
@@ -247,17 +242,34 @@ jobs:
             - name: ✅ Verify Restored Files
               shell: bash
               run: |
-                  if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
-                      echo "Error: file1.txt not restored to original path"
-                      find . -name "file1.txt"
-                      exit 1
-                  fi
-                  if [ ! -f "test-artifacts/dir2/file2.txt" ]; then
-                      echo "Error: file2.txt not restored to original path"
-                      exit 1
-                  fi
-                  if [ ! -f "test-artifacts/root.txt" ]; then
-                      echo "Error: root.txt not restored to original path"
-                      exit 1
-                  fi
+                  [ -f "test-artifacts/dir1/file1.txt" ] || {
+                    echo "::error::file1.txt not restored"
+                    exit 1
+                  }
+                  [ -f "test-artifacts/dir2/file2.txt" ] || {
+                    echo "::error::file2.txt not restored"
+                    exit 1
+                  }
+                  [ -f "test-artifacts/root.txt" ] || {
+                    echo "::error::root.txt not restored"
+                    exit 1
+                  }
+
+                  CONTENT1=$(cat test-artifacts/dir1/file1.txt)
+                  CONTENT2=$(cat test-artifacts/dir2/file2.txt)
+                  CONTENT3=$(cat test-artifacts/root.txt)
+
+                  [ "$CONTENT1" = "Test file 1" ] || {
+                    echo "::error::file1.txt wrong content"
+                    exit 1
+                  }
+                  [ "$CONTENT2" = "Test file 2" ] || {
+                    echo "::error::file2.txt wrong content"
+                    exit 1
+                  }
+                  [ "$CONTENT3" = "Root file" ] || {
+                    echo "::error::root.txt wrong content"
+                    exit 1
+                  }
+
                   echo "✅ All files verified in original paths"
