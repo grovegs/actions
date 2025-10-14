@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 WORKSPACE="${GITHUB_WORKSPACE}"
 STAGING_DIR_NAME=".artifact-staging-${ARTIFACT_NAME}"
 STAGING_DIR="${WORKSPACE}/${STAGING_DIR_NAME}"
-METADATA_FILE="${STAGING_DIR}/.artifact-meta.json"
+METADATA_FILE="${STAGING_DIR}/${ARTIFACT_NAME}.meta"
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"

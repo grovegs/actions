@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 WORKSPACE="${GITHUB_WORKSPACE}"
@@ -7,6 +7,9 @@ echo "Processing downloaded artifact(s)..."
 
 if [ -n "$DOWNLOAD_PATH" ]; then
   echo "Files downloaded to: ${DOWNLOADED_TO}"
+
+  find "${DOWNLOADED_TO}" -name "*.meta" -type f -delete 2>/dev/null || true
+
   echo "download-path=${DOWNLOADED_TO}" >> "$GITHUB_OUTPUT"
   exit 0
 fi
@@ -15,7 +18,7 @@ echo "Attempting path restoration from metadata..."
 
 if [ -n "$ARTIFACT_NAME" ]; then
   TEMP_DIR="${DOWNLOADED_TO}"
-  METADATA_FILE="${TEMP_DIR}/.artifact-meta.json"
+  METADATA_FILE="${TEMP_DIR}/${ARTIFACT_NAME}.meta"
 
   if [ ! -f "$METADATA_FILE" ]; then
     echo "::warning::No metadata found for artifact '${ARTIFACT_NAME}'. Files remain in: ${TEMP_DIR}"
@@ -57,39 +60,43 @@ if [ -n "$ARTIFACT_NAME" ]; then
 
 else
   if [ "$MERGE_MULTIPLE" = "true" ]; then
-    METADATA_FILE="${DOWNLOADED_TO}/.artifact-meta.json"
+    METADATA_FILES=("${DOWNLOADED_TO}"/*.meta)
 
-    if [ ! -f "$METADATA_FILE" ]; then
+    if [ ! -f "${METADATA_FILES[0]}" ]; then
       echo "::warning::No metadata found. Files remain in: ${DOWNLOADED_TO}"
       echo "download-path=${DOWNLOADED_TO}" >> "$GITHUB_OUTPUT"
       exit 0
     fi
 
-    FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
-    echo "Restoring ${FILES_COUNT} file(s) to original paths..."
+    for METADATA_FILE in "${METADATA_FILES[@]}"; do
+      [ ! -f "$METADATA_FILE" ] && continue
 
-    mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+      FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
+      echo "Restoring ${FILES_COUNT} file(s) to original paths..."
 
-    for file_path in "${FILES[@]}"; do
-      [ -z "$file_path" ] && continue
+      mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
 
-      SOURCE="${DOWNLOADED_TO}/${file_path}"
-      TARGET="${WORKSPACE}/${file_path}"
+      for file_path in "${FILES[@]}"; do
+        [ -z "$file_path" ] && continue
 
-      if [ ! -e "$SOURCE" ]; then
-        echo "::warning::Source not found: ${file_path}"
-        continue
-      fi
+        SOURCE="${DOWNLOADED_TO}/${file_path}"
+        TARGET="${WORKSPACE}/${file_path}"
 
-      TARGET_DIR=$(dirname "$TARGET")
-      mkdir -p "$TARGET_DIR"
+        if [ ! -e "$SOURCE" ]; then
+          echo "::warning::Source not found: ${file_path}"
+          continue
+        fi
 
-      if [ -e "$TARGET" ]; then
-        echo "::warning::Overwriting existing: ${file_path}"
-        rm -rf "$TARGET"
-      fi
+        TARGET_DIR=$(dirname "$TARGET")
+        mkdir -p "$TARGET_DIR"
 
-      mv "$SOURCE" "$TARGET"
+        if [ -e "$TARGET" ]; then
+          echo "::warning::Overwriting existing: ${file_path}"
+          rm -rf "$TARGET"
+        fi
+
+        mv "$SOURCE" "$TARGET"
+      done
     done
 
     rm -rf "$DOWNLOADED_TO"
@@ -102,15 +109,15 @@ else
     for artifact_dir in "${DOWNLOADED_TO}"/*; do
       [ ! -d "$artifact_dir" ] && continue
 
-      ARTIFACT_NAME=$(basename "$artifact_dir")
-      METADATA_FILE="${artifact_dir}/.artifact-meta.json"
+      ARTIFACT_NAME_FROM_DIR=$(basename "$artifact_dir")
+      METADATA_FILE="${artifact_dir}/${ARTIFACT_NAME_FROM_DIR}.meta"
 
       if [ ! -f "$METADATA_FILE" ]; then
-        echo "::warning::No metadata for '${ARTIFACT_NAME}'. Skipping restoration."
+        echo "::warning::No metadata for '${ARTIFACT_NAME_FROM_DIR}'. Skipping restoration."
         continue
       fi
 
-      echo "Restoring artifact: ${ARTIFACT_NAME}"
+      echo "Restoring artifact: ${ARTIFACT_NAME_FROM_DIR}"
 
       mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
 

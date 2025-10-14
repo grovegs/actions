@@ -228,7 +228,13 @@ jobs:
                     echo "::error::root.txt not in custom path"
                     exit 1
                   }
-                  echo "✅ Files verified in custom path"
+
+                  if [ -f "downloaded-artifacts/test-artifact.meta" ]; then
+                    echo "::error::Metadata file should be removed"
+                    exit 1
+                  fi
+
+                  echo "✅ Files verified in custom path, metadata removed"
 
             - name: 🧹 Clean Downloaded Files
               shell: bash
@@ -255,6 +261,16 @@ jobs:
                     exit 1
                   }
 
+                  if [ -f "test-artifacts/test-artifact.meta" ]; then
+                    echo "::error::Metadata should not be in restored files"
+                    exit 1
+                  fi
+
+                  if [ -f "test-artifact.meta" ]; then
+                    echo "::error::Metadata should not be in workspace"
+                    exit 1
+                  fi
+
                   CONTENT1=$(cat test-artifacts/dir1/file1.txt)
                   CONTENT2=$(cat test-artifacts/dir2/file2.txt)
                   CONTENT3=$(cat test-artifacts/root.txt)
@@ -272,4 +288,81 @@ jobs:
                     exit 1
                   }
 
-                  echo "✅ All files verified in original paths"
+                  echo "✅ All files verified in original paths, no metadata"
+
+    test-artifact-file-extensions:
+        name: Test Artifact File Extensions
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 📝 Create Test Files
+              shell: bash
+              run: |
+                  mkdir -p outputs
+                  echo "Report content" > outputs/report.txt
+                  echo '{"data": "test"}' > outputs/data.json
+
+            - name: 📤 Upload report.txt
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: report.txt
+                  path: outputs/report.txt
+                  retention-days: 1
+
+            - name: 📤 Upload data.json
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: data.json
+                  path: outputs/data.json
+                  retention-days: 1
+
+            - name: 🧹 Clean Original Files
+              shell: bash
+              run: rm -rf outputs
+
+            - name: 📥 Download report.txt
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: report.txt
+
+            - name: 📥 Download data.json
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: data.json
+
+            - name: ✅ Verify File Extension Artifacts
+              shell: bash
+              run: |
+                  [ -f "outputs/report.txt" ] || {
+                    echo "::error::report.txt not restored"
+                    exit 1
+                  }
+                  [ -f "outputs/data.json" ] || {
+                    echo "::error::data.json not restored"
+                    exit 1
+                  }
+
+                  if [ -f "outputs/report.txt.meta" ] || [ -f "report.txt.meta" ]; then
+                    echo "::error::report.txt.meta should be removed"
+                    exit 1
+                  fi
+                  if [ -f "outputs/data.json.meta" ] || [ -f "data.json.meta" ]; then
+                    echo "::error::data.json.meta should be removed"
+                    exit 1
+                  fi
+
+                  REPORT_CONTENT=$(cat outputs/report.txt)
+                  DATA_CONTENT=$(cat outputs/data.json)
+
+                  [ "$REPORT_CONTENT" = "Report content" ] || {
+                    echo "::error::report.txt wrong content"
+                    exit 1
+                  }
+                  [ "$DATA_CONTENT" = '{"data": "test"}' ] || {
+                    echo "::error::data.json wrong content"
+                    exit 1
+                  }
+
+                  echo "✅ File extension artifacts verified"
