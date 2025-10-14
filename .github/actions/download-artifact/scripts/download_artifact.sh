@@ -1,65 +1,152 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TEMP_DIR=".artifact-temp-${ARTIFACT_NAME}"
-METADATA_FILE="${TEMP_DIR}/.artifact-meta/paths.txt"
+WORKSPACE="${GITHUB_WORKSPACE}"
 
-if [ ! -f "$METADATA_FILE" ]; then
-  echo "::warning::No metadata found, skipping path restoration"
+echo "Processing downloaded artifact(s)..."
 
-  if [ -n "$DOWNLOAD_PATH" ]; then
-    mkdir -p "$DOWNLOAD_PATH"
-    shopt -s nullglob
-    shopt -s dotglob
-    for item in "${TEMP_DIR}"/*; do
-      [ "$(basename "$item")" = ".artifact-meta" ] && continue
-      cp -r "$item" "$DOWNLOAD_PATH/"
-    done
-    shopt -u dotglob
-    shopt -u nullglob
-  fi
+if [ -n "$DOWNLOAD_PATH" ]; then
+  echo "Files downloaded to: ${DOWNLOADED_TO}"
 
-  rm -rf "$TEMP_DIR"
+  find "${DOWNLOADED_TO}" -name "*.meta" -type f -delete 2>/dev/null || true
+
+  echo "download-path=${DOWNLOADED_TO}" >> "$GITHUB_OUTPUT"
   exit 0
 fi
 
-if [ -n "$DOWNLOAD_PATH" ]; then
-  echo "Extracting to custom path: $DOWNLOAD_PATH"
-  mkdir -p "$DOWNLOAD_PATH"
+echo "Attempting path restoration from metadata..."
 
-  shopt -s nullglob
-  shopt -s dotglob
-  for item in "${TEMP_DIR}"/*; do
-    [ "$(basename "$item")" = ".artifact-meta" ] && continue
-    cp -r "$item" "$DOWNLOAD_PATH/"
-  done
-  shopt -u dotglob
-  shopt -u nullglob
-else
-  echo "Restoring files to original paths"
+if [ -n "$ARTIFACT_NAME" ]; then
+  TEMP_DIR="${DOWNLOADED_TO}"
+  METADATA_FILE="${TEMP_DIR}/${ARTIFACT_NAME}.meta"
 
-  FILE_INDEX=0
-  while IFS= read -r original_path; do
-    [ -z "$original_path" ] && continue
+  if [ ! -f "$METADATA_FILE" ]; then
+    echo "::warning::No metadata found for artifact '${ARTIFACT_NAME}'. Files remain in: ${TEMP_DIR}"
+    echo "download-path=${TEMP_DIR}" >> "$GITHUB_OUTPUT"
+    exit 0
+  fi
 
-    source_item="${TEMP_DIR}/file-${FILE_INDEX}"
+  FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
+  echo "Restoring ${FILES_COUNT} file(s) to original paths..."
 
-    if [ -e "$source_item" ]; then
-      target_dir=$(dirname "$original_path")
-      mkdir -p "$target_dir"
+  mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
 
-      if [ -d "$source_item" ]; then
-        rm -rf "$original_path"
-        cp -r "$source_item" "$original_path"
-      else
-        cp "$source_item" "$original_path"
-      fi
+  for file_path in "${FILES[@]}"; do
+    [ -z "$file_path" ] && continue
 
-      echo "Restored: $original_path"
+    SOURCE="${TEMP_DIR}/${file_path}"
+    TARGET="${WORKSPACE}/${file_path}"
+
+    if [ ! -e "$SOURCE" ]; then
+      echo "::warning::Source not found: ${file_path}"
+      continue
     fi
 
-    FILE_INDEX=$((FILE_INDEX + 1))
-  done < "$METADATA_FILE"
-fi
+    TARGET_DIR=$(dirname "$TARGET")
+    mkdir -p "$TARGET_DIR"
 
-rm -rf "$TEMP_DIR"
+    if [ -e "$TARGET" ]; then
+      echo "::warning::Overwriting existing: ${file_path}"
+      rm -rf "$TARGET"
+    fi
+
+    mv "$SOURCE" "$TARGET"
+  done
+
+  rm -rf "$TEMP_DIR"
+
+  echo "✓ Restored to original paths"
+  echo "download-path=${WORKSPACE}" >> "$GITHUB_OUTPUT"
+
+else
+  if [ "$MERGE_MULTIPLE" = "true" ]; then
+    METADATA_FILES=("${DOWNLOADED_TO}"/*.meta)
+
+    if [ ! -f "${METADATA_FILES[0]}" ]; then
+      echo "::warning::No metadata found. Files remain in: ${DOWNLOADED_TO}"
+      echo "download-path=${DOWNLOADED_TO}" >> "$GITHUB_OUTPUT"
+      exit 0
+    fi
+
+    for METADATA_FILE in "${METADATA_FILES[@]}"; do
+      [ ! -f "$METADATA_FILE" ] && continue
+
+      FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
+      echo "Restoring ${FILES_COUNT} file(s) to original paths..."
+
+      mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+
+      for file_path in "${FILES[@]}"; do
+        [ -z "$file_path" ] && continue
+
+        SOURCE="${DOWNLOADED_TO}/${file_path}"
+        TARGET="${WORKSPACE}/${file_path}"
+
+        if [ ! -e "$SOURCE" ]; then
+          echo "::warning::Source not found: ${file_path}"
+          continue
+        fi
+
+        TARGET_DIR=$(dirname "$TARGET")
+        mkdir -p "$TARGET_DIR"
+
+        if [ -e "$TARGET" ]; then
+          echo "::warning::Overwriting existing: ${file_path}"
+          rm -rf "$TARGET"
+        fi
+
+        mv "$SOURCE" "$TARGET"
+      done
+    done
+
+    rm -rf "$DOWNLOADED_TO"
+    echo "✓ Restored to original paths"
+    echo "download-path=${WORKSPACE}" >> "$GITHUB_OUTPUT"
+
+  else
+    TOTAL_RESTORED=0
+
+    for artifact_dir in "${DOWNLOADED_TO}"/*; do
+      [ ! -d "$artifact_dir" ] && continue
+
+      ARTIFACT_NAME_FROM_DIR=$(basename "$artifact_dir")
+      METADATA_FILE="${artifact_dir}/${ARTIFACT_NAME_FROM_DIR}.meta"
+
+      if [ ! -f "$METADATA_FILE" ]; then
+        echo "::warning::No metadata for '${ARTIFACT_NAME_FROM_DIR}'. Skipping restoration."
+        continue
+      fi
+
+      echo "Restoring artifact: ${ARTIFACT_NAME_FROM_DIR}"
+
+      mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+
+      for file_path in "${FILES[@]}"; do
+        [ -z "$file_path" ] && continue
+
+        SOURCE="${artifact_dir}/${file_path}"
+        TARGET="${WORKSPACE}/${file_path}"
+
+        if [ ! -e "$SOURCE" ]; then
+          echo "::warning::Source not found: ${file_path}"
+          continue
+        fi
+
+        TARGET_DIR=$(dirname "$TARGET")
+        mkdir -p "$TARGET_DIR"
+
+        if [ -e "$TARGET" ]; then
+          echo "::warning::Overwriting existing: ${file_path}"
+          rm -rf "$TARGET"
+        fi
+
+        mv "$SOURCE" "$TARGET"
+        TOTAL_RESTORED=$((TOTAL_RESTORED + 1))
+      done
+    done
+
+    rm -rf "$DOWNLOADED_TO"
+    echo "✓ Restored ${TOTAL_RESTORED} file(s) to original paths"
+    echo "download-path=${WORKSPACE}" >> "$GITHUB_OUTPUT"
+  fi
+fi
