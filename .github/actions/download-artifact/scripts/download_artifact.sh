@@ -29,7 +29,10 @@ if [ -n "$ARTIFACT_NAME" ]; then
   FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
   echo "Restoring ${FILES_COUNT} file(s) to original paths..."
 
-  mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+  declare -a FILES
+  while IFS= read -r line; do
+    FILES+=("$line")
+  done < <(jq -r '.files[]' "$METADATA_FILE")
 
   for file_path in "${FILES[@]}"; do
     [ -z "$file_path" ] && continue
@@ -74,7 +77,10 @@ else
       FILES_COUNT=$(jq -r '.files_count' "$METADATA_FILE")
       echo "Restoring ${FILES_COUNT} file(s) to original paths..."
 
-      mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+      declare -a FILES
+      while IFS= read -r line; do
+        FILES+=("$line")
+      done < <(jq -r '.files[]' "$METADATA_FILE")
 
       for file_path in "${FILES[@]}"; do
         [ -z "$file_path" ] && continue
@@ -119,7 +125,10 @@ else
 
       echo "Restoring artifact: ${ARTIFACT_NAME_FROM_DIR}"
 
-      mapfile -t FILES < <(jq -r '.files[]' "$METADATA_FILE")
+      declare -a FILES
+      while IFS= read -r line; do
+        FILES+=("$line")
+      done < <(jq -r '.files[]' "$METADATA_FILE")
 
       for file_path in "${FILES[@]}"; do
         [ -z "$file_path" ] && continue

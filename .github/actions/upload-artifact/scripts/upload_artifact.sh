@@ -11,7 +11,10 @@ mkdir -p "$STAGING_DIR"
 
 echo "Preparing artifact: ${ARTIFACT_NAME}"
 
-mapfile -t PATHS <<< "$ARTIFACT_PATH"
+declare -a PATHS
+while IFS= read -r line; do
+  PATHS+=("$line")
+done <<< "$ARTIFACT_PATH"
 
 FILES_FOUND=0
 declare -a FILE_ENTRIES
