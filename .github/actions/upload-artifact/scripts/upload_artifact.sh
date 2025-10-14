@@ -72,6 +72,11 @@ if [ "$INCLUDE_HIDDEN" = "true" ]; then
   shopt -u dotglob
 fi
 
+if [ "$FILES_FOUND" -eq 0 ]; then
+  echo "::error::No files found. All items were outside workspace or didn't match patterns."
+  exit 1
+fi
+
 cat > "$METADATA_FILE" << EOF
 {
   "version": "1.0",
