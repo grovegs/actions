@@ -1,27 +1,30 @@
 name: Pack Unity Package
-description: Packages the Unity package as a local tarball.
+description: Package a Unity package as a local tarball
 
 inputs:
     package:
-        description: Path to the Unity package, relative to the repository root.
+        description: Path to the Unity package directory (e.g., Packages/com.example.package)
         required: true
     version:
-        description: Version number to apply to the package.
+        description: Version number to apply to the package
         required: true
     filename:
-        description: The name of the output file of the package.
+        description: Name of the output package file (without .tgz extension)
         required: true
 
 outputs:
-    file:
-        description: "The path to the packed package file."
-        value: ${{ steps.pack_package.outputs.file }}
+    package:
+        description: Path to the created package tarball file
+        value: ${{ steps.pack.outputs.package }}
+    modified-files:
+        description: Path to modified package.json file in workspace
+        value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
     using: composite
     steps:
         - name: 📦 Pack Unity Package
-          id: pack_package
+          id: pack
           shell: bash
           env:
               PACKAGE_PATH: ${{ inputs.package }}

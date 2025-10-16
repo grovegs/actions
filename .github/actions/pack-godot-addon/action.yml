@@ -1,27 +1,30 @@
 name: Pack Godot Addon
-description: Packages the Godot addon.
+description: Package a Godot addon into a zip file
 
 inputs:
     addon:
-        description: Path to the Godot addon, relative to the repository root.
+        description: Path to the Godot addon directory (e.g., addons/my-addon)
         required: true
     version:
-        description: Version number to apply to the addon.
+        description: Version number to apply to the addon
         required: true
     filename:
-        description: The name of the output file of the addon.
+        description: Name of the output addon file (without .zip extension)
         required: true
 
 outputs:
-    file:
-        description: "The path to the packed addon file."
-        value: ${{ steps.pack_addon.outputs.file }}
+    package:
+        description: Path to the created addon zip file
+        value: ${{ steps.pack.outputs.package }}
+    modified-files:
+        description: Path to modified plugin.cfg file in workspace
+        value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
     using: composite
     steps:
         - name: 📦 Pack Godot Addon
-          id: pack_addon
+          id: pack
           shell: bash
           env:
               ADDON_PATH: ${{ inputs.addon }}
