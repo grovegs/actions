@@ -46,12 +46,30 @@ jobs:
                   define-symbols: TEST_BUILD
 
             - name: 📦 Pack .NET Project
+              id: pack-dotnet
               uses: ./.github/actions/pack-dotnet
               with:
                   project: sandbox/ConsoleApp
                   configuration: Release
                   version: 1.0.0-test
-                  filename: ConsoleApp-test
+                  name: ConsoleApp-test
+
+            - name: ✅ Verify .NET Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-dotnet.outputs.package }}"
+
+                  if [ -z "$PACKAGE_PATH" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "$PACKAGE_PATH" ]; then
+                    echo "::error::Package file not found: $PACKAGE_PATH"
+                    exit 1
+                  fi
+
+                  echo "✅ Package verified: $PACKAGE_PATH"
 
     test-godot-actions:
         name: Test Godot Actions
@@ -133,7 +151,7 @@ jobs:
                   fetch-depth: 0
 
             - name: 🆙 Bump Version
-              id: bump_version
+              id: bump-version
               uses: ./.github/actions/bump-version
               with:
                   version-type: patch
@@ -141,7 +159,7 @@ jobs:
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog
               with:
-                  next-version: ${{ steps.bump_version.outputs.next-version }}
+                  next-version: ${{ steps.bump-version.outputs.next-version }}
 
     test-package-actions:
         name: Test Package Actions
@@ -151,11 +169,173 @@ jobs:
               uses: actions/checkout@v5
 
             - name: 📦 Pack Godot Addon
+              id: pack-godot
               uses: ./.github/actions/pack-godot-addon
               with:
                   addon: sandbox/GodotApplication/addons/TestAddon
                   version: 1.0.0-test
                   filename: TestAddon-test
+
+            - name: ✅ Verify Godot Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-godot.outputs.package }}"
+                  MODIFIED_FILES="${{ steps.pack-godot.outputs.modified-files }}"
+
+                  if [ -z "$PACKAGE_PATH" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "$PACKAGE_PATH" ]; then
+                    echo "::error::Package file not found: $PACKAGE_PATH"
+                    exit 1
+                  fi
+
+                  if [ -z "$MODIFIED_FILES" ]; then
+                    echo "::error::Modified files path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "$MODIFIED_FILES" ]; then
+                    echo "::error::Modified file not found: $MODIFIED_FILES"
+                    exit 1
+                  fi
+
+                  if ! grep -q 'version="1.0.0-test"' "$MODIFIED_FILES"; then
+                    echo "::error::Version not updated in plugin.cfg"
+                    exit 1
+                  fi
+
+                  echo "✅ Godot package verified"
+                  echo "  Package: $PACKAGE_PATH"
+                  echo "  Modified: $MODIFIED_FILES"
+
+            - name: 📦 Pack Unity Package
+              id: pack-unity
+              uses: ./.github/actions/pack-unity-package
+              with:
+                  package: sandbox/UnityApplication/Packages/com.test.package
+                  version: 2.0.0-test
+                  filename: com.test.package-test
+
+            - name: ✅ Verify Unity Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-unity.outputs.package }}"
+                  MODIFIED_FILES="${{ steps.pack-unity.outputs.modified-files }}"
+
+                  if [ -z "$PACKAGE_PATH" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "$PACKAGE_PATH" ]; then
+                    echo "::error::Package file not found: $PACKAGE_PATH"
+                    exit 1
+                  fi
+
+                  if [ -z "$MODIFIED_FILES" ]; then
+                    echo "::error::Modified files path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "$MODIFIED_FILES" ]; then
+                    echo "::error::Modified file not found: $MODIFIED_FILES"
+                    exit 1
+                  fi
+
+                  if ! grep -q '"version": "2.0.0-test"' "$MODIFIED_FILES"; then
+                    echo "::error::Version not updated in package.json"
+                    exit 1
+                  fi
+
+                  echo "✅ Unity package verified"
+                  echo "  Package: $PACKAGE_PATH"
+                  echo "  Modified: $MODIFIED_FILES"
+
+    test-dotnet-version-update:
+        name: Test .NET Version Update
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/ConsoleApp/global.json
+
+            - name: 🏗️ Build .NET Project
+              uses: ./.github/actions/build-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+                  configuration: Release
+                  version: 2.5.7-test
+
+            - name: 📝 Create Test Directory.Build.props
+              shell: bash
+              run: |
+                  cat > Directory.Build.props << 'EOF'
+                  <Project>
+                    <PropertyGroup>
+                      <Version>0.0.0</Version>
+                      <AssemblyVersion>$(Version)</AssemblyVersion>
+                      <FileVersion>$(Version)</FileVersion>
+                      <PackageVersion>$(Version)</PackageVersion>
+                    </PropertyGroup>
+                  </Project>
+                  EOF
+
+            - name: 📦 Pack with Directory.Build.props
+              id: pack-with-props
+              uses: ./.github/actions/pack-dotnet
+              with:
+                  project: sandbox/ConsoleApp
+                  configuration: Release
+                  version: 2.5.7-test
+                  name: ConsoleApp-version-test
+                  directory-build-props: Directory.Build.props
+
+            - name: ✅ Verify Version Updates
+              shell: bash
+              run: |
+                  MODIFIED_FILES="${{ steps.pack-with-props.outputs.modified-files }}"
+
+                  if [ -z "$MODIFIED_FILES" ]; then
+                    echo "::error::No modified files reported"
+                    exit 1
+                  fi
+
+                  echo "Modified files:"
+                  echo "$MODIFIED_FILES"
+
+                  if ! echo "$MODIFIED_FILES" | grep -q "Directory.Build.props"; then
+                    echo "::error::Directory.Build.props not in modified files"
+                    exit 1
+                  fi
+
+                  if ! grep -q '<Version>2.5.7-test</Version>' Directory.Build.props; then
+                    echo "::error::Version not updated in Directory.Build.props"
+                    cat Directory.Build.props
+                    exit 1
+                  fi
+
+                  if grep -q '<AssemblyVersion>2.5.7-test</AssemblyVersion>' Directory.Build.props; then
+                    echo "::error::Property reference was replaced (should remain as reference)"
+                    cat Directory.Build.props
+                    exit 1
+                  fi
+
+                  if ! grep -q '<AssemblyVersion>$(Version)</AssemblyVersion>' Directory.Build.props; then
+                    echo "::error::Property reference was lost"
+                    cat Directory.Build.props
+                    exit 1
+                  fi
+
+                  echo "✅ Version update verified correctly"
+                  echo "  - <Version> updated to 2.5.7-test"
+                  echo "  - Property references preserved"
 
     test-format-actions:
         name: Test Format Actions
