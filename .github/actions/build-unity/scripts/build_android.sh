@@ -1,195 +1,201 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-validate_args() {
-  if [ $# -ne 13 ]; then
-    echo "::error::Expected 13 arguments: project_dir version configuration filename unity_email unity_password unity_license_key keystore keystore_user keystore_password format build_method profile_name"
-    echo "::error::Got $# arguments"
-    exit 1
-  fi
-}
-
-validate_inputs() {
-  local project_dir="$1"
-
-  if [[ "$project_dir" != /* ]]; then
-    project_dir="$(cd "$project_dir" 2> /dev/null && pwd)" || {
-      echo "::error::Project directory not found or inaccessible: $1"
-      exit 1
-    }
-  fi
-
-  [ -d "$project_dir" ] || {
-    echo "::error::Project directory not found: $project_dir"
-    exit 1
-  }
-
-  [ -d "$project_dir/Assets" ] || {
-    echo "::error::Not a valid Unity project (missing Assets folder): $project_dir"
-    exit 1
-  }
-  [ -d "$project_dir/ProjectSettings" ] || {
-    echo "::error::Not a valid Unity project (missing ProjectSettings folder): $project_dir"
-    exit 1
-  }
-
-  [[ "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-    echo "::error::Invalid version format: $2. Expected x.y.z"
-    exit 1
-  }
-
-  [[ "${11}" =~ ^(apk|aab)$ ]] || {
-    echo "::error::Invalid Android format: ${11}. Expected apk or aab"
-    exit 1
-  }
-}
-
-validate_args "$@"
-
-project_dir="$1"
-version="$2"
-configuration="$3"
-filename="$4"
-unity_email="$5"
-unity_password="$6"
-unity_license_key="$7"
-keystore="$8"
-keystore_user="${9}"
-keystore_password="${10}"
-format="${11}"
-build_method="${12}"
-profile_name="${13}"
-
-validate_inputs "$@"
-
-if [[ "$project_dir" != /* ]]; then
-  project_dir="$(cd "$project_dir" && pwd)"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
+  exit 1
 fi
 
-builds_dir="${HOME}/.builds/android"
-keystore_file="${RUNNER_TEMP}/android.keystore"
-output_file="${builds_dir}/${filename}.${format}"
+if [ -z "${VERSION:-}" ]; then
+  echo "::error::VERSION environment variable is required"
+  exit 1
+fi
+
+if [ -z "${CONFIGURATION:-}" ]; then
+  echo "::error::CONFIGURATION environment variable is required"
+  exit 1
+fi
+
+if [ -z "${FILENAME:-}" ]; then
+  echo "::error::FILENAME environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_EMAIL:-}" ]; then
+  echo "::error::UNITY_EMAIL environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_PASSWORD:-}" ]; then
+  echo "::error::UNITY_PASSWORD environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_LICENSE_KEY:-}" ]; then
+  echo "::error::UNITY_LICENSE_KEY environment variable is required"
+  exit 1
+fi
+
+if [[ "${PROJECT_DIR}" != /* ]]; then
+  PROJECT_DIR="$(cd "${PROJECT_DIR}" 2>/dev/null && pwd)" || {
+    echo "::error::Project directory not found or inaccessible: ${PROJECT_DIR}"
+    exit 1
+  }
+fi
+
+if [ ! -d "${PROJECT_DIR}" ]; then
+  echo "::error::Project directory not found: ${PROJECT_DIR}"
+  exit 1
+fi
+
+if [ ! -d "${PROJECT_DIR}/Assets" ]; then
+  echo "::error::Not a valid Unity project (missing Assets folder): ${PROJECT_DIR}"
+  exit 1
+fi
+
+if [ ! -d "${PROJECT_DIR}/ProjectSettings" ]; then
+  echo "::error::Not a valid Unity project (missing ProjectSettings folder): ${PROJECT_DIR}"
+  exit 1
+fi
+
+if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "::error::Invalid version format: ${VERSION}. Expected x.y.z"
+  exit 1
+fi
+
+ANDROID_FORMAT="${ANDROID_FORMAT:-apk}"
+if [[ ! "${ANDROID_FORMAT}" =~ ^(apk|aab)$ ]]; then
+  echo "::error::Invalid Android format: ${ANDROID_FORMAT}. Expected apk or aab"
+  exit 1
+fi
+
+BUILDS_DIR="${HOME}/.builds/android"
+KEYSTORE_FILE="${RUNNER_TEMP}/android.keystore"
+OUTPUT_FILE="${BUILDS_DIR}/${FILENAME}.${ANDROID_FORMAT}"
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
-  rm -f "${keystore_file}" || true
+  rm -f "${KEYSTORE_FILE}" || true
 }
 trap cleanup EXIT
 
 echo "::notice::Creating build directory..."
-mkdir -p "${builds_dir}" || {
-  echo "::error::Failed to create directory: ${builds_dir}"
+mkdir -p "${BUILDS_DIR}" || {
+  echo "::error::Failed to create directory: ${BUILDS_DIR}"
   exit 1
 }
 
-if [ -n "${keystore}" ]; then
+if [ -n "${ANDROID_KEYSTORE:-}" ]; then
   echo "::notice::Decoding Android keystore..."
-  echo -n "${keystore}" | base64 -d > "${keystore_file}" || {
+  echo -n "${ANDROID_KEYSTORE}" | base64 -d > "${KEYSTORE_FILE}" || {
     echo "::error::Failed to decode Android keystore"
     exit 1
   }
-  chmod 600 "${keystore_file}"
+  chmod 600 "${KEYSTORE_FILE}"
 fi
 
 echo "::notice::Checking Android build requirements..."
-if [ ! -f "${project_dir}/ProjectSettings/ProjectSettings.asset" ]; then
+if [ ! -f "${PROJECT_DIR}/ProjectSettings/ProjectSettings.asset" ]; then
   echo "::warning::ProjectSettings.asset not found - this might not be a valid Unity project"
 fi
 
-if [ -d "${project_dir}/ProjectSettings" ]; then
+if [ -d "${PROJECT_DIR}/ProjectSettings" ]; then
   echo "::debug::ProjectSettings directory contents:"
-  ls -la "${project_dir}/ProjectSettings/" || true
+  ls -la "${PROJECT_DIR}/ProjectSettings/" || true
 fi
 
-echo "::notice::Build configuration:"
-echo "::notice::  Project: ${project_dir}"
-echo "::notice::  Version: ${version}"
-echo "::notice::  Configuration: ${configuration}"
-echo "::notice::  Format: ${format}"
-echo "::notice::  Output: ${output_file}"
-echo "::notice::  Profile: ${profile_name}"
+{
+  echo "::notice::Build configuration:"
+  echo "::notice::  Project: ${PROJECT_DIR}"
+  echo "::notice::  Version: ${VERSION}"
+  echo "::notice::  Configuration: ${CONFIGURATION}"
+  echo "::notice::  Format: ${ANDROID_FORMAT}"
+  echo "::notice::  Output: ${OUTPUT_FILE}"
+  echo "::notice::  Profile: ${PROFILE_NAME:-default}"
+} >&2
 
-if [ -n "${build_method}" ]; then
-  build_method_args=("-executeMethod" "${build_method}")
-  echo "::notice::Using custom build method: ${build_method}"
+if [ -n "${BUILD_METHOD:-}" ]; then
+  BUILD_METHOD_ARGS=("-executeMethod" "${BUILD_METHOD}")
+  echo "::notice::Using custom build method: ${BUILD_METHOD}"
 else
-  build_script_dest="${project_dir}/Assets/Editor/BuildAndroid.cs"
-  mkdir -p "${project_dir}/Assets/Editor"
+  BUILD_SCRIPT_DEST="${PROJECT_DIR}/Assets/Editor/BuildAndroid.cs"
+  mkdir -p "${PROJECT_DIR}/Assets/Editor"
 
   if [ -f "${GITHUB_ACTION_PATH}/scripts/BuildAndroid.cs" ]; then
-    cp "${GITHUB_ACTION_PATH}/scripts/BuildAndroid.cs" "${build_script_dest}" || {
+    cp "${GITHUB_ACTION_PATH}/scripts/BuildAndroid.cs" "${BUILD_SCRIPT_DEST}" || {
       echo "::error::Failed to copy build script"
       exit 1
     }
-    echo "::notice::Copied BuildAndroid.cs to ${build_script_dest}"
+    echo "::notice::Copied BuildAndroid.cs to ${BUILD_SCRIPT_DEST}"
   else
     echo "::error::Build script not found: ${GITHUB_ACTION_PATH}/scripts/BuildAndroid.cs"
     exit 1
   fi
 
-  build_method_args=("-executeMethod" "BuildAndroid.Build")
+  BUILD_METHOD_ARGS=("-executeMethod" "BuildAndroid.Build")
   echo "::notice::Using default build method: BuildAndroid.Build"
 fi
 
-mkdir -p "$(dirname "${output_file}")" || {
-  echo "::error::Failed to create output directory: $(dirname "${output_file}")"
+mkdir -p "$(dirname "${OUTPUT_FILE}")" || {
+  echo "::error::Failed to create output directory: $(dirname "${OUTPUT_FILE}")"
   exit 1
 }
 
-build_args=(
+BUILD_ARGS=(
   -batchmode
   -nographics
   -quit
-  -username "${unity_email}"
-  -password "${unity_password}"
-  -serial "${unity_license_key}"
-  -projectPath "${project_dir}"
+  -username "${UNITY_EMAIL}"
+  -password "${UNITY_PASSWORD}"
+  -serial "${UNITY_LICENSE_KEY}"
+  -projectPath "${PROJECT_DIR}"
   -logFile -
   -buildTarget Android
-  "${build_method_args[@]}"
-  -outputPath "${output_file}"
-  -versionName "${version}"
-  -buildConfig "${configuration}"
-  -buildFormat "${format}"
-  -profileName "${profile_name}"
+  "${BUILD_METHOD_ARGS[@]}"
+  -outputPath "${OUTPUT_FILE}"
+  -versionName "${VERSION}"
+  -buildConfig "${CONFIGURATION}"
+  -buildFormat "${ANDROID_FORMAT}"
+  -profileName "${PROFILE_NAME:-Android}"
 )
 
-if [ -n "${keystore}" ]; then
-  build_args+=(
-    -keystorePath "${keystore_file}"
-    -keystorePass "${keystore_password}"
-    -keyaliasName "${keystore_user}"
-    -keyaliasPass "${keystore_password}"
+if [ -n "${ANDROID_KEYSTORE:-}" ]; then
+  BUILD_ARGS+=(
+    -keystorePath "${KEYSTORE_FILE}"
+    -keystorePass "${ANDROID_KEYSTORE_PASSWORD}"
+    -keyaliasName "${ANDROID_KEYSTORE_USER}"
+    -keyaliasPass "${ANDROID_KEYSTORE_PASSWORD}"
   )
 fi
 
 echo "::notice::Unity command line:"
-printf '%s ' "${build_args[@]}"
+printf '%s ' "${BUILD_ARGS[@]}"
 echo ""
 
 echo "::notice::Starting Unity build..."
-if ! unity "${build_args[@]}" 2>&1; then
+if ! unity "${BUILD_ARGS[@]}" 2>&1; then
   echo "::error::Unity build failed for Android"
   echo "::error::Check the Unity log output above for specific error details"
 
   echo "::debug::Project directory contents:"
-  ls -la "${project_dir}" || echo "::debug::Cannot list project directory"
+  ls -la "${PROJECT_DIR}" || echo "::debug::Cannot list project directory"
 
   echo "::debug::Build directory contents:"
-  ls -la "${builds_dir}" || echo "::debug::Cannot list build directory"
+  ls -la "${BUILDS_DIR}" || echo "::debug::Cannot list build directory"
 
   echo "::debug::Unity version:"
-  unity -version 2> /dev/null || echo "::debug::Cannot get Unity version"
+  unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
 
   exit 1
 fi
 
-if [ ! -f "${output_file}" ]; then
-  echo "::error::Build output not found: ${output_file}"
+if [ ! -f "${OUTPUT_FILE}" ]; then
+  echo "::error::Build output not found: ${OUTPUT_FILE}"
   echo "::debug::Contents of build directory:"
-  ls -la "${builds_dir}" || echo "::debug::Cannot list build directory"
+  ls -la "${BUILDS_DIR}" || echo "::debug::Cannot list build directory"
   exit 1
 fi
 
-file_size=$(stat -f%z "${output_file}" 2> /dev/null || stat -c%s "${output_file}" 2> /dev/null || echo "unknown")
-echo "::notice::Build completed successfully: ${output_file} (${file_size} bytes)"
-echo "file=${output_file}" >> "${GITHUB_OUTPUT}"
+FILE_SIZE=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null || echo "unknown")
+echo "::notice::Build completed successfully: ${OUTPUT_FILE} (${FILE_SIZE} bytes)"
+echo "file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"

@@ -1,97 +1,115 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-if [ $# -ne 15 ]; then
-  echo "::error::Expected 15 arguments"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
 fi
 
-project_dir="$1"
-version="$2"
-configuration="$3"
-filename="$4"
-unity_email="$5"
-unity_password="$6"
-unity_license_key="$7"
-team_id="$8"
-certificate="$9"
-certificate_password="${10}"
-provisioning_profile="${11}"
-provisioning_profile_uuid="${12}"
-export_method="${13}"
-build_method="${14}"
-profile_name="${15}"
-
-if [[ "$project_dir" != /* ]]; then
-  project_dir="$(cd "$project_dir" && pwd)"
+if [ -z "${VERSION:-}" ]; then
+  echo "::error::VERSION environment variable is required"
+  exit 1
 fi
 
-builds_dir="${HOME}/.builds/ios"
-xcode_project_dir="${builds_dir}/${filename}"
-archive_path="${builds_dir}/${filename}.xcarchive"
-export_path="${builds_dir}/${filename}.ipa"
-export_options_plist="${builds_dir}/export.plist"
+if [ -z "${CONFIGURATION:-}" ]; then
+  echo "::error::CONFIGURATION environment variable is required"
+  exit 1
+fi
+
+if [ -z "${FILENAME:-}" ]; then
+  echo "::error::FILENAME environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_EMAIL:-}" ]; then
+  echo "::error::UNITY_EMAIL environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_PASSWORD:-}" ]; then
+  echo "::error::UNITY_PASSWORD environment variable is required"
+  exit 1
+fi
+
+if [ -z "${UNITY_LICENSE_KEY:-}" ]; then
+  echo "::error::UNITY_LICENSE_KEY environment variable is required"
+  exit 1
+fi
+
+if [[ "${PROJECT_DIR}" != /* ]]; then
+  PROJECT_DIR="$(cd "${PROJECT_DIR}" && pwd)"
+fi
+
+BUILDS_DIR="${HOME}/.builds/ios"
+XCODE_PROJECT_DIR="${BUILDS_DIR}/${FILENAME}"
+ARCHIVE_PATH="${BUILDS_DIR}/${FILENAME}.xcarchive"
+EXPORT_PATH="${BUILDS_DIR}/${FILENAME}.ipa"
+EXPORT_OPTIONS_PLIST="${BUILDS_DIR}/export.plist"
+KEYCHAIN_FILE="${RUNNER_TEMP}/ios.keychain-db"
+CERTIFICATE_FILE="${RUNNER_TEMP}/ios.p12"
+PROVISIONING_FILE="${RUNNER_TEMP}/profile.mobileprovision"
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
-  security delete-keychain "${keychain_file}" 2> /dev/null || true
-  rm -f "${certificate_file}" "${provisioning_file}" "${export_options_plist}" || true
+  security delete-keychain "${KEYCHAIN_FILE}" 2>/dev/null || true
+  rm -f "${CERTIFICATE_FILE}" "${PROVISIONING_FILE}" "${EXPORT_OPTIONS_PLIST}" || true
 }
 trap cleanup EXIT
 
 echo "::notice::Creating build directories..."
-mkdir -p "${builds_dir}"
-mkdir -p "${xcode_project_dir}"
+mkdir -p "${BUILDS_DIR}"
+mkdir -p "${XCODE_PROJECT_DIR}"
 
-echo "::notice::Build configuration:"
-echo "::notice::  Project: ${project_dir}"
-echo "::notice::  Version: ${version}"
-echo "::notice::  Configuration: ${configuration}"
-echo "::notice::  Output: ${xcode_project_dir}"
-echo "::notice::  Profile: ${profile_name}"
-echo "::notice::  Team ID: ${team_id}"
+{
+  echo "::notice::Build configuration:"
+  echo "::notice::  Project: ${PROJECT_DIR}"
+  echo "::notice::  Version: ${VERSION}"
+  echo "::notice::  Configuration: ${CONFIGURATION}"
+  echo "::notice::  Output: ${XCODE_PROJECT_DIR}"
+  echo "::notice::  Profile: ${PROFILE_NAME:-default}"
+  echo "::notice::  Team ID: ${IOS_TEAM_ID:-none}"
+} >&2
 
-if [ -n "${build_method}" ]; then
-  echo "::notice::Using custom build method: ${build_method}"
-  build_method_args=("-executeMethod" "${build_method}")
+if [ -n "${BUILD_METHOD:-}" ]; then
+  echo "::notice::Using custom build method: ${BUILD_METHOD}"
+  BUILD_METHOD_ARGS=("-executeMethod" "${BUILD_METHOD}")
 else
   echo "::notice::Using default build method: BuildiOS.Build"
-  build_script_dest="${project_dir}/Assets/Editor/BuildiOS.cs"
-  mkdir -p "${project_dir}/Assets/Editor"
+  BUILD_SCRIPT_DEST="${PROJECT_DIR}/Assets/Editor/BuildiOS.cs"
+  mkdir -p "${PROJECT_DIR}/Assets/Editor"
 
   if [ -f "${GITHUB_ACTION_PATH}/scripts/BuildiOS.cs" ]; then
-    cp "${GITHUB_ACTION_PATH}/scripts/BuildiOS.cs" "${build_script_dest}"
-    echo "::notice::Copied BuildiOS.cs to ${build_script_dest}"
+    cp "${GITHUB_ACTION_PATH}/scripts/BuildiOS.cs" "${BUILD_SCRIPT_DEST}"
+    echo "::notice::Copied BuildiOS.cs to ${BUILD_SCRIPT_DEST}"
   else
     echo "::error::Build script not found: ${GITHUB_ACTION_PATH}/scripts/BuildiOS.cs"
     exit 1
   fi
 
-  build_method_args=("-executeMethod" "BuildiOS.Build")
+  BUILD_METHOD_ARGS=("-executeMethod" "BuildiOS.Build")
 fi
 
-build_args=(
+BUILD_ARGS=(
   -batchmode
   -nographics
   -quit
-  -username "${unity_email}"
-  -password "${unity_password}"
-  -serial "${unity_license_key}"
-  -projectPath "${project_dir}"
+  -username "${UNITY_EMAIL}"
+  -password "${UNITY_PASSWORD}"
+  -serial "${UNITY_LICENSE_KEY}"
+  -projectPath "${PROJECT_DIR}"
   -buildTarget iOS
   -logFile -
-  "${build_method_args[@]}"
-  -outputPath "${xcode_project_dir}"
-  -versionName "${version}"
-  -buildConfig "${configuration}"
-  -profileId "${provisioning_profile_uuid}"
-  -teamId "${team_id}"
-  -profileName "${profile_name}"
+  "${BUILD_METHOD_ARGS[@]}"
+  -outputPath "${XCODE_PROJECT_DIR}"
+  -versionName "${VERSION}"
+  -buildConfig "${CONFIGURATION}"
+  -profileId "${IOS_PROVISIONING_PROFILE_UUID:-}"
+  -teamId "${IOS_TEAM_ID:-}"
+  -profileName "${PROFILE_NAME:-iOS}"
 )
 
 echo "::notice::Starting Unity build..."
-if ! unity "${build_args[@]}" 2>&1; then
+if ! unity "${BUILD_ARGS[@]}" 2>&1; then
   echo "::error::Unity build failed for iOS"
   exit 1
 fi
@@ -99,94 +117,92 @@ fi
 echo "::notice::Unity build completed successfully"
 
 echo "::notice::Looking for Xcode workspace..."
-xcworkspace_file=$(find "${xcode_project_dir}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
+XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
 
-if [ -z "$xcworkspace_file" ]; then
-  echo "::error::No Xcode workspace found in ${xcode_project_dir}"
-  echo "::debug::Contents of ${xcode_project_dir}:"
-  ls -la "${xcode_project_dir}"
+if [ -z "${XCWORKSPACE_FILE}" ]; then
+  echo "::error::No Xcode workspace found in ${XCODE_PROJECT_DIR}"
+  echo "::debug::Contents of ${XCODE_PROJECT_DIR}:"
+  ls -la "${XCODE_PROJECT_DIR}"
   echo "::debug::Unity should generate a .xcworkspace file for iOS builds"
   exit 1
 fi
 
-workspace_name=$(basename "$xcworkspace_file")
-scheme_name="${workspace_name%.*}"
-echo "::notice::Found Xcode workspace: ${workspace_name}"
-echo "::notice::Using scheme: ${scheme_name}"
+WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
+SCHEME_NAME="${WORKSPACE_NAME%.*}"
+echo "::notice::Found Xcode workspace: ${WORKSPACE_NAME}"
+echo "::notice::Using scheme: ${SCHEME_NAME}"
 
-xcodebuild -workspace "${xcworkspace_file}" -list 2>/dev/null || echo "::debug::Could not list schemes"
+xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2>/dev/null || echo "::debug::Could not list schemes"
 
-if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
+if [ -n "${IOS_CERTIFICATE:-}" ] && [ -n "${IOS_PROVISIONING_PROFILE:-}" ]; then
   echo "::notice::Setting up iOS signing..."
-  keychain_file="${RUNNER_TEMP}/ios.keychain-db"
-  certificate_file="${RUNNER_TEMP}/ios.p12"
-  provisioning_file="${RUNNER_TEMP}/profile.mobileprovision"
-  keychain_password=$(openssl rand -base64 32)
+  KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-  echo -n "${certificate}" | base64 -d > "${certificate_file}"
-  echo -n "${provisioning_profile}" | base64 -d > "${provisioning_file}"
+  echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}"
+  echo -n "${IOS_PROVISIONING_PROFILE}" | base64 -d > "${PROVISIONING_FILE}"
 
-  security create-keychain -p "${keychain_password}" "${keychain_file}"
-  security set-keychain-settings -lut 3600 "${keychain_file}"
-  security unlock-keychain -p "${keychain_password}" "${keychain_file}"
-  security list-keychains -d user -s "${keychain_file}"
-  security import "${certificate_file}" -k "${keychain_file}" -P "${certificate_password}" -T /usr/bin/codesign
-  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${keychain_password}" "${keychain_file}"
+  security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+  security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"
+  security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+  security list-keychains -d user -s "${KEYCHAIN_FILE}"
+  security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign
+  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 
   mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-  cp "${provisioning_file}" "$HOME/Library/MobileDevice/Provisioning Profiles/${provisioning_profile_uuid}.mobileprovision"
+  cp "${PROVISIONING_FILE}" "$HOME/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
 
   echo "::notice::Building and archiving iOS project..."
 
-  if ! xcodebuild -workspace "${xcworkspace_file}" \
-    -scheme "${scheme_name}" \
-    -configuration "${configuration}" \
+  if ! xcodebuild -workspace "${XCWORKSPACE_FILE}" \
+    -scheme "${SCHEME_NAME}" \
+    -configuration "${CONFIGURATION}" \
     -destination "generic/platform=iOS" \
-    -archivePath "${archive_path}" \
+    -archivePath "${ARCHIVE_PATH}" \
     archive \
     CODE_SIGN_STYLE=Manual \
-    DEVELOPMENT_TEAM="${team_id}" \
-    PROVISIONING_PROFILE_SPECIFIER="${provisioning_profile_uuid}"; then
+    DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
+    PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"; then
     echo "::error::Xcode archive failed"
     exit 1
   fi
 
-  echo "::notice::Archive created successfully at ${archive_path}"
+  echo "::notice::Archive created successfully at ${ARCHIVE_PATH}"
 
   echo "::notice::Creating export options plist..."
 
-  if [ -d "${archive_path}" ]; then
-    bundle_id=$(defaults read "${archive_path}/Info.plist" ApplicationProperties 2>/dev/null | grep -o 'CFBundleIdentifier = "[^"]*"' | cut -d'"' -f2 | head -1)
+  BUNDLE_ID=""
+  if [ -d "${ARCHIVE_PATH}" ]; then
+    BUNDLE_ID=$(defaults read "${ARCHIVE_PATH}/Info.plist" ApplicationProperties 2>/dev/null | grep -o 'CFBundleIdentifier = "[^"]*"' | cut -d'"' -f2 | head -1)
   fi
 
-  if [ -z "$bundle_id" ]; then
-    xcodeproj_file=$(find "${xcode_project_dir}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
-    if [ -n "$xcodeproj_file" ]; then
-      bundle_id=$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*' "${xcodeproj_file}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
+  if [ -z "${BUNDLE_ID}" ]; then
+    XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+    if [ -n "${XCODEPROJ_FILE}" ]; then
+      BUNDLE_ID=$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*' "${XCODEPROJ_FILE}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
     fi
   fi
 
-  if [ -z "$bundle_id" ]; then
+  if [ -z "${BUNDLE_ID}" ]; then
     echo "::error::Could not extract bundle ID from archive or project"
     exit 1
   fi
 
-  echo "::notice::Using bundle ID: ${bundle_id}"
-  echo "::notice::Using provisioning profile UUID: ${provisioning_profile_uuid}"
+  echo "::notice::Using bundle ID: ${BUNDLE_ID}"
+  echo "::notice::Using provisioning profile UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
 
-  cat > "${export_options_plist}" << EOF
+  cat > "${EXPORT_OPTIONS_PLIST}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>${export_method}</string>
+    <string>${IOS_EXPORT_METHOD}</string>
     <key>teamID</key>
-    <string>${team_id}</string>
+    <string>${IOS_TEAM_ID}</string>
     <key>provisioningProfiles</key>
     <dict>
-        <key>${bundle_id}</key>
-        <string>${provisioning_profile_uuid}</string>
+        <key>${BUNDLE_ID}</key>
+        <string>${IOS_PROVISIONING_PROFILE_UUID}</string>
     </dict>
     <key>compileBitcode</key>
     <false/>
@@ -202,27 +218,27 @@ EOF
 
   echo "::notice::Exporting IPA from archive..."
   if ! xcodebuild -exportArchive \
-    -archivePath "${archive_path}" \
-    -exportPath "${builds_dir}" \
-    -exportOptionsPlist "${export_options_plist}"; then
+    -archivePath "${ARCHIVE_PATH}" \
+    -exportPath "${BUILDS_DIR}" \
+    -exportOptionsPlist "${EXPORT_OPTIONS_PLIST}"; then
     echo "::error::IPA export failed"
     exit 1
   fi
 
-  actual_ipa=$(find "${builds_dir}" -name "*.ipa" -type f | head -1)
-  if [ -n "$actual_ipa" ] && [ "$actual_ipa" != "$export_path" ]; then
-    mv "$actual_ipa" "$export_path"
+  ACTUAL_IPA=$(find "${BUILDS_DIR}" -name "*.ipa" -type f | head -1)
+  if [ -n "${ACTUAL_IPA}" ] && [ "${ACTUAL_IPA}" != "${EXPORT_PATH}" ]; then
+    mv "${ACTUAL_IPA}" "${EXPORT_PATH}"
   fi
 
-  if [ ! -f "${export_path}" ]; then
-    echo "::error::IPA file not found: ${export_path}"
+  if [ ! -f "${EXPORT_PATH}" ]; then
+    echo "::error::IPA file not found: ${EXPORT_PATH}"
     exit 1
   fi
 
-  file_size=$(stat -f%z "${export_path}" 2> /dev/null || stat -c%s "${export_path}" 2> /dev/null || echo "unknown")
-  echo "::notice::Build completed successfully: ${export_path} (${file_size} bytes)"
-  echo "file=${export_path}" >> "${GITHUB_OUTPUT}"
+  FILE_SIZE=$(stat -f%z "${EXPORT_PATH}" 2>/dev/null || stat -c%s "${EXPORT_PATH}" 2>/dev/null || echo "unknown")
+  echo "::notice::Build completed successfully: ${EXPORT_PATH} (${FILE_SIZE} bytes)"
+  echo "file=${EXPORT_PATH}" >> "${GITHUB_OUTPUT}"
 else
-  echo "::notice::Build completed successfully (Xcode project only): ${xcode_project_dir}"
-  echo "file=${xcode_project_dir}" >> "${GITHUB_OUTPUT}"
+  echo "::notice::Build completed successfully (Xcode project only): ${XCODE_PROJECT_DIR}"
+  echo "file=${XCODE_PROJECT_DIR}" >> "${GITHUB_OUTPUT}"
 fi
