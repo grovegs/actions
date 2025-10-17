@@ -98,16 +98,23 @@ fi
 
 echo "::notice::Unity build completed successfully"
 
-echo "::notice::Looking for Xcode project..."
-xcodeproj_file=$(find "${xcode_project_dir}" -name "*.xcodeproj" -type d | head -1)
-if [ -z "$xcodeproj_file" ]; then
-  echo "::error::No Xcode project found in ${xcode_project_dir}"
+echo "::notice::Looking for Xcode workspace..."
+xcworkspace_file=$(find "${xcode_project_dir}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
+
+if [ -z "$xcworkspace_file" ]; then
+  echo "::error::No Xcode workspace found in ${xcode_project_dir}"
+  echo "::debug::Contents of ${xcode_project_dir}:"
+  ls -la "${xcode_project_dir}"
+  echo "::debug::Unity should generate a .xcworkspace file for iOS builds"
   exit 1
 fi
 
-xcodeproj_name=$(basename "$xcodeproj_file")
-scheme_name="${xcodeproj_name%.*}"
-echo "::notice::Found Xcode project: ${xcodeproj_name}"
+workspace_name=$(basename "$xcworkspace_file")
+scheme_name="${workspace_name%.*}"
+echo "::notice::Found Xcode workspace: ${workspace_name}"
+echo "::notice::Using scheme: ${scheme_name}"
+
+xcodebuild -workspace "${xcworkspace_file}" -list 2>/dev/null || echo "::debug::Could not list schemes"
 
 if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
   echo "::notice::Setting up iOS signing..."
@@ -124,17 +131,22 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
   security unlock-keychain -p "${keychain_password}" "${keychain_file}"
   security list-keychains -d user -s "${keychain_file}"
   security import "${certificate_file}" -k "${keychain_file}" -P "${certificate_password}" -T /usr/bin/codesign
+  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${keychain_password}" "${keychain_file}"
 
   mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-  cp "${provisioning_file}" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+  cp "${provisioning_file}" "$HOME/Library/MobileDevice/Provisioning Profiles/${provisioning_profile_uuid}.mobileprovision"
 
   echo "::notice::Building and archiving iOS project..."
-  if ! xcodebuild -project "${xcodeproj_file}" \
+
+  if ! xcodebuild -workspace "${xcworkspace_file}" \
     -scheme "${scheme_name}" \
     -configuration "${configuration}" \
     -destination "generic/platform=iOS" \
     -archivePath "${archive_path}" \
-    archive; then
+    archive \
+    CODE_SIGN_STYLE=Manual \
+    DEVELOPMENT_TEAM="${team_id}" \
+    PROVISIONING_PROFILE_SPECIFIER="${provisioning_profile_uuid}"; then
     echo "::error::Xcode archive failed"
     exit 1
   fi
@@ -142,10 +154,20 @@ if [ -n "${certificate}" ] && [ -n "${provisioning_profile}" ]; then
   echo "::notice::Archive created successfully at ${archive_path}"
 
   echo "::notice::Creating export options plist..."
-  bundle_id=$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*' "${xcodeproj_file}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
+
+  if [ -d "${archive_path}" ]; then
+    bundle_id=$(defaults read "${archive_path}/Info.plist" ApplicationProperties 2>/dev/null | grep -o 'CFBundleIdentifier = "[^"]*"' | cut -d'"' -f2 | head -1)
+  fi
 
   if [ -z "$bundle_id" ]; then
-    echo "::error::Could not extract bundle ID from project.pbxproj"
+    xcodeproj_file=$(find "${xcode_project_dir}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+    if [ -n "$xcodeproj_file" ]; then
+      bundle_id=$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*' "${xcodeproj_file}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
+    fi
+  fi
+
+  if [ -z "$bundle_id" ]; then
+    echo "::error::Could not extract bundle ID from archive or project"
     exit 1
   fi
 
