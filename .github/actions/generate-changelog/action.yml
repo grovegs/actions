@@ -1,47 +1,47 @@
 name: Generate Changelog
-description: Generate structured changelog and format in multiple formats.
+description: Generate structured changelog from git commits and format in multiple output formats.
 
 inputs:
     next-version:
-        description: The next version tag to compare (e.g., 1.1.0).
+        description: The next version tag to compare such as 1.1.0
         required: true
 
 outputs:
     changelog-raw:
-        description: Raw structured changelog (categories and commits).
-        value: ${{ steps.generate_raw.outputs.changelog_raw }}
+        description: Raw structured changelog with categories and commits
+        value: ${{ steps.generate-raw.outputs.changelog-raw }}
     changelog-plain:
-        description: Formatted changelog in plain text format.
-        value: ${{ steps.format_plain.outputs.changelog_plain }}
+        description: Formatted changelog in plain text format
+        value: ${{ steps.format-plain.outputs.changelog-plain }}
     changelog-markdown:
-        description: Formatted changelog in markdown format.
-        value: ${{ steps.format_markdown.outputs.changelog_markdown }}
+        description: Formatted changelog in markdown format
+        value: ${{ steps.format-markdown.outputs.changelog-markdown }}
 
 runs:
     using: composite
     steps:
-        - name: Generate Raw Structured Changelog
-          id: generate_raw
+        - name: 📝 Generate Raw Structured Changelog
+          id: generate-raw
           shell: bash
           run: |
               chmod +x "${{ github.action_path }}/scripts/generate_raw.sh"
               "${{ github.action_path }}/scripts/generate_raw.sh"
 
-        - name: Format to Plain Text
-          id: format_plain
+        - name: 📄 Format to Plain Text
+          id: format-plain
           shell: bash
           env:
-              RAW_CHANGELOG: ${{ steps.generate_raw.outputs.changelog_raw }}
+              RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
               VERSION: ${{ inputs.next-version }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_plain.sh"
               "${{ github.action_path }}/scripts/format_plain.sh"
 
-        - name: Format to Markdown
-          id: format_markdown
+        - name: 📋 Format to Markdown
+          id: format-markdown
           shell: bash
           env:
-              RAW_CHANGELOG: ${{ steps.generate_raw.outputs.changelog_raw }}
+              RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
               VERSION: ${{ inputs.next-version }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_markdown.sh"
