@@ -1,15 +1,15 @@
 name: Pack Unity Package
-description: Package a Unity package as a local tarball
+description: Package a Unity package as a local tarball with automatic version management.
 
 inputs:
     package:
-        description: Path to the Unity package directory (e.g., Packages/com.example.package)
+        description: Path to the Unity package directory such as Packages/com.example.package
         required: true
     version:
         description: Version number to apply to the package
         required: true
     filename:
-        description: Name of the output package file (without .tgz extension)
+        description: Name of the output package file without .tgz extension
         required: true
 
 outputs:
