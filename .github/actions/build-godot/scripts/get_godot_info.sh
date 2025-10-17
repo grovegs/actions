@@ -1,35 +1,41 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "::error::Usage: $0 <global_json_file>"
+if [ -z "${GLOBAL_JSON_FILE:-}" ]; then
+  echo "::error::GLOBAL_JSON_FILE environment variable is required"
   exit 1
 fi
 
-global_json_file="$1"
-
-full_version=$(sed -n 's/.*"Godot\.NET\.Sdk": "\([^"]*\)".*/\1/p' "${global_json_file}")
-
-if [ -z "${full_version}" ]; then
-  echo "::error::Version not found in ${global_json_file}."
+if [ ! -f "${GLOBAL_JSON_FILE}" ]; then
+  echo "::error::File not found: ${GLOBAL_JSON_FILE}"
   exit 1
 fi
 
-if [[ "${full_version}" == *"-"* ]]; then
-  version=${full_version%%-*}
-  stage=${full_version#*-}
-  stage=${stage//./}
+FULL_VERSION=$(sed -n 's/.*"Godot\.NET\.Sdk": "\([^"]*\)".*/\1/p' "${GLOBAL_JSON_FILE}")
+
+if [ -z "${FULL_VERSION}" ]; then
+  echo "::error::Version not found in ${GLOBAL_JSON_FILE}"
+  exit 1
+fi
+
+if [[ "${FULL_VERSION}" == *"-"* ]]; then
+  VERSION="${FULL_VERSION%%-*}"
+  STAGE="${FULL_VERSION#*-}"
+  STAGE="${STAGE//./}"
 else
-  version=${full_version}
-  stage="stable"
+  VERSION="${FULL_VERSION}"
+  STAGE="stable"
 fi
 
-IFS='.' read -r major minor patch <<< "${version}"
+IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
 
-if [ "${patch}" = "0" ]; then
-  version="${major}.${minor}"
+if [ "${PATCH}" = "0" ]; then
+  VERSION="${MAJOR}.${MINOR}"
 fi
 
-echo "::notice::Godot version is ${version}"
-echo "::notice::Godot stage is ${stage}"
-echo "version=${version}" >> "$GITHUB_OUTPUT"
-echo "stage=${stage}" >> "$GITHUB_OUTPUT"
+{
+  echo "::notice::Godot version is ${VERSION}"
+  echo "::notice::Godot stage is ${STAGE}"
+  echo "version=${VERSION}"
+  echo "stage=${STAGE}"
+} >> "${GITHUB_OUTPUT}"

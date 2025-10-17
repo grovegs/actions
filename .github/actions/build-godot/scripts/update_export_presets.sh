@@ -1,39 +1,47 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -lt 3 ]; then
-  echo "::error::Usage: $0 <presets_file> <preset_name> <key=value> [key=value] ..."
-  echo "::notice::Example: $0 export_presets.cfg Android version/code=42 gradle_build/use_gradle_build=true"
+if [ -z "${PRESETS_FILE:-}" ]; then
+  echo "::error::PRESETS_FILE environment variable is required"
   exit 1
 fi
 
-presets_file="$1"
-preset_name="$2"
-shift 2
-
-if [ ! -f "${presets_file}" ]; then
-  echo "::error::File ${presets_file} does not exist."
+if [ -z "${PRESET_NAME:-}" ]; then
+  echo "::error::PRESET_NAME environment variable is required"
   exit 1
 fi
 
-preset_section=$(awk -v preset_name="$preset_name" '
+if [ -z "${EXPORT_OPTIONS:-}" ]; then
+  echo "::error::EXPORT_OPTIONS environment variable is required"
+  exit 1
+fi
+
+if [ ! -f "${PRESETS_FILE}" ]; then
+  echo "::error::File ${PRESETS_FILE} does not exist"
+  exit 1
+fi
+
+PRESET_SECTION=$(awk -v preset_name="${PRESET_NAME}" '
     BEGIN { section_id = "" }
     /^\[preset\.[0-9]+\]/ { section_id = $0 }
     $0 ~ "name=\"" preset_name "\"" { print section_id; exit }
-' "$presets_file")
+' "${PRESETS_FILE}")
 
-if [ -z "$preset_section" ]; then
-  echo "::error::Preset with name '${preset_name}' not found in ${presets_file}."
+if [ -z "${PRESET_SECTION}" ]; then
+  echo "::error::Preset with name '${PRESET_NAME}' not found in ${PRESETS_FILE}"
   exit 1
 fi
 
-temp_file=$(mktemp)
-cp "${presets_file}" "${temp_file}"
+TEMP_FILE=$(mktemp)
+cp "${PRESETS_FILE}" "${TEMP_FILE}"
 
-for pair in "$@"; do
-  key="${pair%%=*}"
-  value="${pair#*=}"
+read -ra OPTIONS_ARRAY <<< "${EXPORT_OPTIONS}"
 
-  awk -v section="$preset_section" -v key="$key" -v value="$value" '
+for pair in "${OPTIONS_ARRAY[@]}"; do
+  KEY="${pair%%=*}"
+  VALUE="${pair#*=}"
+
+  awk -v section="${PRESET_SECTION}" -v key="${KEY}" -v value="${VALUE}" '
     BEGIN { in_section = 0 }
     $0 ~ section { in_section = 1 }
     in_section && /^\[/ && $0 != section { in_section = 0 }
@@ -50,8 +58,8 @@ for pair in "$@"; do
         }
     }
     { print }
-    ' "$temp_file" > "${temp_file}.tmp" && mv "${temp_file}.tmp" "$temp_file"
+    ' "${TEMP_FILE}" > "${TEMP_FILE}.tmp" && mv "${TEMP_FILE}.tmp" "${TEMP_FILE}"
 done
 
-mv "${temp_file}" "${presets_file}"
-echo "::notice::Successfully updated ${presets_file} for preset '${preset_name}'"
+mv "${TEMP_FILE}" "${PRESETS_FILE}"
+echo "::notice::Successfully updated ${PRESETS_FILE} for preset '${PRESET_NAME}'"
