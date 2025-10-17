@@ -6,6 +6,16 @@ if [ -z "${PLATFORM:-}" ]; then
   exit 1
 fi
 
+case "${PLATFORM}" in
+  "Android"|"iOS")
+    echo "::notice::Building for platform: ${PLATFORM}"
+    ;;
+  *)
+    echo "::error::Unsupported platform: ${PLATFORM}. Supported values: Android, iOS"
+    exit 1
+    ;;
+esac
+
 if [ -n "${UNITY_EMAIL:-}" ]; then
   echo "::add-mask::${UNITY_EMAIL}"
 fi
@@ -44,9 +54,5 @@ case "${PLATFORM}" in
   "iOS")
     chmod +x "${GITHUB_ACTION_PATH}/scripts/build_ios.sh"
     "${GITHUB_ACTION_PATH}/scripts/build_ios.sh"
-    ;;
-  *)
-    echo "::error::Unsupported platform: ${PLATFORM}"
-    exit 1
     ;;
 esac

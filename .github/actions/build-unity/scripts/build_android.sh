@@ -36,6 +36,21 @@ if [ -z "${UNITY_LICENSE_KEY:-}" ]; then
   exit 1
 fi
 
+if [ -z "${ANDROID_KEYSTORE:-}" ]; then
+  echo "::error::ANDROID_KEYSTORE is required for Android builds"
+  exit 1
+fi
+
+if [ -z "${ANDROID_KEYSTORE_USER:-}" ]; then
+  echo "::error::ANDROID_KEYSTORE_USER is required for Android builds"
+  exit 1
+fi
+
+if [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ]; then
+  echo "::error::ANDROID_KEYSTORE_PASSWORD is required for Android builds"
+  exit 1
+fi
+
 if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" 2>/dev/null && pwd)" || {
     echo "::error::Project directory not found or inaccessible: ${PROJECT_DIR}"
@@ -85,14 +100,12 @@ mkdir -p "${BUILDS_DIR}" || {
   exit 1
 }
 
-if [ -n "${ANDROID_KEYSTORE:-}" ]; then
-  echo "::notice::Decoding Android keystore..."
-  echo -n "${ANDROID_KEYSTORE}" | base64 -d > "${KEYSTORE_FILE}" || {
-    echo "::error::Failed to decode Android keystore"
-    exit 1
-  }
-  chmod 600 "${KEYSTORE_FILE}"
-fi
+echo "::notice::Decoding Android keystore..."
+echo -n "${ANDROID_KEYSTORE}" | base64 -d > "${KEYSTORE_FILE}" || {
+  echo "::error::Failed to decode Android keystore"
+  exit 1
+}
+chmod 600 "${KEYSTORE_FILE}"
 
 echo "::notice::Checking Android build requirements..."
 if [ ! -f "${PROJECT_DIR}/ProjectSettings/ProjectSettings.asset" ]; then
@@ -157,16 +170,11 @@ BUILD_ARGS=(
   -buildConfig "${CONFIGURATION}"
   -buildFormat "${ANDROID_FORMAT}"
   -profileName "${PROFILE_NAME:-Android}"
+  -keystorePath "${KEYSTORE_FILE}"
+  -keystorePass "${ANDROID_KEYSTORE_PASSWORD}"
+  -keyaliasName "${ANDROID_KEYSTORE_USER}"
+  -keyaliasPass "${ANDROID_KEYSTORE_PASSWORD}"
 )
-
-if [ -n "${ANDROID_KEYSTORE:-}" ]; then
-  BUILD_ARGS+=(
-    -keystorePath "${KEYSTORE_FILE}"
-    -keystorePass "${ANDROID_KEYSTORE_PASSWORD}"
-    -keyaliasName "${ANDROID_KEYSTORE_USER}"
-    -keyaliasPass "${ANDROID_KEYSTORE_PASSWORD}"
-  )
-fi
 
 echo "::notice::Unity command line:"
 printf '%s ' "${BUILD_ARGS[@]}"
