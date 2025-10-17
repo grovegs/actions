@@ -1,15 +1,15 @@
 name: Pack Godot Addon
-description: Package a Godot addon into a zip file
+description: Package a Godot addon into a zip file with automatic version management.
 
 inputs:
     addon:
-        description: Path to the Godot addon directory (e.g., addons/my-addon)
+        description: Path to the Godot addon directory such as addons/my-addon
         required: true
     version:
         description: Version number to apply to the addon
         required: true
     filename:
-        description: Name of the output addon file (without .zip extension)
+        description: Name of the output addon file without .zip extension
         required: true
 
 outputs:
