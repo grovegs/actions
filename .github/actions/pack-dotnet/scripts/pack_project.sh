@@ -21,50 +21,50 @@ if [ -z "${PACKAGE_NAME:-}" ]; then
   exit 1
 fi
 
-MODIFIED_FILES=()
+declare -a MODIFIED_FILES
 
 update_version_in_file() {
   local file="$1"
   local updated=false
 
-  if grep -q "<Version>" "$file"; then
-    if ! grep -q "<Version>\$(.*)</Version>" "$file"; then
-      sed -i.bak "s|<Version>.*</Version>|<Version>${PACKAGE_VERSION}</Version>|g" "$file"
+  if grep -q "<Version>" "${file}"; then
+    if ! grep -q "<Version>\$(.*)</Version>" "${file}"; then
+      sed -i.bak "s|<Version>.*</Version>|<Version>${PACKAGE_VERSION}</Version>|g" "${file}"
       updated=true
     fi
   fi
 
-  if grep -q "<AssemblyVersion>" "$file"; then
-    if ! grep -q "<AssemblyVersion>\$(.*)</AssemblyVersion>" "$file"; then
-      sed -i.bak "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>${PACKAGE_VERSION}</AssemblyVersion>|g" "$file"
+  if grep -q "<AssemblyVersion>" "${file}"; then
+    if ! grep -q "<AssemblyVersion>\$(.*)</AssemblyVersion>" "${file}"; then
+      sed -i.bak "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>${PACKAGE_VERSION}</AssemblyVersion>|g" "${file}"
       updated=true
     fi
   fi
 
-  if grep -q "<FileVersion>" "$file"; then
-    if ! grep -q "<FileVersion>\$(.*)</FileVersion>" "$file"; then
-      sed -i.bak "s|<FileVersion>.*</FileVersion>|<FileVersion>${PACKAGE_VERSION}</FileVersion>|g" "$file"
+  if grep -q "<FileVersion>" "${file}"; then
+    if ! grep -q "<FileVersion>\$(.*)</FileVersion>" "${file}"; then
+      sed -i.bak "s|<FileVersion>.*</FileVersion>|<FileVersion>${PACKAGE_VERSION}</FileVersion>|g" "${file}"
       updated=true
     fi
   fi
 
-  if grep -q "<InformationalVersion>" "$file"; then
-    if ! grep -q "<InformationalVersion>\$(.*)</InformationalVersion>" "$file"; then
-      sed -i.bak "s|<InformationalVersion>.*</InformationalVersion>|<InformationalVersion>${PACKAGE_VERSION}</InformationalVersion>|g" "$file"
+  if grep -q "<InformationalVersion>" "${file}"; then
+    if ! grep -q "<InformationalVersion>\$(.*)</InformationalVersion>" "${file}"; then
+      sed -i.bak "s|<InformationalVersion>.*</InformationalVersion>|<InformationalVersion>${PACKAGE_VERSION}</InformationalVersion>|g" "${file}"
       updated=true
     fi
   fi
 
-  if grep -q "<PackageVersion>" "$file"; then
-    if ! grep -q "<PackageVersion>\$(.*)</PackageVersion>" "$file"; then
-      sed -i.bak "s|<PackageVersion>.*</PackageVersion>|<PackageVersion>${PACKAGE_VERSION}</PackageVersion>|g" "$file"
+  if grep -q "<PackageVersion>" "${file}"; then
+    if ! grep -q "<PackageVersion>\$(.*)</PackageVersion>" "${file}"; then
+      sed -i.bak "s|<PackageVersion>.*</PackageVersion>|<PackageVersion>${PACKAGE_VERSION}</PackageVersion>|g" "${file}"
       updated=true
     fi
   fi
 
   rm -f "${file}.bak"
 
-  echo "$updated"
+  echo "${updated}"
 }
 
 if [ -n "${DIRECTORY_BUILD_PROPS:-}" ]; then
@@ -73,7 +73,7 @@ if [ -n "${DIRECTORY_BUILD_PROPS:-}" ]; then
 
     PROPS_UPDATED=$(update_version_in_file "${DIRECTORY_BUILD_PROPS}")
 
-    if [ "$PROPS_UPDATED" = "true" ]; then
+    if [ "${PROPS_UPDATED}" = "true" ]; then
       echo "  ✓ Updated version to ${PACKAGE_VERSION}"
       MODIFIED_FILES+=("${DIRECTORY_BUILD_PROPS}")
     else
@@ -106,7 +106,7 @@ echo "::notice::Checking for version properties in ${PROJECT_FILE}"
 
 CSPROJ_UPDATED=$(update_version_in_file "${PROJECT_FILE}")
 
-if [ "$CSPROJ_UPDATED" = "true" ]; then
+if [ "${CSPROJ_UPDATED}" = "true" ]; then
   echo "  ✓ Updated version in ${PROJECT_FILE}"
   MODIFIED_FILES+=("${PROJECT_FILE}")
 else
@@ -159,9 +159,8 @@ echo "::notice::✓ Successfully created package: ${PACKAGE_FILE}"
   echo "package=${PACKAGE_FILE}"
 
   if [ "${#MODIFIED_FILES[@]}" -gt 0 ]; then
-    FILES_OUTPUT=$(printf '%s\n' "${MODIFIED_FILES[@]}")
     echo "modified-files<<EOF"
-    echo "${FILES_OUTPUT}"
+    printf '%s\n' "${MODIFIED_FILES[@]}"
     echo "EOF"
   fi
-} >> "$GITHUB_OUTPUT"
+} >> "${GITHUB_OUTPUT}"

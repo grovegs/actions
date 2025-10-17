@@ -1,22 +1,22 @@
 name: Pack .NET
-description: Package a .NET project into a NuGet package
+description: Package a .NET project into a NuGet package with automatic version management.
 
 inputs:
     project:
         description: Path to .NET project directory containing the csproj file
         required: true
     configuration:
-        description: Build configuration (Release or Debug)
-        required: true
+        description: Build configuration such as Release or Debug
+        required: false
         default: "Release"
     version:
         description: Version number to apply to the package
         required: true
     name:
-        description: Name of the output package file (without .nupkg extension)
+        description: Name of the output package file without .nupkg extension
         required: true
     directory-build-props:
-        description: Path to Directory.Build.props file to update version (optional)
+        description: Path to Directory.Build.props file to update version
         required: false
         default: ""
 
@@ -25,7 +25,7 @@ outputs:
         description: Path to the created NuGet package file
         value: ${{ steps.pack.outputs.package }}
     modified-files:
-        description: Newline-separated paths to modified files in workspace (csproj, Directory.Build.props)
+        description: Newline-separated paths to modified files in workspace such as csproj and Directory.Build.props
         value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
