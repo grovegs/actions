@@ -1,12 +1,12 @@
 name: Test .NET
-description: Tests a .NET project.
+description: Run tests for a .NET project with specified configuration.
 
 inputs:
     project:
-        description: The relative path to .NET project directory containing the `csproj` file.
+        description: Path to .NET project directory containing the csproj file
         required: true
     configuration:
-        description: The build configuration (e.g., Release or Debug).
+        description: Build configuration such as Release or Debug
         required: true
 
 runs:
@@ -14,6 +14,9 @@ runs:
     steps:
         - name: 🧪 Test Project
           shell: bash
+          env:
+              PROJECT_PATH: ${{ inputs.project }}
+              BUILD_CONFIGURATION: ${{ inputs.configuration }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
-              "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}"
+              "${{ github.action_path }}/scripts/test_project.sh"
