@@ -1,29 +1,31 @@
 name: Setup .NET
-description: Setup a .NET project.
+description: Set up a .NET project with SDK version from global.json and optional NuGet package caching.
 
 inputs:
     global-json-file:
-        description: The path to the global.json file specifying the .NET SDK version.
+        description: Path to the global.json file specifying the .NET SDK version
         required: true
     cache:
-        description: Whether to use a cache .NET SDK installation (true/false).
+        description: Cache .NET SDK installation and NuGet packages
         required: false
         default: "false"
 
 outputs:
     dotnet-version:
-        description: The .NET SDK version that was set up.
-        value: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+        description: The .NET SDK version that was set up
+        value: ${{ steps.get-dotnet-version.outputs.dotnet-version }}
 
 runs:
     using: composite
     steps:
-        - name: 📖 Get .Net Version
-          id: get_dotnet_version
+        - name: 📖 Get .NET Version
+          id: get-dotnet-version
           shell: bash
+          env:
+              GLOBAL_JSON_FILE: ${{ inputs.global-json-file }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/get_dotnet_version.sh"
-              "${{ github.action_path }}/scripts/get_dotnet_version.sh" "${{ inputs.global-json-file }}"
+              "${{ github.action_path }}/scripts/get_dotnet_version.sh"
 
         - name: 🛠️ Setup .NET SDK
           uses: actions/setup-dotnet@v4
@@ -31,10 +33,10 @@ runs:
               DOTNET_CLI_TELEMETRY_OPTOUT: true
               DOTNET_NOLOGO: true
           with:
-              dotnet-version: ${{ steps.get_dotnet_version.outputs.dotnet_version }}
+              dotnet-version: ${{ steps.get-dotnet-version.outputs.dotnet-version }}
 
-        - name: 📦 Cache NuGet packages
-          if: ${{ inputs.cache == 'true' }}
+        - name: 📦 Cache NuGet Packages
+          if: inputs.cache == 'true'
           uses: actions/cache@v4
           with:
               path: ~/.nuget/packages
