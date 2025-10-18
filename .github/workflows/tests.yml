@@ -378,17 +378,46 @@ jobs:
                   echo "Root file" > test-artifacts/root.txt
 
             - name: 📤 Upload Test Artifact
+              id: upload-test
               uses: ./.github/actions/upload-artifact
               with:
                   name: test-artifact
                   path: test-artifacts/**
                   retention-days: 1
 
+            - name: ✅ Verify Upload Outputs
+              shell: bash
+              run: |
+                  ARTIFACT_ID="${{ steps.upload-test.outputs.artifact-id }}"
+                  ARTIFACT_URL="${{ steps.upload-test.outputs.artifact-url }}"
+                  ARTIFACT_DIGEST="${{ steps.upload-test.outputs.artifact-digest }}"
+
+                  if [ -z "${ARTIFACT_ID}" ]; then
+                    echo "::error::artifact-id output is empty"
+                    exit 1
+                  fi
+
+                  if [ -z "${ARTIFACT_URL}" ]; then
+                    echo "::error::artifact-url output is empty"
+                    exit 1
+                  fi
+
+                  if [ -z "${ARTIFACT_DIGEST}" ]; then
+                    echo "::error::artifact-digest output is empty"
+                    exit 1
+                  fi
+
+                  echo "✅ Upload outputs verified"
+                  echo "  ID: ${ARTIFACT_ID}"
+                  echo "  URL: ${ARTIFACT_URL}"
+                  echo "  Digest: ${ARTIFACT_DIGEST}"
+
             - name: 🧹 Clean Test Files
               shell: bash
               run: rm -rf test-artifacts
 
             - name: 📥 Download Test Artifact (Custom Path)
+              id: download-custom
               uses: ./.github/actions/download-artifact
               with:
                   name: test-artifact
@@ -397,6 +426,15 @@ jobs:
             - name: ✅ Verify Downloaded Files (Custom Path)
               shell: bash
               run: |
+                  DOWNLOAD_PATH="${{ steps.download-custom.outputs.download-path }}"
+
+                  if [ -z "${DOWNLOAD_PATH}" ]; then
+                    echo "::error::download-path output is empty"
+                    exit 1
+                  fi
+
+                  echo "Download path: ${DOWNLOAD_PATH}"
+
                   if [ ! -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not in custom path"
                     exit 1
@@ -424,6 +462,7 @@ jobs:
               run: rm -rf downloaded-artifacts
 
             - name: 📥 Download Test Artifact (Restore Paths)
+              id: download-restore
               uses: ./.github/actions/download-artifact
               with:
                   name: test-artifact
@@ -431,6 +470,15 @@ jobs:
             - name: ✅ Verify Restored Files
               shell: bash
               run: |
+                  DOWNLOAD_PATH="${{ steps.download-restore.outputs.download-path }}"
+
+                  if [ -z "${DOWNLOAD_PATH}" ]; then
+                    echo "::error::download-path output is empty"
+                    exit 1
+                  fi
+
+                  echo "Download path: ${DOWNLOAD_PATH}"
+
                   if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not restored"
                     exit 1
@@ -494,9 +542,9 @@ jobs:
             - name: 📝 Create Files Outside Workspace
               shell: bash
               run: |
-                  mkdir -p ~/.external-files
-                  echo "Outside workspace" > ~/.external-files/outside.txt
-                  echo "External data" > ~/.external-files/data.bin
+                  mkdir -p "${HOME}/.external-files"
+                  echo "Outside workspace" > "${HOME}/.external-files/outside.txt"
+                  echo "External data" > "${HOME}/.external-files/data.bin"
 
             - name: 📤 Upload Mixed Location Files
               uses: ./.github/actions/upload-artifact
@@ -512,7 +560,7 @@ jobs:
               shell: bash
               run: |
                   rm -rf workspace-files
-                  rm -rf ~/.external-files
+                  rm -rf "${HOME}/.external-files"
 
             - name: 📥 Download Mixed Location Files (Custom Path)
               uses: ./.github/actions/download-artifact
@@ -526,7 +574,6 @@ jobs:
                   echo "Checking downloaded structure..."
                   find downloaded-mixed -type f
 
-                  # Workspace files should preserve structure
                   if [ ! -f "downloaded-mixed/workspace-files/inside.txt" ]; then
                     echo "::error::Workspace file structure not preserved"
                     exit 1
@@ -537,7 +584,6 @@ jobs:
                     exit 1
                   fi
 
-                  # External files should be in flat structure
                   if [ ! -f "downloaded-mixed/outside.txt" ]; then
                     echo "::error::External file not found in flat structure"
                     exit 1
@@ -548,7 +594,6 @@ jobs:
                     exit 1
                   fi
 
-                  # Verify external files are NOT in nested structure
                   if [ -f "downloaded-mixed/.external-files/outside.txt" ]; then
                     echo "::error::External files should not preserve home directory structure"
                     exit 1
@@ -569,10 +614,9 @@ jobs:
               shell: bash
               run: |
                   echo "Checking restored structure..."
-                  find workspace-files -type f || echo "No workspace-files directory"
+                  find workspace-files -type f 2>/dev/null || echo "No workspace-files directory"
                   ls -la outside.txt data.bin 2>/dev/null || echo "External files not in workspace root"
 
-                  # Workspace files should be restored to original paths
                   if [ ! -f "workspace-files/inside.txt" ]; then
                     echo "::error::Workspace file not restored to original path"
                     exit 1
@@ -583,8 +627,6 @@ jobs:
                     exit 1
                   fi
 
-                  # External files cannot be restored (they were outside workspace)
-                  # They should be in workspace root after download with no path
                   if [ ! -f "outside.txt" ]; then
                     echo "::error::External file not found in workspace root"
                     exit 1
@@ -595,7 +637,6 @@ jobs:
                     exit 1
                   fi
 
-                  # Verify contents
                   INSIDE_CONTENT=$(cat workspace-files/inside.txt)
                   NESTED_CONTENT=$(cat workspace-files/subdir/nested.txt)
                   OUTSIDE_CONTENT=$(cat outside.txt)
@@ -640,8 +681,8 @@ jobs:
             - name: 📦 Simulate Package Creation Outside Workspace
               shell: bash
               run: |
-                  mkdir -p ~/.nupkgs
-                  echo "Mock NuGet Package Content" > ~/.nupkgs/MyProject-1.2.3.nupkg
+                  mkdir -p "${HOME}/.nupkgs"
+                  echo "Mock NuGet Package Content" > "${HOME}/.nupkgs/MyProject-1.2.3.nupkg"
 
             - name: 📝 Simulate Version Update in Workspace
               shell: bash
@@ -668,7 +709,7 @@ jobs:
             - name: 🧹 Clean Everything
               shell: bash
               run: |
-                  rm -rf ~/.nupkgs
+                  rm -rf "${HOME}/.nupkgs"
                   rm -rf src
                   rm -f Directory.Build.props
 
@@ -686,13 +727,11 @@ jobs:
             - name: ✅ Verify Package and Modified Files
               shell: bash
               run: |
-                  # Package should be in custom path (flat structure)
                   if [ ! -f "packages/MyProject-1.2.3.nupkg" ]; then
                     echo "::error::Package not found in custom path"
                     exit 1
                   fi
 
-                  # Modified files should be restored to original workspace paths
                   if [ ! -f "src/MyProject/MyProject.csproj" ]; then
                     echo "::error::csproj not restored to original path"
                     exit 1
@@ -703,7 +742,6 @@ jobs:
                     exit 1
                   fi
 
-                  # Verify version updates persisted
                   if ! grep -q '<Version>1.2.3</Version>' src/MyProject/MyProject.csproj; then
                     echo "::error::Version not updated in csproj"
                     exit 1
@@ -816,8 +854,8 @@ jobs:
             - name: 📝 Create External Files
               shell: bash
               run: |
-                  mkdir -p ~/.macos-external
-                  echo "External macOS file" > ~/.macos-external/external.txt
+                  mkdir -p "${HOME}/.macos-external"
+                  echo "External macOS file" > "${HOME}/.macos-external/external.txt"
 
             - name: 📤 Upload Mixed Files on macOS
               uses: ./.github/actions/upload-artifact
@@ -832,7 +870,7 @@ jobs:
               shell: bash
               run: |
                   rm -rf test-files
-                  rm -rf ~/.macos-external
+                  rm -rf "${HOME}/.macos-external"
 
             - name: 📥 Download Files
               uses: ./.github/actions/download-artifact
@@ -842,7 +880,6 @@ jobs:
             - name: ✅ Verify macOS Compatibility
               shell: bash
               run: |
-                  # Check workspace files restored
                   if [ ! -f "test-files/file1.txt" ]; then
                     echo "::error::file1.txt not restored on macOS"
                     exit 1
@@ -853,7 +890,6 @@ jobs:
                     exit 1
                   fi
 
-                  # Check external file in workspace root
                   if [ ! -f "external.txt" ]; then
                     echo "::error::External file not found on macOS"
                     exit 1

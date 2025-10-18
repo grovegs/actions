@@ -48,17 +48,15 @@ for path_pattern in "${PATHS[@]}"; do
     continue
   fi
 
-  if [[ "${path_pattern}" == !* ]]; then
-    continue
-  fi
-
   path_pattern="${path_pattern/#\~/$HOME}"
 
-  if [ -e "${path_pattern}" ] && [ ! -d "${path_pattern}" ] && [[ "${path_pattern}" != *\** ]] && [[ "${path_pattern}" != *\?* ]]; then
+  if [ -e "${path_pattern}" ] && [[ "${path_pattern}" != *\** ]] && [[ "${path_pattern}" != *\?* ]]; then
     if [ -f "${path_pattern}" ]; then
       ITEM_DIR=$(cd "$(dirname "${path_pattern}")" && pwd)
       ITEM_NAME=$(basename "${path_pattern}")
       ABS_PATH="${ITEM_DIR}/${ITEM_NAME}"
+    elif [ -d "${path_pattern}" ]; then
+      ABS_PATH=$(cd "${path_pattern}" && pwd)
     else
       continue
     fi
@@ -69,18 +67,27 @@ for path_pattern in "${PATHS[@]}"; do
       TARGET_DIR="${STAGING_DIR}/$(dirname "${REL_PATH}")"
       mkdir -p "${TARGET_DIR}"
 
-      cp -p "${path_pattern}" "${STAGING_DIR}/${REL_PATH}"
+      if [ -f "${path_pattern}" ]; then
+        cp -p "${path_pattern}" "${STAGING_DIR}/${REL_PATH}"
+      elif [ -d "${path_pattern}" ]; then
+        cp -rp "${path_pattern}" "${STAGING_DIR}/${REL_PATH}"
+      fi
 
       FILE_ENTRIES+=("${REL_PATH}")
+      FILES_FOUND=$((FILES_FOUND + 1))
     else
       FILENAME=$(basename "${ABS_PATH}")
 
-      cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
-
-      FILE_ENTRIES+=("${FILENAME}")
+      if [ -f "${ABS_PATH}" ]; then
+        cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+        FILE_ENTRIES+=("${FILENAME}")
+        FILES_FOUND=$((FILES_FOUND + 1))
+      elif [ -d "${ABS_PATH}" ]; then
+        cp -rp "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+        FILE_ENTRIES+=("${FILENAME}")
+        FILES_FOUND=$((FILES_FOUND + 1))
+      fi
     fi
-
-    FILES_FOUND=$((FILES_FOUND + 1))
   else
     for item in ${path_pattern}; do
       if [ ! -e "${item}" ]; then
@@ -110,19 +117,20 @@ for path_pattern in "${PATHS[@]}"; do
         fi
 
         FILE_ENTRIES+=("${REL_PATH}")
+        FILES_FOUND=$((FILES_FOUND + 1))
       else
         FILENAME=$(basename "${ABS_PATH}")
 
         if [ -f "${ABS_PATH}" ]; then
           cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+          FILE_ENTRIES+=("${FILENAME}")
+          FILES_FOUND=$((FILES_FOUND + 1))
         elif [ -d "${ABS_PATH}" ]; then
           cp -rp "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+          FILE_ENTRIES+=("${FILENAME}")
+          FILES_FOUND=$((FILES_FOUND + 1))
         fi
-
-        FILE_ENTRIES+=("${FILENAME}")
       fi
-
-      FILES_FOUND=$((FILES_FOUND + 1))
     done
   fi
 done
@@ -133,7 +141,7 @@ if [ "${INCLUDE_HIDDEN}" = "true" ]; then
 fi
 
 if [ "${FILES_FOUND}" -eq 0 ]; then
-  echo "::error::No files found. All items were outside workspace or did not match patterns"
+  echo "::error::No files found matching the patterns"
   exit 1
 fi
 
