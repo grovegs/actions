@@ -1,34 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "::error::Usage: $0 <project>"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
 fi
 
-project="$1"
-
-if [[ ! -d "${project}" ]]; then
-  echo "::error::Project directory '${project}' does not exist."
+if [ ! -d "${PROJECT_DIR}" ]; then
+  echo "::error::Project directory '${PROJECT_DIR}' does not exist"
   exit 1
 fi
 
-solution_file="${project}/$(basename "${project}").sln"
-project_file="${project}/$(basename "${project}").csproj"
+PROJECT_NAME=$(basename "${PROJECT_DIR}")
+SOLUTION_FILE="${PROJECT_DIR}/${PROJECT_NAME}.sln"
+PROJECT_FILE="${PROJECT_DIR}/${PROJECT_NAME}.csproj"
 
-if [[ -f "${solution_file}" ]]; then
-  target_file="${solution_file}"
-  file_type="solution"
-elif [[ -f "${project_file}" ]]; then
-  target_file="${project_file}"
-  file_type="project"
+if [ -f "${SOLUTION_FILE}" ]; then
+  TARGET_FILE="${SOLUTION_FILE}"
+  FILE_TYPE="solution"
+elif [ -f "${PROJECT_FILE}" ]; then
+  TARGET_FILE="${PROJECT_FILE}"
+  FILE_TYPE="project"
 else
-  echo "::error::Neither solution file '${solution_file}' nor project file '${project_file}' exists."
+  echo "::error::Neither solution file '${SOLUTION_FILE}' nor project file '${PROJECT_FILE}' exists"
   exit 1
 fi
 
-echo "::notice::Formatting ${file_type}: ${target_file}"
-if ! dotnet format --verify-no-changes "${target_file}"; then
-  echo "::warning::Code formatting issues found in ${target_file}"
+echo "::notice::Formatting ${FILE_TYPE}: ${TARGET_FILE}"
+
+if ! dotnet format --verify-no-changes "${TARGET_FILE}"; then
+  echo "::warning::Code formatting issues found in ${TARGET_FILE}"
   exit 1
 fi
-echo "::notice::${file_type^} formatting verified successfully"
+
+echo "::notice::${FILE_TYPE^} formatting verified successfully"

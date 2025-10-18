@@ -3,10 +3,10 @@ description: Build a .NET project.
 
 inputs:
     project:
-        description: The relative path to .NET project directory containing the `csproj` file.
+        description: The relative path to .NET project directory containing the csproj file.
         required: true
     configuration:
-        description: The build configuration (e.g., Release or Debug).
+        description: The build configuration such as Release or Debug.
         required: true
     version:
         description: The version number to set for the build.
@@ -18,12 +18,13 @@ inputs:
 runs:
     using: composite
     steps:
-        - name: ⚙️ Build Project
+        - name: 🏗️ Build Project
           shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
+              CONFIGURATION: ${{ inputs.configuration }}
+              VERSION: ${{ inputs.version }}
+              DEFINE_SYMBOLS: ${{ inputs.define-symbols }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/build_project.sh"
-              "${{ github.action_path }}/scripts/build_project.sh" \
-              "${{ inputs.project }}" \
-              "${{ inputs.configuration }}" \
-              "${{ inputs.version }}" \
-              "${{ inputs.define-symbols }}"
+              "${{ github.action_path }}/scripts/build_project.sh"

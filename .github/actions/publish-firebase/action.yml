@@ -1,29 +1,29 @@
 name: Publish to Firebase
-description: Uploads a build file to Firebase App Distribution.
+description: Upload a build file to Firebase App Distribution for testing.
 
 inputs:
     file:
-        description: The name of the build file to be uploaded to Firebase App Distribution.
+        description: Path to the build file to be uploaded to Firebase App Distribution
         required: true
     app-id:
-        description: The Firebase App ID associated with the app.
+        description: The Firebase App ID associated with the app
         required: true
     credentials:
-        description: The Firebase credentials as base64 used for authentication.
+        description: The Firebase credentials as base64 used for authentication
         required: true
     release-notes:
-        description: Notes for this release to be displayed to testers in Firebase App Distribution.
+        description: Release notes to be displayed to testers in Firebase App Distribution
         required: false
         default: ""
     tester-groups:
-        description: A comma-separated list of tester groups to distribute the build to.
+        description: Comma-separated list of tester groups to distribute the build to
         required: false
         default: ""
 
 runs:
     using: composite
     steps:
-        - name: 🚀 Install Firebase
+        - name: 🔧 Install Firebase CLI
           shell: bash
           run: curl -sL https://firebase.tools | bash
 

@@ -1,50 +1,77 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -ne 4 ]; then
-  echo "::error::Usage: $0 <version> <stage> <templates_dir> <platforms>"
+if [ -z "${GODOT_VERSION:-}" ]; then
+  echo "::error::GODOT_VERSION environment variable is required"
   exit 1
 fi
 
-version="$1"
-stage="$2"
-templates_dir="$3"
-platforms="$4"
-
-echo "::notice::Processing platforms: $platforms"
-platform_patterns=$(echo "$platforms" | tr ',' '\n' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | awk '{print "templates/" tolower($0) "*"}' | paste -sd ' ' -)
-
-if ! mkdir -p "${templates_dir}"; then
-  echo "::error::Failed to create directory at ${templates_dir}"
+if [ -z "${GODOT_STAGE:-}" ]; then
+  echo "::error::GODOT_STAGE environment variable is required"
   exit 1
 fi
 
-source_name="godot"
-
-if [[ "${stage}" != "stable" ]]; then
-  source_name+="-builds"
-fi
-
-file_name=${version}.${stage}.mono
-url=https://github.com/godotengine/${source_name}/releases/download/${version}-${stage}/Godot_v${version}-${stage}_mono_export_templates.tpz
-downloaded_file=${templates_dir}/${file_name}.tpz
-
-echo "::notice::Downloading templates from $url"
-if ! curl -L -o "${downloaded_file}" "${url}"; then
-  echo "::error::Download failed for ${url}"
+if [ -z "${TEMPLATES_DIR:-}" ]; then
+  echo "::error::TEMPLATES_DIR environment variable is required"
   exit 1
 fi
 
-if [ ! -f "${downloaded_file}" ]; then
-  echo "::error::Downloaded file ${downloaded_file} not found!"
+if [ -z "${TARGET_PLATFORMS:-}" ]; then
+  echo "::error::TARGET_PLATFORMS environment variable is required"
   exit 1
 fi
 
-echo "::notice::Extracting templates with patterns: ${platform_patterns}"
-if ! unzip -o "${downloaded_file}" "templates/version.txt" ${platform_patterns} -d "${templates_dir}"; then
-  echo "::error::Extraction failed for ${downloaded_file} with patterns ${platform_patterns}"
+if ! command -v curl > /dev/null 2>&1; then
+  echo "::error::curl is not installed or not in PATH"
   exit 1
 fi
 
-rm "${downloaded_file}"
-mv "${templates_dir}/templates" "${templates_dir}/${file_name}"
-echo "::notice::Successfully completed template setup"
+if ! command -v unzip > /dev/null 2>&1; then
+  echo "::error::unzip is not installed or not in PATH"
+  exit 1
+fi
+
+echo "::notice::Processing platforms: ${TARGET_PLATFORMS}"
+
+PLATFORM_PATTERNS=$(echo "${TARGET_PLATFORMS}" \
+  | tr ',' '\n' \
+  | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' \
+  | awk '{print "templates/" tolower($0) "*"}' \
+  | paste -sd ' ' -)
+
+if ! mkdir -p "${TEMPLATES_DIR}"; then
+  echo "::error::Failed to create directory at ${TEMPLATES_DIR}"
+  exit 1
+fi
+
+SOURCE_NAME="godot"
+
+if [[ "${GODOT_STAGE}" != "stable" ]]; then
+  SOURCE_NAME+="-builds"
+fi
+
+FILE_NAME="${GODOT_VERSION}.${GODOT_STAGE}.mono"
+URL="https://github.com/godotengine/${SOURCE_NAME}/releases/download/${GODOT_VERSION}-${GODOT_STAGE}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_export_templates.tpz"
+DOWNLOADED_FILE="${TEMPLATES_DIR}/${FILE_NAME}.tpz"
+
+echo "::notice::Downloading templates from ${URL}"
+if ! curl -L -o "${DOWNLOADED_FILE}" "${URL}"; then
+  echo "::error::Download failed for ${URL}"
+  exit 1
+fi
+
+if [ ! -f "${DOWNLOADED_FILE}" ]; then
+  echo "::error::Downloaded file not found: ${DOWNLOADED_FILE}"
+  exit 1
+fi
+
+echo "::notice::Extracting templates with patterns: ${PLATFORM_PATTERNS}"
+if ! unzip -o "${DOWNLOADED_FILE}" "templates/version.txt" "${PLATFORM_PATTERNS}" -d "${TEMPLATES_DIR}"; then
+  echo "::error::Extraction failed for ${DOWNLOADED_FILE}"
+  exit 1
+fi
+
+rm "${DOWNLOADED_FILE}"
+mv "${TEMPLATES_DIR}/templates" "${TEMPLATES_DIR}/${FILE_NAME}"
+
+echo "::notice::✓ Export templates downloaded successfully"

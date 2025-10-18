@@ -1,74 +1,93 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -ne 3 ]; then
-  echo "::error::Usage: $0 <version> <stage> <runner_os>"
+if [ -z "${GODOT_VERSION:-}" ]; then
+  echo "::error::GODOT_VERSION environment variable is required"
   exit 1
 fi
 
-version="$1"
-stage="$2"
-runner_os="$3"
-
-editor_dir=~/.godot
-
-echo "::notice::Creating Godot directory at ${editor_dir}"
-if ! mkdir -p ${editor_dir}; then
-  echo "::error::Failed to create directory at ${editor_dir}"
+if [ -z "${GODOT_STAGE:-}" ]; then
+  echo "::error::GODOT_STAGE environment variable is required"
   exit 1
 fi
 
-case ${runner_os} in
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
+
+if ! command -v curl > /dev/null 2>&1; then
+  echo "::error::curl is not installed or not in PATH"
+  exit 1
+fi
+
+if ! command -v unzip > /dev/null 2>&1; then
+  echo "::error::unzip is not installed or not in PATH"
+  exit 1
+fi
+
+EDITOR_DIR="${HOME}/.godot"
+
+echo "::notice::Creating Godot directory at ${EDITOR_DIR}"
+if ! mkdir -p "${EDITOR_DIR}"; then
+  echo "::error::Failed to create directory at ${EDITOR_DIR}"
+  exit 1
+fi
+
+case "${RUNNER_OS}" in
   "Linux")
-    platform="linux_x86_64"
+    PLATFORM="linux_x86_64"
     ;;
   "macOS")
-    platform="macos.universal"
+    PLATFORM="macos.universal"
     ;;
   *)
-    echo "::error::Unsupported platform ${runner_os}"
+    echo "::error::Unsupported platform: ${RUNNER_OS}"
     exit 1
     ;;
 esac
 
-source_name="godot"
+SOURCE_NAME="godot"
 
-if [[ "${stage}" != "stable" ]]; then
-  source_name+="-builds"
+if [[ "${GODOT_STAGE}" != "stable" ]]; then
+  SOURCE_NAME+="-builds"
 fi
 
-file_name=Godot_v${version}-${stage}_mono_${platform}
-url=https://github.com/godotengine/${source_name}/releases/download/${version}-${stage}/${file_name}.zip
-downloaded_file=${editor_dir}/${file_name}.zip
+FILE_NAME="Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_${PLATFORM}"
+URL="https://github.com/godotengine/${SOURCE_NAME}/releases/download/${GODOT_VERSION}-${GODOT_STAGE}/${FILE_NAME}.zip"
+DOWNLOADED_FILE="${EDITOR_DIR}/${FILE_NAME}.zip"
 
-echo "::notice::Downloading Godot from ${url}"
-if ! curl -L -o "${downloaded_file}" "${url}"; then
-  echo "::error::Download failed for ${url}"
+echo "::notice::Downloading Godot from ${URL}"
+if ! curl -L -o "${DOWNLOADED_FILE}" "${URL}"; then
+  echo "::error::Download failed for ${URL}"
   exit 1
 fi
 
-if [ ! -f "${downloaded_file}" ]; then
-  echo "::error::Downloaded file ${downloaded_file} not found!"
+if [ ! -f "${DOWNLOADED_FILE}" ]; then
+  echo "::error::Downloaded file not found: ${DOWNLOADED_FILE}"
   exit 1
 fi
 
-echo "::notice::Extracting ${downloaded_file}"
-if ! unzip -o "${downloaded_file}" -d ${editor_dir}; then
-  echo "::error::Extraction failed for ${downloaded_file}"
+echo "::notice::Extracting ${DOWNLOADED_FILE}"
+if ! unzip -o "${DOWNLOADED_FILE}" -d "${EDITOR_DIR}"; then
+  echo "::error::Extraction failed for ${DOWNLOADED_FILE}"
   exit 1
 fi
 
-rm "${downloaded_file}"
+rm "${DOWNLOADED_FILE}"
 
 echo "::notice::Moving Godot to final location"
-case "${runner_os}" in
+case "${RUNNER_OS}" in
   "Linux")
-    mv "${editor_dir}/Godot_v${version}-${stage}_mono_linux_x86_64" "${editor_dir}/Godot_v${version}"
+    mv "${EDITOR_DIR}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux_x86_64" "${EDITOR_DIR}/Godot_v${GODOT_VERSION}"
     ;;
   "macOS")
-    mv "${editor_dir}/Godot_mono.app" "${editor_dir}/Godot_v${version}.app"
+    mv "${EDITOR_DIR}/Godot_mono.app" "${EDITOR_DIR}/Godot_v${GODOT_VERSION}.app"
     ;;
   *)
-    echo "::error::Unsupported platform ${runner_os}"
+    echo "::error::Unsupported platform: ${RUNNER_OS}"
     exit 1
     ;;
 esac
+
+echo "::notice::✓ Godot editor downloaded successfully"

@@ -1,22 +1,29 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-
-FILES_PATTERN="$1"
-IGNORE_PATH="$2"
-
-echo "Formatting files with pattern: $FILES_PATTERN"
-echo "Using ignore file: $IGNORE_PATH"
-
-if ! command -v npx &> /dev/null; then
-  echo "Error: npx is not available"
+if [ -z "${FILES_PATTERN:-}" ]; then
+  echo "::error::FILES_PATTERN environment variable is required"
   exit 1
 fi
 
-if [ -f "$IGNORE_PATH" ]; then
-  npx prettier --write "$FILES_PATTERN" --ignore-path "$IGNORE_PATH" --plugin prettier-plugin-sh
-else
-  npx prettier --write "$FILES_PATTERN" --plugin prettier-plugin-sh
+echo "Formatting files with pattern: ${FILES_PATTERN}"
+
+if ! command -v npx &> /dev/null; then
+  echo "::error::npx is not available"
+  exit 1
 fi
+
+PRETTIER_ARGS=(
+  --write
+  "${FILES_PATTERN}"
+  --plugin prettier-plugin-sh
+)
+
+if [ -n "${IGNORE_PATH}" ] && [ -f "${IGNORE_PATH}" ]; then
+  echo "Using ignore file: ${IGNORE_PATH}"
+  PRETTIER_ARGS+=(--ignore-path "${IGNORE_PATH}")
+fi
+
+npx prettier "${PRETTIER_ARGS[@]}"
 
 echo "File formatting completed successfully"

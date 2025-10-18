@@ -1,39 +1,55 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -ne 4 ]; then
-  echo "::error::Usage: $0 <project_dir> <templates_dir> <version> <stage>"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
 fi
 
-project_dir="$1"
-templates_dir="$2"
-version="$3"
-stage="$4"
-
-echo "::notice::Installing Android template for Godot ${version}-${stage}..."
-
-template_dir=${templates_dir}/${version}.${stage}.mono
-android_source="${template_dir}/android_source.zip"
-android_dir="${project_dir}/android"
-build_dir="${android_dir}/build"
-
-if ! mkdir -p "${build_dir}"; then
-  echo "::error::Failed to create directory at ${build_dir}"
+if [ -z "${TEMPLATES_DIR:-}" ]; then
+  echo "::error::TEMPLATES_DIR environment variable is required"
   exit 1
 fi
 
-if ! unzip -o "${android_source}" -d "${build_dir}"; then
-  echo "::error::Extraction failed for ${android_source}"
+if [ -z "${GODOT_VERSION:-}" ]; then
+  echo "::error::GODOT_VERSION environment variable is required"
   exit 1
 fi
 
-if ! cp "${template_dir}/version.txt" "${android_dir}/.build_version"; then
-  echo "::error::Failed to copy version file to ${android_dir}/.build_version"
+if [ -z "${GODOT_STAGE:-}" ]; then
+  echo "::error::GODOT_STAGE environment variable is required"
   exit 1
 fi
 
-if ! touch "${build_dir}/.gdignore"; then
-  echo "::error::Failed to create .gdignore file in ${build_dir}"
+echo "::notice::Installing Android template for Godot ${GODOT_VERSION}-${GODOT_STAGE}..."
+
+TEMPLATE_DIR="${TEMPLATES_DIR}/${GODOT_VERSION}.${GODOT_STAGE}.mono"
+ANDROID_SOURCE="${TEMPLATE_DIR}/android_source.zip"
+ANDROID_DIR="${PROJECT_DIR}/android"
+BUILD_DIR="${ANDROID_DIR}/build"
+
+if [ ! -f "${ANDROID_SOURCE}" ]; then
+  echo "::error::Android source not found: ${ANDROID_SOURCE}"
+  exit 1
+fi
+
+if ! mkdir -p "${BUILD_DIR}"; then
+  echo "::error::Failed to create directory at ${BUILD_DIR}"
+  exit 1
+fi
+
+if ! unzip -o "${ANDROID_SOURCE}" -d "${BUILD_DIR}"; then
+  echo "::error::Extraction failed for ${ANDROID_SOURCE}"
+  exit 1
+fi
+
+if ! cp "${TEMPLATE_DIR}/version.txt" "${ANDROID_DIR}/.build_version"; then
+  echo "::error::Failed to copy version file to ${ANDROID_DIR}/.build_version"
+  exit 1
+fi
+
+if ! touch "${BUILD_DIR}/.gdignore"; then
+  echo "::error::Failed to create .gdignore file in ${BUILD_DIR}"
   exit 1
 fi
 

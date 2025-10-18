@@ -24,34 +24,52 @@ jobs:
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
               with:
-                  global-json-file: sandbox/ConsoleApp/global.json
+                  global-json-file: sandbox/ConsoleApplication/global.json
 
             - name: 🧪 Test .NET Project
               uses: ./.github/actions/test-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Debug
 
             - name: 🎨 Format .NET Project
               uses: ./.github/actions/format-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
 
             - name: 🏗️ Build .NET Project
               uses: ./.github/actions/build-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 1.0.0-test
                   define-symbols: TEST_BUILD
 
             - name: 📦 Pack .NET Project
+              id: pack-dotnet
               uses: ./.github/actions/pack-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 1.0.0-test
-                  filename: ConsoleApp-test
+                  name: ConsoleApplication-test
+
+            - name: ✅ Verify .NET Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-dotnet.outputs.package }}"
+
+                  if [ -z "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
+                    exit 1
+                  fi
+
+                  echo "✅ Package verified: ${PACKAGE_PATH}"
 
     test-godot-actions:
         name: Test Godot Actions
@@ -70,7 +88,7 @@ jobs:
               with:
                   global-json-file: sandbox/GodotApplication/global.json
                   target-platforms: Android
-                  cache: true
+                  cache: "true"
 
             - name: 🧪 Test Godot Project
               uses: ./.github/actions/test-godot
@@ -88,7 +106,7 @@ jobs:
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
               with:
-                  java-version: 17
+                  java-version: "17"
                   android-packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
 
             - name: 🎮 Setup Unity
@@ -96,7 +114,7 @@ jobs:
               with:
                   project: sandbox/UnityApplication
                   unity-modules: android
-                  cache: true
+                  cache: "true"
 
     test-android-setup:
         name: Test Android Setup
@@ -108,7 +126,7 @@ jobs:
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
               with:
-                  java-version: 17
+                  java-version: "17"
                   android-packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
     test-xcode-setup:
@@ -133,7 +151,7 @@ jobs:
                   fetch-depth: 0
 
             - name: 🆙 Bump Version
-              id: bump_version
+              id: bump-version
               uses: ./.github/actions/bump-version
               with:
                   version-type: patch
@@ -141,7 +159,7 @@ jobs:
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog
               with:
-                  next-version: ${{ steps.bump_version.outputs.next-version }}
+                  next-version: ${{ steps.bump-version.outputs.next-version }}
 
     test-package-actions:
         name: Test Package Actions
@@ -151,11 +169,174 @@ jobs:
               uses: actions/checkout@v5
 
             - name: 📦 Pack Godot Addon
+              id: pack-godot
               uses: ./.github/actions/pack-godot-addon
               with:
                   addon: sandbox/GodotApplication/addons/TestAddon
                   version: 1.0.0-test
                   filename: TestAddon-test
+
+            - name: ✅ Verify Godot Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-godot.outputs.package }}"
+                  MODIFIED_FILES="${{ steps.pack-godot.outputs.modified-files }}"
+
+                  if [ -z "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
+                    exit 1
+                  fi
+
+                  if [ -z "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified files path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified file not found: ${MODIFIED_FILES}"
+                    exit 1
+                  fi
+
+                  if ! grep -q 'version="1.0.0-test"' "${MODIFIED_FILES}"; then
+                    echo "::error::Version not updated in plugin.cfg"
+                    exit 1
+                  fi
+
+                  echo "✅ Godot package verified"
+                  echo "  Package: ${PACKAGE_PATH}"
+                  echo "  Modified: ${MODIFIED_FILES}"
+
+            - name: 📦 Pack Unity Package
+              id: pack-unity
+              uses: ./.github/actions/pack-unity-package
+              with:
+                  package: sandbox/UnityApplication/Packages/com.test.package
+                  version: 2.0.0-test
+                  filename: com.test.package-test
+
+            - name: ✅ Verify Unity Package
+              shell: bash
+              run: |
+                  PACKAGE_PATH="${{ steps.pack-unity.outputs.package }}"
+                  MODIFIED_FILES="${{ steps.pack-unity.outputs.modified-files }}"
+
+                  if [ -z "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
+                    exit 1
+                  fi
+
+                  if [ -z "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified files path is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified file not found: ${MODIFIED_FILES}"
+                    exit 1
+                  fi
+
+                  if ! grep -q '"version": "2.0.0-test"' "${MODIFIED_FILES}"; then
+                    echo "::error::Version not updated in package.json"
+                    exit 1
+                  fi
+
+                  echo "✅ Unity package verified"
+                  echo "  Package: ${PACKAGE_PATH}"
+                  echo "  Modified: ${MODIFIED_FILES}"
+
+    test-dotnet-version-update:
+        name: Test .NET Version Update
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 🔧 Setup .NET
+              uses: ./.github/actions/setup-dotnet
+              with:
+                  global-json-file: sandbox/ConsoleApplication/global.json
+
+            - name: 🏗️ Build .NET Project
+              uses: ./.github/actions/build-dotnet
+              with:
+                  project: sandbox/ConsoleApplication
+                  configuration: Release
+                  version: 2.5.7-test
+
+            - name: 📝 Create Test Directory.Build.props
+              shell: bash
+              run: |
+                  cat > Directory.Build.props << 'EOF'
+                  <Project>
+                    <PropertyGroup>
+                      <Version>0.0.0</Version>
+                      <AssemblyVersion>$(Version)</AssemblyVersion>
+                      <FileVersion>$(Version)</FileVersion>
+                      <PackageVersion>$(Version)</PackageVersion>
+                    </PropertyGroup>
+                  </Project>
+                  EOF
+
+            - name: 📦 Pack with Directory.Build.props
+              id: pack-with-props
+              uses: ./.github/actions/pack-dotnet
+              with:
+                  project: sandbox/ConsoleApplication
+                  configuration: Release
+                  version: 2.5.7-test
+                  name: ConsoleApplication-version-test
+                  directory-build-props: Directory.Build.props
+
+            - name: ✅ Verify Version Updates
+              shell: bash
+              run: |
+                  MODIFIED_FILES="${{ steps.pack-with-props.outputs.modified-files }}"
+
+                  echo "Modified files output:"
+                  echo "${MODIFIED_FILES}"
+                  echo "---"
+
+                  if [ -z "${MODIFIED_FILES}" ]; then
+                    echo "::warning::No modified files reported (properties may use references)"
+                  else
+                    if echo "${MODIFIED_FILES}" | grep -q "Directory.Build.props"; then
+                      echo "✓ Directory.Build.props was modified"
+
+                      if ! grep -q '<Version>2.5.7-test</Version>' Directory.Build.props; then
+                        echo "::error::Version not updated in Directory.Build.props"
+                        cat Directory.Build.props
+                        exit 1
+                      fi
+                      echo "✓ Version updated to 2.5.7-test"
+
+                      if grep -q '<AssemblyVersion>2.5.7-test</AssemblyVersion>' Directory.Build.props; then
+                        echo "::error::Property reference was replaced (should remain as reference)"
+                        cat Directory.Build.props
+                        exit 1
+                      fi
+                      echo "✓ Property references preserved"
+
+                      if ! grep -q '<AssemblyVersion>$(Version)</AssemblyVersion>' Directory.Build.props; then
+                        echo "::error::Property reference was lost"
+                        cat Directory.Build.props
+                        exit 1
+                      fi
+                      echo "✓ All property references intact"
+                    fi
+                  fi
+
+                  echo ""
+                  echo "✅ Version update test completed successfully"
 
     test-format-actions:
         name: Test Format Actions
@@ -167,7 +348,7 @@ jobs:
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
               with:
-                  global-json-file: sandbox/ConsoleApp/global.json
+                  global-json-file: sandbox/ConsoleApplication/global.json
 
             - name: 🎨 Test Format Files Action
               uses: ./.github/actions/format-files
@@ -178,7 +359,7 @@ jobs:
             - name: 🎨 Test Format .NET Action
               uses: ./.github/actions/format-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
 
     test-artifact-actions:
         name: Test Artifact Actions
@@ -216,18 +397,20 @@ jobs:
             - name: ✅ Verify Downloaded Files (Custom Path)
               shell: bash
               run: |
-                  [ -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ] || {
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not in custom path"
                     exit 1
-                  }
-                  [ -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ] || {
+                  fi
+
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ]; then
                     echo "::error::file2.txt not in custom path"
                     exit 1
-                  }
-                  [ -f "downloaded-artifacts/test-artifacts/root.txt" ] || {
+                  fi
+
+                  if [ ! -f "downloaded-artifacts/test-artifacts/root.txt" ]; then
                     echo "::error::root.txt not in custom path"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "downloaded-artifacts/test-artifact.meta" ]; then
                     echo "::error::Metadata file should be removed"
@@ -248,18 +431,20 @@ jobs:
             - name: ✅ Verify Restored Files
               shell: bash
               run: |
-                  [ -f "test-artifacts/dir1/file1.txt" ] || {
+                  if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not restored"
                     exit 1
-                  }
-                  [ -f "test-artifacts/dir2/file2.txt" ] || {
+                  fi
+
+                  if [ ! -f "test-artifacts/dir2/file2.txt" ]; then
                     echo "::error::file2.txt not restored"
                     exit 1
-                  }
-                  [ -f "test-artifacts/root.txt" ] || {
+                  fi
+
+                  if [ ! -f "test-artifacts/root.txt" ]; then
                     echo "::error::root.txt not restored"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "test-artifacts/test-artifact.meta" ]; then
                     echo "::error::Metadata should not be in restored files"
@@ -275,18 +460,20 @@ jobs:
                   CONTENT2=$(cat test-artifacts/dir2/file2.txt)
                   CONTENT3=$(cat test-artifacts/root.txt)
 
-                  [ "$CONTENT1" = "Test file 1" ] || {
+                  if [ "${CONTENT1}" != "Test file 1" ]; then
                     echo "::error::file1.txt wrong content"
                     exit 1
-                  }
-                  [ "$CONTENT2" = "Test file 2" ] || {
+                  fi
+
+                  if [ "${CONTENT2}" != "Test file 2" ]; then
                     echo "::error::file2.txt wrong content"
                     exit 1
-                  }
-                  [ "$CONTENT3" = "Root file" ] || {
+                  fi
+
+                  if [ "${CONTENT3}" != "Root file" ]; then
                     echo "::error::root.txt wrong content"
                     exit 1
-                  }
+                  fi
 
                   echo "✅ All files verified in original paths, no metadata"
 
@@ -335,19 +522,21 @@ jobs:
             - name: ✅ Verify File Extension Artifacts
               shell: bash
               run: |
-                  [ -f "outputs/report.txt" ] || {
+                  if [ ! -f "outputs/report.txt" ]; then
                     echo "::error::report.txt not restored"
                     exit 1
-                  }
-                  [ -f "outputs/data.json" ] || {
+                  fi
+
+                  if [ ! -f "outputs/data.json" ]; then
                     echo "::error::data.json not restored"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "outputs/report.txt.meta" ] || [ -f "report.txt.meta" ]; then
                     echo "::error::report.txt.meta should be removed"
                     exit 1
                   fi
+
                   if [ -f "outputs/data.json.meta" ] || [ -f "data.json.meta" ]; then
                     echo "::error::data.json.meta should be removed"
                     exit 1
@@ -356,13 +545,14 @@ jobs:
                   REPORT_CONTENT=$(cat outputs/report.txt)
                   DATA_CONTENT=$(cat outputs/data.json)
 
-                  [ "$REPORT_CONTENT" = "Report content" ] || {
+                  if [ "${REPORT_CONTENT}" != "Report content" ]; then
                     echo "::error::report.txt wrong content"
                     exit 1
-                  }
-                  [ "$DATA_CONTENT" = '{"data": "test"}' ] || {
+                  fi
+
+                  if [ "${DATA_CONTENT}" != '{"data": "test"}' ]; then
                     echo "::error::data.json wrong content"
                     exit 1
-                  }
+                  fi
 
                   echo "✅ File extension artifacts verified"

@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 if ! command -v git > /dev/null 2>&1; then
   echo "::error::Git is not installed or not in PATH"
@@ -7,24 +8,25 @@ fi
 
 latest_version=$(git describe --tags --abbrev=0 HEAD 2> /dev/null || echo "")
 
-if [ -z "$latest_version" ]; then
+if [ -z "${latest_version}" ]; then
   commits=$(git log --pretty=format:"%s")
 else
   commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
 fi
 
-if [ -z "$commits" ]; then
+if [ -z "${commits}" ]; then
   {
-    echo "changelog_raw<<EOF"
+    echo "changelog-raw<<EOF"
     echo "No changes in this release."
     echo "EOF"
-  } >> "$GITHUB_OUTPUT"
+  } >> "${GITHUB_OUTPUT}"
   exit 0
 fi
 
+declare -a categories
 categories=("Features" "Bug Fixes" "Chores" "Refactors" "Tests" "CI/CD" "Reverts" "Documentation" "Other")
-declare -a commits_by_category
 
+declare -a commits_by_category
 for i in "${!categories[@]}"; do
   commits_by_category[i]=""
 done
@@ -32,23 +34,23 @@ done
 sanitize_text() {
   local text="$1"
   text="${text//\`/\\\`}"
-  printf "%s" "$text"
+  printf "%s" "${text}"
 }
 
 clean_commit() {
   local commit="$1"
-  commit=$(printf "%s" "$commit" | sed 's/^[^a-zA-Z]*//')
-  commit=$(printf "%s" "$commit" | sed 's/[[:space:]]\{1,\}/ /g')
-  commit=$(printf "%s" "$commit" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  printf "%s" "$commit"
+  commit=$(printf "%s" "${commit}" | sed 's/^[^a-zA-Z]*//')
+  commit=$(printf "%s" "${commit}" | sed 's/[[:space:]]\{1,\}/ /g')
+  commit=$(printf "%s" "${commit}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  printf "%s" "${commit}"
 }
 
 get_commit_type() {
   local commit="$1"
   local commit_lower
-  commit_lower=$(printf "%s" "$commit" | tr '[:upper:]' '[:lower:]')
+  commit_lower=$(printf "%s" "${commit}" | tr '[:upper:]' '[:lower:]')
 
-  case "$commit_lower" in
+  case "${commit_lower}" in
     feat\(* | feat:* | feat\[*) printf "feat" ;;
     fix\(* | fix:* | fix\[* | fixes\(* | fixes:* | fixes\[* | hotfix\(* | hotfix:* | hotfix\[*) printf "fix" ;;
     chore\(* | chore:* | chore\[* | style\(* | style:* | style\[*) printf "chore" ;;
@@ -68,78 +70,80 @@ parse_commit() {
   local description=""
   local remaining
 
-  case "$commit_type" in
+  case "${commit_type}" in
     feat)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Ff][Ee][Aa][Tt][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Ff][Ee][Aa][Tt][\[\(:]*//')
       ;;
     fix)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Ff][Ii][Xx][Ee]*[Ss]*[\[\(:]*//' | sed 's/^[Hh][Oo][Tt][Ff][Ii][Xx][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Ff][Ii][Xx][Ee]*[Ss]*[\[\(:]*//' | sed 's/^[Hh][Oo][Tt][Ff][Ii][Xx][\[\(:]*//')
       ;;
     chore)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Cc][Hh][Oo][Rr][Ee][\[\(:]*//' | sed 's/^[Ss][Tt][Yy][Ll][Ee][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Cc][Hh][Oo][Rr][Ee][\[\(:]*//' | sed 's/^[Ss][Tt][Yy][Ll][Ee][\[\(:]*//')
       ;;
     docs)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Dd][Oo][Cc][Ss]*[\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Dd][Oo][Cc][Ss]*[\[\(:]*//')
       ;;
     refactor)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Rr][Ee][Ff][Aa][Cc][Tt][Oo][Rr][\[\(:]*//' | sed 's/^[Pp][Ee][Rr][Ff][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Rr][Ee][Ff][Aa][Cc][Tt][Oo][Rr][\[\(:]*//' | sed 's/^[Pp][Ee][Rr][Ff][\[\(:]*//')
       ;;
     test)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Tt][Ee][Ss][Tt][Ss]*[\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Tt][Ee][Ss][Tt][Ss]*[\[\(:]*//')
       ;;
     ci)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Cc][Ii][\[\(:]*//' | sed 's/^[Bb][Uu][Ii][Ll][Dd][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Cc][Ii][\[\(:]*//' | sed 's/^[Bb][Uu][Ii][Ll][Dd][\[\(:]*//')
       ;;
     revert)
-      remaining=$(printf "%s" "$commit" | sed 's/^[Rr][Ee][Vv][Ee][Rr][Tt][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed 's/^[Rr][Ee][Vv][Ee][Rr][Tt][\[\(:]*//')
       ;;
     *)
-      remaining="$commit"
+      remaining="${commit}"
       ;;
   esac
 
-  if printf "%s" "$remaining" | grep -q '):\|]:\|}:'; then
-    scope=$(printf "%s" "$remaining" | sed 's/^\([^:)]*[)\]]\):.*$/\1/' | sed 's/[[\](){}]//g')
-    description=$(printf "%s" "$remaining" | sed 's/^[^:)]*[)\]]:*[[:space:]]*//')
-  elif printf "%s" "$remaining" | grep -q ':'; then
-    description=$(printf "%s" "$remaining" | sed 's/^[^:]*:[[:space:]]*//')
+  if printf "%s" "${remaining}" | grep -q '):\|]:\|}:'; then
+    scope=$(printf "%s" "${remaining}" | sed 's/^\([^:)]*[)\]]\):.*$/\1/' | sed 's/[[\](){}]//g')
+    description=$(printf "%s" "${remaining}" | sed 's/^[^:)]*[)\]]:*[[:space:]]*//')
+  elif printf "%s" "${remaining}" | grep -q ':'; then
+    description=$(printf "%s" "${remaining}" | sed 's/^[^:]*:[[:space:]]*//')
   else
-    description="$remaining"
+    description="${remaining}"
   fi
 
-  if [ -n "$scope" ]; then
-    scope=$(printf "%s" "$scope" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    scope=$(printf "%s" "$scope" | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9]*$//')
+  if [ -n "${scope}" ]; then
+    scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    scope=$(printf "%s" "${scope}" | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9]*$//')
   fi
 
-  description=$(printf "%s" "$description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  description=$(printf "%s" "${description}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
-  if [ -n "$description" ]; then
-    first_char=$(printf "%s" "$description" | cut -c1)
-    rest_chars=$(printf "%s" "$description" | cut -c2-)
-    case "$first_char" in
-      [A-Z]) description="$(printf "%s" "$first_char" | tr '[:upper:]' '[:lower:]')$rest_chars" ;;
+  if [ -n "${description}" ]; then
+    local first_char
+    local rest_chars
+    first_char=$(printf "%s" "${description}" | cut -c1)
+    rest_chars=$(printf "%s" "${description}" | cut -c2-)
+    case "${first_char}" in
+      [A-Z]) description="$(printf "%s" "${first_char}" | tr '[:upper:]' '[:lower:]')${rest_chars}" ;;
     esac
   fi
 
-  if [ -n "$scope" ] && [ -n "$description" ]; then
-    printf "%s: %s" "$scope" "$description"
-  elif [ -n "$description" ]; then
-    printf "%s" "$description"
+  if [ -n "${scope}" ] && [ -n "${description}" ]; then
+    printf "%s: %s" "${scope}" "${description}"
+  elif [ -n "${description}" ]; then
+    printf "%s" "${description}"
   else
-    printf "%s" "$commit"
+    printf "%s" "${commit}"
   fi
 }
 
 while IFS= read -r commit; do
-  [ -z "$commit" ] && continue
+  [ -z "${commit}" ] && continue
 
-  clean_commit_msg=$(clean_commit "$commit")
-  [ -z "$clean_commit_msg" ] && continue
+  clean_commit_msg=$(clean_commit "${commit}")
+  [ -z "${clean_commit_msg}" ] && continue
 
-  commit_type=$(get_commit_type "$clean_commit_msg")
+  commit_type=$(get_commit_type "${clean_commit_msg}")
 
-  case $commit_type in
+  case ${commit_type} in
     feat) category_index=0 ;;
     fix) category_index=1 ;;
     chore) category_index=2 ;;
@@ -154,15 +158,15 @@ while IFS= read -r commit; do
       ;;
   esac
 
-  if [ "$commit_type" = "other" ]; then
-    formatted_commit="$clean_commit_msg"
+  if [ "${commit_type}" = "other" ]; then
+    formatted_commit="${clean_commit_msg}"
   else
-    formatted_commit=$(parse_commit "$clean_commit_msg" "$commit_type")
+    formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}")
   fi
 
-  formatted_commit=$(sanitize_text "$formatted_commit")
+  formatted_commit=$(sanitize_text "${formatted_commit}")
 
-  if [ -n "$formatted_commit" ]; then
+  if [ -n "${formatted_commit}" ]; then
     if [ -z "${commits_by_category[category_index]}" ]; then
       commits_by_category[category_index]="${formatted_commit}"
     else
@@ -170,13 +174,13 @@ while IFS= read -r commit; do
 ${formatted_commit}"
     fi
   fi
-done <<< "$commits"
+done <<< "${commits}"
 
 changelog=""
 for i in "${!categories[@]}"; do
   if [ -n "${commits_by_category[i]}" ]; then
     category_name=${categories[i]}
-    if [ -z "$changelog" ]; then
+    if [ -z "${changelog}" ]; then
       changelog="${category_name}
 ${commits_by_category[i]}"
     else
@@ -189,11 +193,11 @@ ${commits_by_category[i]}"
 done
 
 {
-  echo "changelog_raw<<EOF"
-  if [ -n "$changelog" ]; then
-    printf "%s\n" "$changelog"
+  echo "changelog-raw<<EOF"
+  if [ -n "${changelog}" ]; then
+    printf "%s\n" "${changelog}"
   else
     echo "No changes in this release."
   fi
   echo "EOF"
-} >> "$GITHUB_OUTPUT"
+} >> "${GITHUB_OUTPUT}"

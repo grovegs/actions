@@ -1,19 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 4 ]; then
-  echo "::error::Usage: $0 <version> <changeset> <modules> <download_dir>"
+if [ -z "${UNITY_VERSION:-}" ]; then
+  echo "::error::UNITY_VERSION environment variable is required"
   exit 1
 fi
 
-version="$1"
-changeset="$2"
-modules="$3"
-download_dir="$4"
+if [ -z "${UNITY_CHANGESET:-}" ]; then
+  echo "::error::UNITY_CHANGESET environment variable is required"
+  exit 1
+fi
 
-echo "::notice::Creating download directory: ${download_dir}"
-if ! mkdir -p "${download_dir}"; then
-  echo "::error::Failed to create download directory: ${download_dir}"
+if [ -z "${DOWNLOAD_DIR:-}" ]; then
+  echo "::error::DOWNLOAD_DIR environment variable is required"
+  exit 1
+fi
+
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
+
+if ! command -v curl > /dev/null 2>&1; then
+  echo "::error::curl is not installed or not in PATH"
+  exit 1
+fi
+
+UNITY_MODULES="${UNITY_MODULES:-}"
+
+echo "::notice::Creating download directory: ${DOWNLOAD_DIR}"
+if ! mkdir -p "${DOWNLOAD_DIR}"; then
+  echo "::error::Failed to create download directory: ${DOWNLOAD_DIR}"
   exit 1
 fi
 
@@ -23,7 +40,7 @@ download_file() {
   local filename
   filename=$(basename "${file_path}")
 
-  echo "::notice::Downloading ${filename} from ${url}"
+  echo "::notice::Downloading ${filename}"
 
   if [ -f "${file_path}" ]; then
     echo "::notice::File already exists, skipping: ${file_path}"
@@ -36,7 +53,7 @@ download_file() {
   local max_retries=3
   local retry_count=0
 
-  while [ $retry_count -lt $max_retries ]; do
+  while [ "${retry_count}" -lt "${max_retries}" ]; do
     if curl --fail --location --silent --show-error --output "${temp_file}" "${url}"; then
       echo "::notice::Successfully downloaded ${filename}"
       mv "${temp_file}" "${file_path}"
@@ -45,7 +62,7 @@ download_file() {
       local curl_exit_code=$?
       retry_count=$((retry_count + 1))
 
-      if [ $curl_exit_code -eq 22 ]; then
+      if [ "${curl_exit_code}" -eq 22 ]; then
         echo "::warning::Module ${filename} is not available for this platform (HTTP 404)"
         rm -f "${temp_file}" 2> /dev/null || true
         return 1
@@ -53,8 +70,8 @@ download_file() {
 
       echo "::warning::Download attempt ${retry_count} failed for ${filename}"
 
-      if [ $retry_count -lt $max_retries ]; then
-        echo "::notice::Retrying in 5 seconds..."
+      if [ "${retry_count}" -lt "${max_retries}" ]; then
+        echo "::notice::Retrying in 5 seconds"
         sleep 5
       fi
     fi
@@ -78,6 +95,7 @@ validate_download() {
 
   local file_size
   file_size=$(stat -f%z "${file_path}" 2> /dev/null || stat -c%s "${file_path}" 2> /dev/null || echo "0")
+
   if [ "${file_size}" -lt 1048576 ]; then
     echo "::error::Downloaded file appears to be corrupted or incomplete: ${filename} (${file_size} bytes)"
     exit 1
@@ -87,7 +105,7 @@ validate_download() {
 }
 
 get_platform_info() {
-  case "$RUNNER_OS" in
+  case "${RUNNER_OS}" in
     "macOS")
       echo "macOS"
       ;;
@@ -95,7 +113,7 @@ get_platform_info() {
       echo "Linux"
       ;;
     *)
-      echo "::error::Unsupported platform: $RUNNER_OS"
+      echo "::error::Unsupported platform: ${RUNNER_OS}"
       exit 1
       ;;
   esac
@@ -104,9 +122,9 @@ get_platform_info() {
 get_editor_info() {
   local platform="$1"
 
-  case "$platform" in
+  case "${platform}" in
     "macOS")
-      echo "MacEditorInstallerArm64|Unity-${version}.pkg"
+      echo "MacEditorInstallerArm64|Unity-${UNITY_VERSION}.pkg"
       ;;
     "Linux")
       echo "LinuxEditorInstaller|Unity.tar.xz"
@@ -118,14 +136,14 @@ get_module_info() {
   local platform="$1"
   local module="$2"
 
-  case "$platform" in
+  case "${platform}" in
     "macOS")
-      case "$module" in
+      case "${module}" in
         "android")
-          echo "MacEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.pkg"
+          echo "MacEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${UNITY_VERSION}.pkg"
           ;;
         "ios")
-          echo "MacEditorTargetInstaller|UnitySetup-iOS-Support-for-Editor-${version}.pkg"
+          echo "MacEditorTargetInstaller|UnitySetup-iOS-Support-for-Editor-${UNITY_VERSION}.pkg"
           ;;
         *)
           echo ""
@@ -133,9 +151,9 @@ get_module_info() {
       esac
       ;;
     "Linux")
-      case "$module" in
+      case "${module}" in
         "android")
-          echo "LinuxEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${version}.tar.xz"
+          echo "LinuxEditorTargetInstaller|UnitySetup-Android-Support-for-Editor-${UNITY_VERSION}.tar.xz"
           ;;
         *)
           echo ""
@@ -145,56 +163,56 @@ get_module_info() {
   esac
 }
 
-echo "::notice::Starting Unity ${version} download for ${RUNNER_OS}"
-echo "::notice::Changeset: ${changeset}"
-echo "::notice::Modules: ${modules}"
+echo "::notice::Starting Unity ${UNITY_VERSION} download for ${RUNNER_OS}"
+echo "::notice::Changeset: ${UNITY_CHANGESET}"
+echo "::notice::Modules: ${UNITY_MODULES}"
 
-platform=$(get_platform_info)
-base_url="https://download.unity3d.com/download_unity/${changeset}"
+PLATFORM=$(get_platform_info)
+BASE_URL="https://download.unity3d.com/download_unity/${UNITY_CHANGESET}"
 
-editor_info=$(get_editor_info "$platform")
-editor_path_segment=$(echo "$editor_info" | cut -d'|' -f1)
-editor_filename=$(echo "$editor_info" | cut -d'|' -f2)
-editor_url="${base_url}/${editor_path_segment}/${editor_filename}"
-editor_file_path="${download_dir}/${editor_filename}"
+EDITOR_INFO=$(get_editor_info "${PLATFORM}")
+EDITOR_PATH_SEGMENT=$(echo "${EDITOR_INFO}" | cut -d'|' -f1)
+EDITOR_FILENAME=$(echo "${EDITOR_INFO}" | cut -d'|' -f2)
+EDITOR_URL="${BASE_URL}/${EDITOR_PATH_SEGMENT}/${EDITOR_FILENAME}"
+EDITOR_FILE_PATH="${DOWNLOAD_DIR}/${EDITOR_FILENAME}"
 
-download_file "${editor_url}" "${editor_file_path}"
-validate_download "${editor_file_path}"
+download_file "${EDITOR_URL}" "${EDITOR_FILE_PATH}"
+validate_download "${EDITOR_FILE_PATH}"
 
-if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
-  echo "::notice::Processing modules: ${modules}"
+if [ -n "${UNITY_MODULES}" ]; then
+  echo "::notice::Processing modules: ${UNITY_MODULES}"
 
-  IFS=',' read -ra module_array <<< "${modules}"
+  IFS=',' read -ra MODULE_ARRAY <<< "${UNITY_MODULES}"
 
-  for module in "${module_array[@]}"; do
-    module_trimmed=$(echo "${module}" | xargs)
+  for module in "${MODULE_ARRAY[@]}"; do
+    MODULE_TRIMMED=$(echo "${module}" | xargs)
 
-    if [ -z "${module_trimmed}" ]; then
+    if [ -z "${MODULE_TRIMMED}" ]; then
       continue
     fi
 
-    echo "::notice::Processing module: ${module_trimmed}"
+    echo "::notice::Processing module: ${MODULE_TRIMMED}"
 
-    module_info=$(get_module_info "$platform" "$module_trimmed")
+    MODULE_INFO=$(get_module_info "${PLATFORM}" "${MODULE_TRIMMED}")
 
-    if [ -z "$module_info" ]; then
-      echo "::warning::Module '${module_trimmed}' is not supported on ${platform}, skipping"
+    if [ -z "${MODULE_INFO}" ]; then
+      echo "::warning::Module '${MODULE_TRIMMED}' is not supported on ${PLATFORM}, skipping"
       continue
     fi
 
-    module_path_segment=$(echo "$module_info" | cut -d'|' -f1)
-    module_filename=$(echo "$module_info" | cut -d'|' -f2)
-    module_url="${base_url}/${module_path_segment}/${module_filename}"
-    module_file_path="${download_dir}/${module_filename}"
+    MODULE_PATH_SEGMENT=$(echo "${MODULE_INFO}" | cut -d'|' -f1)
+    MODULE_FILENAME=$(echo "${MODULE_INFO}" | cut -d'|' -f2)
+    MODULE_URL="${BASE_URL}/${MODULE_PATH_SEGMENT}/${MODULE_FILENAME}"
+    MODULE_FILE_PATH="${DOWNLOAD_DIR}/${MODULE_FILENAME}"
 
-    if download_file "${module_url}" "${module_file_path}"; then
-      validate_download "${module_file_path}"
+    if download_file "${MODULE_URL}" "${MODULE_FILE_PATH}"; then
+      validate_download "${MODULE_FILE_PATH}"
     else
-      echo "::warning::Skipping module '${module_trimmed}' as it is not available for ${platform}"
+      echo "::warning::Skipping module '${MODULE_TRIMMED}' as it is not available for ${PLATFORM}"
     fi
   done
 else
   echo "::notice::No modules specified for download"
 fi
 
-echo "::notice::Unity download completed successfully"
+echo "::notice::✓ Unity download completed successfully"

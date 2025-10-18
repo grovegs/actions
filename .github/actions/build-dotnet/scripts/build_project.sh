@@ -1,54 +1,64 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ "$#" -lt 2 ]; then
-  echo "::error::Usage: $0 <project> <configuration> [<version>] [<define_symbols>]"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
 fi
 
-project="$1"
-configuration="$2"
-version="${3:-}"
-define_symbols="${4:-}"
-
-if [[ ! -d "${project}" ]]; then
-  echo "::error::Project directory '${project}' does not exist."
+if [ -z "${CONFIGURATION:-}" ]; then
+  echo "::error::CONFIGURATION environment variable is required"
   exit 1
 fi
 
-if [[ "${project}" == "." ]]; then
-  file_name="$(basename "$(pwd)")"
+if [ ! -d "${PROJECT_DIR}" ]; then
+  echo "::error::Project directory '${PROJECT_DIR}' does not exist"
+  exit 1
+fi
+
+if [[ "${PROJECT_DIR}" == "." ]]; then
+  FILE_NAME="$(basename "$(pwd)")"
 else
-  file_name="$(basename "${project}")"
+  FILE_NAME="$(basename "${PROJECT_DIR}")"
 fi
 
-project_file="${project}/${file_name}.csproj"
+PROJECT_FILE="${PROJECT_DIR}/${FILE_NAME}.csproj"
 
-if [[ ! -f "${project_file}" ]]; then
-  echo "::error::Project file '${project_file}' does not exist."
+if [ ! -f "${PROJECT_FILE}" ]; then
+  echo "::error::Project file '${PROJECT_FILE}' does not exist"
   exit 1
 fi
 
-version_flag=""
-define_symbols_flag=""
+BUILD_ARGS=(
+  --nologo
+  --configuration "${CONFIGURATION}"
+  "${PROJECT_FILE}"
+)
 
-if [[ -n "${version}" ]]; then
-  version_flag="-p:Version=${version}"
+if [ -n "${VERSION:-}" ]; then
+  BUILD_ARGS+=("-p:Version=${VERSION}")
 fi
 
-if [[ -n "${define_symbols}" ]]; then
-  define_symbols_flag="-p:DefineSymbols=\"${define_symbols}\""
+if [ -n "${DEFINE_SYMBOLS:-}" ]; then
+  BUILD_ARGS+=("-p:DefineSymbols=${DEFINE_SYMBOLS}")
 fi
 
-echo "::group::Building ${project_file}"
-echo "::notice::Configuration: ${configuration}"
-echo "::notice::Version Flag: ${version_flag}"
-echo "::notice::Define Symbols Flag: ${define_symbols_flag}"
+{
+  echo "::group::Building ${PROJECT_FILE}"
+  echo "::notice::Configuration: ${CONFIGURATION}"
+  if [ -n "${VERSION:-}" ]; then
+    echo "::notice::Version: ${VERSION}"
+  fi
+  if [ -n "${DEFINE_SYMBOLS:-}" ]; then
+    echo "::notice::Define Symbols: ${DEFINE_SYMBOLS}"
+  fi
+} >&2
 
-dotnet build --nologo --configuration "${configuration}" "${project_file}" "${version_flag}" "${define_symbols_flag}"
-build_exit_code=$?
+if ! dotnet build "${BUILD_ARGS[@]}"; then
+  echo "::endgroup::"
+  echo "::error::Build failed"
+  exit 1
+fi
+
 echo "::endgroup::"
-
-if [ $build_exit_code -ne 0 ]; then
-  echo "::error::Build failed with exit code ${build_exit_code}"
-  exit $build_exit_code
-fi
+echo "::notice::Build completed successfully"

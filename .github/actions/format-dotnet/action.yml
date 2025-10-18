@@ -3,14 +3,16 @@ description: Formats a .NET project.
 
 inputs:
     project:
-        description: The relative path to the .NET project (.csproj) or solution (.sln) file.
+        description: The relative path to the .NET project directory containing csproj or sln file.
         required: true
 
 runs:
     using: composite
     steps:
-        - name: 🔍 Format Project
+        - name: 🎨 Format Project
           shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_project.sh"
-              "${{ github.action_path }}/scripts/format_project.sh" "${{ inputs.project }}"
+              "${{ github.action_path }}/scripts/format_project.sh"

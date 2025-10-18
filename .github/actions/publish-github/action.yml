@@ -1,21 +1,21 @@
-name: Publish to Github
-description: Creates a GitHub release and uploads specified artifacts.
+name: Publish to GitHub
+description: Create a GitHub release and upload specified artifacts.
 
 inputs:
     title:
-        description: The title for the GitHub release.
+        description: The title for the GitHub release
         required: true
     version:
-        description: The version number for the release.
+        description: The version number for the release
         required: true
     changelog:
-        description: The changelog for the release.
+        description: The changelog content for the release
         required: true
     github-token:
-        description: The GitHub token for authentication.
+        description: The GitHub token for authentication
         required: true
     assets:
-        description: The assets to include in the release.
+        description: Space-separated list of asset paths to include in the release
         required: false
         default: ""
 
@@ -37,18 +37,5 @@ runs:
               RELEASE_NOTES: ${{ inputs.changelog }}
               RELEASE_ASSETS: ${{ inputs.assets }}
           run: |
-              NOTES_FILE=$(mktemp)
-              printf '%s' "$RELEASE_NOTES" > "$NOTES_FILE"
-
-              if [[ -n "$RELEASE_ASSETS" ]]; then
-                IFS=' ' read -ra assets <<< "$RELEASE_ASSETS"
-                gh release create "$RELEASE_VERSION" "${assets[@]}" \
-                  --title "$RELEASE_TITLE" \
-                  --notes-file "$NOTES_FILE"
-              else
-                gh release create "$RELEASE_VERSION" \
-                  --title "$RELEASE_TITLE" \
-                  --notes-file "$NOTES_FILE"
-              fi
-
-              rm -f "$NOTES_FILE"
+              chmod +x "${{ github.action_path }}/scripts/create_release.sh"
+              "${{ github.action_path }}/scripts/create_release.sh"

@@ -1,17 +1,32 @@
-name: Publish Nuget
-description: Uploads NuGet package to nuget.org.
+name: Publish NuGet
+description: Upload a NuGet package to nuget.org with automatic duplicate handling.
 
 inputs:
     file:
-        description: The NuGet file to be published.
+        description: Path to the NuGet package file to be published
         required: true
     api-key:
-        description: NuGet API key used for authenticating and publishing the package.
+        description: NuGet API key used for authenticating and publishing the package
         required: true
+    source:
+        description: The NuGet server URL to publish to
+        required: false
+        default: "https://api.nuget.org/v3/index.json"
+    skip-duplicate:
+        description: Skip publishing if the package version already exists
+        required: false
+        default: "true"
 
 runs:
     using: composite
     steps:
         - name: 🚀 Publish NuGet Package
           shell: bash
-          run: dotnet nuget push ${{ inputs.file }} --api-key ${{ inputs.api-key }} --skip-duplicate --source https://api.nuget.org/v3/index.json
+          env:
+              PACKAGE_FILE: ${{ inputs.file }}
+              NUGET_API_KEY: ${{ inputs.api-key }}
+              NUGET_SOURCE: ${{ inputs.source }}
+              SKIP_DUPLICATE: ${{ inputs.skip-duplicate }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/publish_package.sh"
+              "${{ github.action_path }}/scripts/publish_package.sh"

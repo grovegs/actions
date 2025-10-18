@@ -1,30 +1,48 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-  echo "::error::Usage: $0 <project> <configuration>"
+if [ -z "${PROJECT_PATH:-}" ]; then
+  echo "::error::PROJECT_PATH environment variable is required"
   exit 1
 fi
 
-project="$1"
-configuration="$2"
-
-if [[ ! -d "${project}" ]]; then
-  echo "::error::Project directory '${project}' does not exist."
+if [ -z "${BUILD_CONFIGURATION:-}" ]; then
+  echo "::error::BUILD_CONFIGURATION environment variable is required"
   exit 1
 fi
 
-if [[ "${project}" == "." ]]; then
-  file_name="$(basename "$(pwd)")"
+if ! command -v dotnet > /dev/null 2>&1; then
+  echo "::error::dotnet is not installed or not in PATH"
+  exit 1
+fi
+
+if [ ! -d "${PROJECT_PATH}" ]; then
+  echo "::error::Project directory does not exist: ${PROJECT_PATH}"
+  exit 1
+fi
+
+if [ "${PROJECT_PATH}" = "." ]; then
+  PROJECT_NAME="$(basename "$(pwd)")"
 else
-  file_name="$(basename "${project}")"
+  PROJECT_NAME="$(basename "${PROJECT_PATH}")"
 fi
 
-project_file="${project}/${file_name}.csproj"
+PROJECT_FILE="${PROJECT_PATH}/${PROJECT_NAME}.csproj"
 
-if [[ ! -f "${project_file}" ]]; then
-  echo "::error::Project file '${project_file}' does not exist."
+if [ ! -f "${PROJECT_FILE}" ]; then
+  echo "::error::Project file does not exist: ${PROJECT_FILE}"
   exit 1
 fi
 
-echo "::notice::Running tests for project '${project_file}' with configuration '${configuration}'"
-dotnet test --nologo --configuration "${configuration}" "${project_file}"
+echo "::notice::Running tests for project: ${PROJECT_FILE}"
+echo "  Configuration: ${BUILD_CONFIGURATION}"
+
+if ! dotnet test \
+  --nologo \
+  --configuration "${BUILD_CONFIGURATION}" \
+  "${PROJECT_FILE}"; then
+  echo "::error::Tests failed for project: ${PROJECT_FILE}"
+  exit 1
+fi
+
+echo "::notice::✓ All tests passed for project: ${PROJECT_FILE}"

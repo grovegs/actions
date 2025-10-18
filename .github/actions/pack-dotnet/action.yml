@@ -1,31 +1,45 @@
-name: Pack Dotnet
-description: Packages a .NET project.
+name: Pack .NET
+description: Package a .NET project into a NuGet package with automatic version management.
 
 inputs:
     project:
-        description: The relative path to .NET project directory containing the `csproj` file.
+        description: Path to .NET project directory containing the csproj file
         required: true
     configuration:
-        description: Build configuration (e.g., Release or Debug) for the package.
-        required: true
+        description: Build configuration such as Release or Debug
+        required: false
+        default: "Release"
     version:
-        description: Version number to apply to the package.
+        description: Version number to apply to the package
         required: true
-    filename:
-        description: The name of the output file of the package.
+    name:
+        description: Name of the output package file without .nupkg extension
         required: true
+    directory-build-props:
+        description: Path to Directory.Build.props file to update version
+        required: false
+        default: ""
 
 outputs:
-    file:
-        description: "The path to the packed nuget file."
-        value: ${{ steps.pack_project.outputs.file }}
+    package:
+        description: Path to the created NuGet package file
+        value: ${{ steps.pack.outputs.package }}
+    modified-files:
+        description: Newline-separated paths to modified files in workspace such as csproj and Directory.Build.props
+        value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
     using: composite
     steps:
         - name: 📦 Pack Project
-          id: pack_project
+          id: pack
           shell: bash
+          env:
+              PROJECT_PATH: ${{ inputs.project }}
+              BUILD_CONFIGURATION: ${{ inputs.configuration }}
+              PACKAGE_VERSION: ${{ inputs.version }}
+              PACKAGE_NAME: ${{ inputs.name }}
+              DIRECTORY_BUILD_PROPS: ${{ inputs.directory-build-props }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_project.sh"
-              "${{ github.action_path }}/scripts/pack_project.sh" "${{ inputs.project }}" "${{ inputs.configuration }}" "${{ inputs.version }}" "${{ inputs.filename }}"
+              "${{ github.action_path }}/scripts/pack_project.sh"

@@ -1,25 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "::error::Usage: $0 <runner_os>"
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
   exit 1
 fi
 
-runner_os="$1"
-echo "::notice::Processing templates directory for ${runner_os}"
+echo "::notice::Processing templates directory for ${RUNNER_OS}"
 
-case ${runner_os} in
+case "${RUNNER_OS}" in
   "Linux")
-    templates_dir=~/.local/share/godot/export_templates
+    TEMPLATES_DIR=~/.local/share/godot/export_templates
     ;;
   "macOS")
-    templates_dir=~/Library/Application\ Support/Godot/export_templates
+    TEMPLATES_DIR=~/Library/Application\ Support/Godot/export_templates
     ;;
   *)
-    echo "::error::Unsupported platform ${runner_os}."
+    echo "::error::Unsupported platform: ${RUNNER_OS}"
     exit 1
     ;;
 esac
 
-echo "::notice::Templates directory set to: ${templates_dir}"
-echo templates_dir="${templates_dir}" >> "$GITHUB_OUTPUT"
+{
+  echo "::notice::Templates directory set to: ${TEMPLATES_DIR}"
+  echo "templates-dir=${TEMPLATES_DIR}"
+} >> "${GITHUB_OUTPUT}"

@@ -1,71 +1,120 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "::error::Usage: $0 <project_dir>"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
 fi
 
-project_dir="$1"
-
-if [ ! -d "${project_dir}" ]; then
-  echo "::error::Directory '${project_dir}' does not exist."
+if ! command -v dotnet > /dev/null 2>&1; then
+  echo "::error::dotnet is not installed or not in PATH"
   exit 1
 fi
 
-if [[ "${project_dir}" == "." ]]; then
-  file_name="$(basename "$(pwd)")"
+if ! command -v godot > /dev/null 2>&1; then
+  echo "::error::godot is not installed or not in PATH"
+  exit 1
+fi
+
+if [ ! -d "${PROJECT_DIR}" ]; then
+  echo "::error::Project directory does not exist: ${PROJECT_DIR}"
+  exit 1
+fi
+
+if [ "${PROJECT_DIR}" = "." ]; then
+  PROJECT_NAME="$(basename "$(pwd)")"
 else
-  file_name="$(basename "${project_dir}")"
+  PROJECT_NAME="$(basename "${PROJECT_DIR}")"
 fi
 
-csproj_file="${project_dir}/${file_name}.csproj"
+CSPROJ_FILE="${PROJECT_DIR}/${PROJECT_NAME}.csproj"
 
-if [ ! -f "${csproj_file}" ]; then
-  echo "::error::.csproj file '${csproj_file}' not found."
+if [ ! -f "${CSPROJ_FILE}" ]; then
+  echo "::error::C# project file not found: ${CSPROJ_FILE}"
   exit 1
 fi
 
-dotnet_output=$(dotnet build "${csproj_file}" 2>&1 || true)
-dotnet_error_count=$(echo "${dotnet_output}" | grep -c "error " || true)
-dotnet_warning_count=$(echo "${dotnet_output}" | grep -c "warning " || true)
+PROJECT_GODOT_FILE="${PROJECT_DIR}/project.godot"
 
-if [ "${dotnet_error_count}" -gt 0 ]; then
-  echo "::error::Dotnet build failed with ${dotnet_error_count} error(s)."
-  echo "${dotnet_output}" | grep "error " | uniq | while read -r line; do
+if [ ! -f "${PROJECT_GODOT_FILE}" ]; then
+  echo "::error::Godot project file not found: ${PROJECT_GODOT_FILE}"
+  exit 1
+fi
+
+echo "::notice::Testing Godot project: ${PROJECT_DIR}"
+
+echo "::notice::Building C# project: ${CSPROJ_FILE}"
+
+set +e
+DOTNET_OUTPUT=$(dotnet build "${CSPROJ_FILE}" 2>&1)
+DOTNET_EXIT_CODE=$?
+set -e
+
+DOTNET_ERROR_COUNT=$(echo "${DOTNET_OUTPUT}" | grep -c "error " || true)
+DOTNET_WARNING_COUNT=$(echo "${DOTNET_OUTPUT}" | grep -c "warning " || true)
+
+if [ "${DOTNET_ERROR_COUNT}" -gt 0 ]; then
+  echo "::error::C# build failed with ${DOTNET_ERROR_COUNT} error(s)"
+  echo "${DOTNET_OUTPUT}" | grep "error " | sort -u | while IFS= read -r line; do
     echo "::error::${line}"
   done
 fi
 
-if [ "${dotnet_warning_count}" -gt 0 ]; then
-  echo "::warning::Dotnet build completed with ${dotnet_warning_count} warning(s)."
-  echo "${dotnet_output}" | grep "warning " | uniq | while read -r line; do
+if [ "${DOTNET_WARNING_COUNT}" -gt 0 ]; then
+  echo "::warning::C# build completed with ${DOTNET_WARNING_COUNT} warning(s)"
+  echo "${DOTNET_OUTPUT}" | grep "warning " | sort -u | while IFS= read -r line; do
     echo "::warning::${line}"
   done
 fi
 
-godot_output=$(godot --path "${project_dir}" --headless --quiet --import 2>&1 || true)
-godot_error_count=$(echo "${godot_output}" | grep -c "ERROR:" || true)
-godot_warning_count=$(echo "${godot_output}" | grep -c "WARNING:" || true)
+if [ "${DOTNET_EXIT_CODE}" -eq 0 ]; then
+  echo "::notice::✓ C# build completed successfully"
+fi
 
-if [ "${godot_error_count}" -gt 0 ]; then
-  echo "::error::Godot import failed with ${godot_error_count} error(s)."
-  echo "${godot_output}" | grep "ERROR:" | uniq | while read -r line; do
+echo "::notice::Importing Godot project assets"
+
+set +e
+GODOT_OUTPUT=$(godot --path "${PROJECT_DIR}" --headless --quiet --import 2>&1)
+GODOT_EXIT_CODE=$?
+set -e
+
+GODOT_ERROR_COUNT=$(echo "${GODOT_OUTPUT}" | grep -c "ERROR:" || true)
+GODOT_WARNING_COUNT=$(echo "${GODOT_OUTPUT}" | grep -c "WARNING:" || true)
+
+if [ "${GODOT_ERROR_COUNT}" -gt 0 ]; then
+  echo "::error::Godot import failed with ${GODOT_ERROR_COUNT} error(s)"
+  echo "${GODOT_OUTPUT}" | grep "ERROR:" | sort -u | while IFS= read -r line; do
     echo "::error::${line}"
   done
 fi
 
-if [ "${godot_warning_count}" -gt 0 ]; then
-  echo "::warning::Godot import completed with ${godot_warning_count} warning(s)."
-  echo "${godot_output}" | grep "WARNING:" | uniq | while read -r line; do
+if [ "${GODOT_WARNING_COUNT}" -gt 0 ]; then
+  echo "::warning::Godot import completed with ${GODOT_WARNING_COUNT} warning(s)"
+  echo "${GODOT_OUTPUT}" | grep "WARNING:" | sort -u | while IFS= read -r line; do
     echo "::warning::${line}"
   done
 fi
 
-total_errors=$((dotnet_error_count + godot_error_count))
-total_warnings=$((dotnet_warning_count + godot_warning_count))
-
-if [ "$total_errors" -eq 0 ]; then
-  echo "::notice::Summary: No errors, ${total_warnings} warning(s)."
-else
-  echo "::error::Summary: ${total_errors} error(s), ${total_warnings} warning(s)."
+if [ "${GODOT_EXIT_CODE}" -eq 0 ]; then
+  echo "::notice::✓ Godot import completed successfully"
 fi
+
+TOTAL_ERRORS=$((DOTNET_ERROR_COUNT + GODOT_ERROR_COUNT))
+TOTAL_WARNINGS=$((DOTNET_WARNING_COUNT + GODOT_WARNING_COUNT))
+
+echo ""
+echo "::notice::=========================================="
+echo "::notice::Test Summary"
+echo "::notice::=========================================="
+echo "::notice::C# Build:     ${DOTNET_ERROR_COUNT} error(s), ${DOTNET_WARNING_COUNT} warning(s)"
+echo "::notice::Godot Import: ${GODOT_ERROR_COUNT} error(s), ${GODOT_WARNING_COUNT} warning(s)"
+echo "::notice::------------------------------------------"
+echo "::notice::Total:        ${TOTAL_ERRORS} error(s), ${TOTAL_WARNINGS} warning(s)"
+echo "::notice::=========================================="
+
+if [ "${TOTAL_ERRORS}" -gt 0 ]; then
+  echo "::error::Tests failed with ${TOTAL_ERRORS} total error(s)"
+  exit 1
+fi
+
+echo "::notice::✓ All tests passed"

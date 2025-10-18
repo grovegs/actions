@@ -1,110 +1,152 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-log_error() {
-  echo "::error::$1"
+if [ -z "${PROJECT_DIR:-}" ]; then
+  echo "::error::PROJECT_DIR environment variable is required"
   exit 1
-}
+fi
 
-log_notice() {
-  echo "::notice::$1"
-}
+if [ -z "${PRESET:-}" ]; then
+  echo "::error::PRESET environment variable is required"
+  exit 1
+fi
+
+if [ -z "${CONFIGURATION:-}" ]; then
+  echo "::error::CONFIGURATION environment variable is required"
+  exit 1
+fi
+
+if [ -z "${FILENAME:-}" ]; then
+  echo "::error::FILENAME environment variable is required"
+  exit 1
+fi
+
+if [ -z "${IOS_CERTIFICATE:-}" ]; then
+  echo "::error::IOS_CERTIFICATE is required for iOS builds"
+  exit 1
+fi
+
+if [ -z "${IOS_CERTIFICATE_PASSWORD:-}" ]; then
+  echo "::error::IOS_CERTIFICATE_PASSWORD is required for iOS builds"
+  exit 1
+fi
+
+if [ -z "${IOS_PROVISIONING_PROFILE:-}" ]; then
+  echo "::error::IOS_PROVISIONING_PROFILE is required for iOS builds"
+  exit 1
+fi
+
+if [ -z "${IOS_PROVISIONING_PROFILE_UUID:-}" ]; then
+  echo "::error::IOS_PROVISIONING_PROFILE_UUID is required for iOS builds"
+  exit 1
+fi
+
+BUILDS_DIR="${HOME}/.builds/ios"
+KEYCHAINS_DIR="${RUNNER_TEMP}/Keychains"
+KEYCHAIN_FILE="${KEYCHAINS_DIR}/ios.keychain-db"
+CERTIFICATE_FILE="${RUNNER_TEMP}/ios.p12"
+PROVISIONING_PROFILE_FILE="${RUNNER_TEMP}/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
+PROVISIONING_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
+KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+PROJECT_NAME="$(basename "${PROJECT_DIR}")"
+XCODEPROJ_FILE="${BUILDS_DIR}/${PROJECT_NAME}.xcodeproj"
+EXPORT_FILE="${BUILDS_DIR}/${FILENAME}.ipa"
+
+export DefineSymbols="${DEFINE_SYMBOLS:-}"
 
 cleanup() {
-  log_notice "Cleaning up sensitive files..."
-  security delete-keychain "${keychain_file}" || true
-  rm -f "${certificate_file}" || true
-  rm -f "${provisioning_profile_file}" || true
+  echo "::notice::Cleaning up sensitive files..."
+  security delete-keychain "${KEYCHAIN_FILE}" 2>/dev/null || true
+  rm -f "${CERTIFICATE_FILE}" "${PROVISIONING_PROFILE_FILE}" || true
 }
 trap cleanup EXIT
 
-if [ $# -ne 9 ]; then
-  log_error "Usage: $0 <project_dir> <preset> <configuration> <filename> <define_symbols> <certificate> <certificate_password> <provisioning_profile> <provisioning_profile_uuid>"
-fi
+echo "::notice::Creating required directories..."
+mkdir -p "${BUILDS_DIR}" || {
+  echo "::error::Failed to create directory: ${BUILDS_DIR}"
+  exit 1
+}
+mkdir -p "${KEYCHAINS_DIR}" || {
+  echo "::error::Failed to create directory: ${KEYCHAINS_DIR}"
+  exit 1
+}
+mkdir -p "${PROVISIONING_DIR}" || {
+  echo "::error::Failed to create directory: ${PROVISIONING_DIR}"
+  exit 1
+}
 
-project_dir="$1"
-preset="$2"
-configuration="$3"
-filename="$4"
-define_symbols="$5"
-certificate="$6"
-certificate_password="$7"
-provisioning_profile="$8"
-provisioning_profile_uuid="$9"
+echo "::notice::Decoding certificate and provisioning profile..."
+echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}" || {
+  echo "::error::Failed to decode and save the iOS .p12 certificate"
+  exit 1
+}
+echo -n "${IOS_PROVISIONING_PROFILE}" | base64 -d > "${PROVISIONING_PROFILE_FILE}" || {
+  echo "::error::Failed to decode and save the provisioning profile"
+  exit 1
+}
 
-builds_dir="${HOME}/.builds/ios"
-keychains_dir="${RUNNER_TEMP}/Keychains"
-keychain_file="${keychains_dir}/ios.keychain-db"
-certificate_file="${RUNNER_TEMP}/ios.p12"
-provisioning_profile_file="${RUNNER_TEMP}/${provisioning_profile_uuid}.mobileprovision"
-provisioning_dir="${HOME}/Library/MobileDevice/Provisioning Profiles"
-keychain_password=$(openssl rand -base64 32)
-project_name="$(basename "${project_dir}")"
-xcodeproj_file="${builds_dir}/${project_name}.xcodeproj"
-export_file="${builds_dir}/${filename}.ipa"
+echo "::notice::Creating temporary keychain..."
+security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}" || {
+  echo "::error::Failed to create keychain"
+  exit 1
+}
 
-export DefineSymbols="${define_symbols}"
+echo "::notice::Configuring temporary keychain..."
+security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"
+security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+security list-keychains -d user -s "${KEYCHAIN_FILE}"
 
-log_notice "Creating required directories..."
-mkdir -p "${builds_dir}" || log_error "Failed to create directory: ${builds_dir}"
-mkdir -p "${keychains_dir}" || log_error "Failed to create directory: ${keychains_dir}"
-mkdir -p "${provisioning_dir}" || log_error "Failed to create directory: ${provisioning_dir}"
+echo "::notice::Importing certificate into keychain..."
+security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign || {
+  echo "::error::Failed to import the .p12 certificate into the keychain"
+  exit 1
+}
 
-log_notice "Decoding certificate and provisioning profile..."
-echo -n "${certificate}" | base64 -d > "${certificate_file}" \
-  || log_error "Failed to decode and save the iOS .p12 certificate"
-echo -n "${provisioning_profile}" | base64 -d > "${provisioning_profile_file}" \
-  || log_error "Failed to decode and save the provisioning profile"
+echo "::notice::Copying provisioning profile to local directory..."
+cp "${PROVISIONING_PROFILE_FILE}" "${PROVISIONING_DIR}/" || {
+  echo "::error::Failed to copy the provisioning profile"
+  exit 1
+}
 
-log_notice "Creating temporary keychain..."
-security create-keychain -p "${keychain_password}" "${keychain_file}" \
-  || log_error "Failed to create keychain"
-
-log_notice "Configuring temporary keychain..."
-security set-keychain-settings -lut 3600 "${keychain_file}"
-security unlock-keychain -p "${keychain_password}" "${keychain_file}"
-security list-keychains -d user -s "${keychain_file}"
-
-log_notice "Importing certificate into keychain..."
-security import "${certificate_file}" -k "${keychain_file}" -P "${certificate_password}" -T /usr/bin/codesign \
-  || log_error "Failed to import the .p12 certificate into the keychain"
-
-log_notice "Copying provisioning profile to local directory..."
-cp "${provisioning_profile_file}" "${provisioning_dir}/" \
-  || log_error "Failed to copy the provisioning profile"
-
-case "${configuration}" in
+case "${CONFIGURATION}" in
   Debug)
-    log_notice "Exporting debug build for iOS..."
-    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${provisioning_profile_uuid}"
-    godot --nologo --path "${project_dir}" --rendering-driver vulkan --export-debug "${preset}" "${export_file}" \
-      || log_error "Godot export debug failed"
+    echo "::notice::Exporting debug build for iOS..."
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${IOS_PROVISIONING_PROFILE_UUID}"
+    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-debug "${PRESET}" "${EXPORT_FILE}"; then
+      echo "::error::Godot export debug failed"
+      exit 1
+    fi
     ;;
   Release)
-    log_notice "Exporting release build for iOS..."
-    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${provisioning_profile_uuid}"
-    godot --nologo --path "${project_dir}" --rendering-driver vulkan --export-release "${preset}" "${export_file}" \
-      || log_error "Godot export release failed"
+    echo "::notice::Exporting release build for iOS..."
+    export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${IOS_PROVISIONING_PROFILE_UUID}"
+    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-release "${PRESET}" "${EXPORT_FILE}"; then
+      echo "::error::Godot export release failed"
+      exit 1
+    fi
     ;;
   *)
-    log_error "Unsupported configuration: ${configuration}"
+    echo "::error::Unsupported configuration: ${CONFIGURATION}"
+    exit 1
     ;;
 esac
 
-log_notice "Godot export succeeded. xcodeproj file exported to: ${xcodeproj_file}"
+echo "::notice::Godot export succeeded. xcodeproj file exported to: ${XCODEPROJ_FILE}"
 
-archive_path="${builds_dir}/${project_name}.xcarchive"
-launch_screen_file="${builds_dir}/${project_name}/Launch Screen.storyboard"
-splash_image_file="${builds_dir}/${project_name}/Images.xcassets/SplashImage.imageset"
-export_options_plist="${builds_dir}/${project_name}/export_options.plist"
+ARCHIVE_PATH="${BUILDS_DIR}/${PROJECT_NAME}.xcarchive"
+LAUNCH_SCREEN_FILE="${BUILDS_DIR}/${PROJECT_NAME}/Launch Screen.storyboard"
+SPLASH_IMAGE_FILE="${BUILDS_DIR}/${PROJECT_NAME}/Images.xcassets/SplashImage.imageset"
+EXPORT_OPTIONS_PLIST="${BUILDS_DIR}/${PROJECT_NAME}/export_options.plist"
 
-log_notice "Removing SplashImage and <imageView> from Launch Screen.storyboard..."
+echo "::notice::Removing SplashImage and imageView from Launch Screen.storyboard..."
 
-if [ -d "${launch_screen_file}" ]; then
-  rm -rf "${splash_image_file}"
+if [ -d "${SPLASH_IMAGE_FILE}" ]; then
+  rm -rf "${SPLASH_IMAGE_FILE}"
 fi
 
-if [ ! -f "${launch_screen_file}" ]; then
-  log_error "Launch Screen.storyboard not found at ${launch_screen_file}"
+if [ ! -f "${LAUNCH_SCREEN_FILE}" ]; then
+  echo "::error::Launch Screen.storyboard not found at ${LAUNCH_SCREEN_FILE}"
+  exit 1
 fi
 
 if ! awk '
@@ -112,18 +154,20 @@ if ! awk '
     /<imageView/ { found=1; printing=0; next }
     printing { print }
     /<\/imageView>/ { if (found) { found=0; printing=1; next } else print }
-' "${launch_screen_file}" > "${launch_screen_file}.tmp"; then
-  log_error "Failed to process Launch Screen.storyboard with awk"
+' "${LAUNCH_SCREEN_FILE}" > "${LAUNCH_SCREEN_FILE}.tmp"; then
+  echo "::error::Failed to process Launch Screen.storyboard with awk"
+  exit 1
 fi
 
-if ! mv "${launch_screen_file}.tmp" "${launch_screen_file}"; then
-  log_error "Failed to update Launch Screen.storyboard"
+if ! mv "${LAUNCH_SCREEN_FILE}.tmp" "${LAUNCH_SCREEN_FILE}"; then
+  echo "::error::Failed to update Launch Screen.storyboard"
+  exit 1
 fi
 
-xcodebuild -list -project "${xcodeproj_file}"
+xcodebuild -list -project "${XCODEPROJ_FILE}"
 
-default_scheme="$(
-  xcodebuild -list -project "${xcodeproj_file}" \
+DEFAULT_SCHEME=$(
+  xcodebuild -list -project "${XCODEPROJ_FILE}" \
     | awk '
       /Schemes:/ { flag = 1; next }
       /^$/       { flag = 0 }
@@ -133,27 +177,33 @@ default_scheme="$(
       }
     ' \
     | head -n 1
-)"
+)
 
-log_notice "Running xcodebuild clean..."
+echo "::notice::Running xcodebuild clean..."
 xcodebuild clean \
-  -project "${xcodeproj_file}" \
-  -scheme "${default_scheme}" \
-  -configuration "${configuration}"
+  -project "${XCODEPROJ_FILE}" \
+  -scheme "${DEFAULT_SCHEME}" \
+  -configuration "${CONFIGURATION}"
 
-log_notice "Creating an archive (.xcarchive)..."
+echo "::notice::Creating an archive (.xcarchive)..."
 xcodebuild archive \
-  -project "${xcodeproj_file}" \
-  -scheme "${default_scheme}" \
-  -configuration "${configuration}" \
+  -project "${XCODEPROJ_FILE}" \
+  -scheme "${DEFAULT_SCHEME}" \
+  -configuration "${CONFIGURATION}" \
   -destination 'generic/platform=iOS' \
-  -archivePath "${archive_path}"
+  -archivePath "${ARCHIVE_PATH}"
 
-log_notice "Exporting .ipa from archive..."
+echo "::notice::Exporting .ipa from archive..."
 xcodebuild -exportArchive \
-  -archivePath "${archive_path}" \
-  -exportPath "${builds_dir}" \
-  -exportOptionsPlist "${export_options_plist}"
+  -archivePath "${ARCHIVE_PATH}" \
+  -exportPath "${BUILDS_DIR}" \
+  -exportOptionsPlist "${EXPORT_OPTIONS_PLIST}"
 
-log_notice "Build completed successfully: ${export_file}"
-echo "file=${export_file}" >> "${GITHUB_OUTPUT}"
+if [ ! -f "${EXPORT_FILE}" ]; then
+  echo "::error::IPA file not found: ${EXPORT_FILE}"
+  exit 1
+fi
+
+FILE_SIZE=$(stat -f%z "${EXPORT_FILE}" 2>/dev/null || stat -c%s "${EXPORT_FILE}" 2>/dev/null || echo "unknown")
+echo "::notice::Build completed successfully: ${EXPORT_FILE} (${FILE_SIZE} bytes)"
+echo "file=${EXPORT_FILE}" >> "${GITHUB_OUTPUT}"
