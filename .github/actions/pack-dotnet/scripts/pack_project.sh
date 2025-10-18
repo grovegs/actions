@@ -158,9 +158,9 @@ echo "::notice::✓ Successfully created package: ${PACKAGE_FILE}"
 {
   echo "package=${PACKAGE_FILE}"
 
-  if [ "${#MODIFIED_FILES[@]}" -gt 0 ]; then
-    echo "modified-files<<EOF"
+  echo "modified-files<<EOF"
+  if [ ${#MODIFIED_FILES[@]} -gt 0 ]; then
     printf '%s\n' "${MODIFIED_FILES[@]}"
-    echo "EOF"
   fi
+  echo "EOF"
 } >> "${GITHUB_OUTPUT}"
