@@ -1,17 +1,21 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-modules_string="$1"
+MODULES_STRING="${UNITY_MODULES:-}"
 
-if [ -z "$modules_string" ]; then
+if [ -z "${MODULES_STRING}" ]; then
   echo ""
   exit 0
 fi
 
-modules_id=$(echo "$modules_string" | tr ',' '\n' | sort | while read -r module; do
-  trimmed_module=$(echo "$module" | xargs)
-  if [ -n "$trimmed_module" ]; then
-    echo -n "${trimmed_module:0:3}"
-  fi
-done)
+MODULES_ID=$(echo "${MODULES_STRING}" \
+  | tr ',' '\n' \
+  | sort \
+  | while IFS= read -r module; do
+      TRIMMED_MODULE=$(echo "${module}" | xargs)
+      if [ -n "${TRIMMED_MODULE}" ]; then
+        echo -n "${TRIMMED_MODULE:0:3}"
+      fi
+    done)
 
-echo "$modules_id"
+echo "${MODULES_ID}"

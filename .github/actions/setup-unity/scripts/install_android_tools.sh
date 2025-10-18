@@ -1,51 +1,54 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "::error::Usage: $0 <unity_version>"
+if [ -z "${UNITY_VERSION:-}" ]; then
+  echo "::error::UNITY_VERSION environment variable is required"
   exit 1
 fi
 
-unity_version="$1"
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
 
-jdk_path="${JAVA_HOME:-}"
-sdk_path="${ANDROID_HOME:-}"
-ndk_path="${NDK_HOME:-}"
+JDK_PATH="${JAVA_HOME:-}"
+SDK_PATH="${ANDROID_HOME:-}"
+NDK_PATH="${NDK_HOME:-}"
 
 validate_paths() {
-  echo "::notice::Validating environment paths..."
+  echo "::notice::Validating environment paths"
 
-  if [ -z "${jdk_path}" ] || [ ! -d "${jdk_path}" ]; then
-    echo "::error::JAVA_HOME not set or path does not exist: ${jdk_path}"
+  if [ -z "${JDK_PATH}" ] || [ ! -d "${JDK_PATH}" ]; then
+    echo "::error::JAVA_HOME not set or path does not exist: ${JDK_PATH}"
     echo "::error::Make sure to run setup-android action before setup-unity"
     exit 1
   fi
 
-  if [ -z "${sdk_path}" ] || [ ! -d "${sdk_path}" ]; then
-    echo "::error::ANDROID_HOME not set or path does not exist: ${sdk_path}"
+  if [ -z "${SDK_PATH}" ] || [ ! -d "${SDK_PATH}" ]; then
+    echo "::error::ANDROID_HOME not set or path does not exist: ${SDK_PATH}"
     echo "::error::Make sure to run setup-android action before setup-unity"
     exit 1
   fi
 
-  if [ -z "${ndk_path}" ] || [ ! -d "${ndk_path}" ]; then
-    echo "::error::NDK_HOME not set or path does not exist: ${ndk_path}"
+  if [ -z "${NDK_PATH}" ] || [ ! -d "${NDK_PATH}" ]; then
+    echo "::error::NDK_HOME not set or path does not exist: ${NDK_PATH}"
     echo "::error::Make sure to run setup-android action before setup-unity"
     exit 1
   fi
 
   echo "::notice::Environment paths validated successfully"
-  echo "::notice::JDK: ${jdk_path}"
-  echo "::notice::SDK: ${sdk_path}"
-  echo "::notice::NDK: ${ndk_path}"
+  echo "::notice::JDK: ${JDK_PATH}"
+  echo "::notice::SDK: ${SDK_PATH}"
+  echo "::notice::NDK: ${NDK_PATH}"
 }
 
 find_unity_android_path() {
   local unity_version="$1"
   local android_player_path=""
 
-  echo "::notice::Locating Unity Android Player path for version ${unity_version}..." >&2
+  echo "::notice::Locating Unity Android Player path for version ${unity_version}" >&2
 
-  case "$RUNNER_OS" in
+  case "${RUNNER_OS}" in
     "macOS")
       local unity_path="/Applications/Unity/Unity-${unity_version}"
 
@@ -57,7 +60,7 @@ find_unity_android_path() {
       fi
       ;;
     "Linux")
-      local unity_dir="$HOME/Unity-${unity_version}"
+      local unity_dir="${HOME}/Unity-${unity_version}"
       if [ -d "${unity_dir}" ]; then
         android_player_path="${unity_dir}/Editor/Data/PlaybackEngines/AndroidPlayer"
         echo "::notice::Found Unity Android Player path: ${android_player_path}" >&2
@@ -66,7 +69,7 @@ find_unity_android_path() {
       fi
       ;;
     *)
-      echo "::error::Unsupported platform: $RUNNER_OS" >&2
+      echo "::error::Unsupported platform: ${RUNNER_OS}" >&2
       exit 1
       ;;
   esac
@@ -79,7 +82,7 @@ link_directory() {
   local target_path="$2"
   local description="$3"
 
-  echo "::notice::Linking ${description}..."
+  echo "::notice::Linking ${description}"
   echo "::notice::Source: ${source_path}"
   echo "::notice::Target: ${target_path}"
 
@@ -103,7 +106,7 @@ link_directory() {
 verify_android_tools() {
   local android_player_path="$1"
 
-  echo "::notice::Verifying Android tools installation..."
+  echo "::notice::Verifying Android tools installation"
 
   local unity_sdk_dir="${android_player_path}/SDK"
   local unity_ndk_dir="${android_player_path}/NDK"
@@ -141,7 +144,7 @@ verify_android_tools() {
 display_unity_paths() {
   local android_player_path="$1"
 
-  echo "::notice::Unity Android Player Tools Setup Complete!"
+  echo "::notice::Unity Android Player Tools Setup Complete"
   echo "::notice::"
   echo "::notice::Unity will automatically detect Android tools via symlinks at:"
   echo "::notice::  📁 Android Player: ${android_player_path}"
@@ -151,35 +154,34 @@ display_unity_paths() {
 }
 
 main() {
-  echo "::notice::Starting Android tools symlink setup for Unity ${unity_version}"
+  echo "::notice::Starting Android tools symlink setup for Unity ${UNITY_VERSION}"
   echo "::notice::Platform: ${RUNNER_OS}"
 
   validate_paths
 
-  local android_player_path
-  android_player_path=$(find_unity_android_path "${unity_version}")
+  ANDROID_PLAYER_PATH=$(find_unity_android_path "${UNITY_VERSION}")
 
-  if [ -z "${android_player_path}" ]; then
+  if [ -z "${ANDROID_PLAYER_PATH}" ]; then
     echo "::error::Failed to locate Unity Android Player path"
     exit 1
   fi
 
-  echo "::notice::Creating Android Player directory structure..."
-  mkdir -p "${android_player_path}"
+  echo "::notice::Creating Android Player directory structure"
+  mkdir -p "${ANDROID_PLAYER_PATH}"
 
-  local unity_sdk_dir="${android_player_path}/SDK"
-  local unity_ndk_dir="${android_player_path}/NDK"
-  local unity_jdk_dir="${android_player_path}/OpenJDK"
+  UNITY_SDK_DIR="${ANDROID_PLAYER_PATH}/SDK"
+  UNITY_NDK_DIR="${ANDROID_PLAYER_PATH}/NDK"
+  UNITY_JDK_DIR="${ANDROID_PLAYER_PATH}/OpenJDK"
 
-  link_directory "${jdk_path}" "${unity_jdk_dir}" "OpenJDK"
-  link_directory "${sdk_path}" "${unity_sdk_dir}" "Android SDK"
-  link_directory "${ndk_path}" "${unity_ndk_dir}" "Android NDK"
+  link_directory "${JDK_PATH}" "${UNITY_JDK_DIR}" "OpenJDK"
+  link_directory "${SDK_PATH}" "${UNITY_SDK_DIR}" "Android SDK"
+  link_directory "${NDK_PATH}" "${UNITY_NDK_DIR}" "Android NDK"
 
-  verify_android_tools "${android_player_path}"
+  verify_android_tools "${ANDROID_PLAYER_PATH}"
 
-  display_unity_paths "${android_player_path}"
+  display_unity_paths "${ANDROID_PLAYER_PATH}"
 
-  echo "::notice::Android tools symlink setup completed successfully"
+  echo "::notice::✓ Android tools symlink setup completed successfully"
 }
 
-main "$@"
+main

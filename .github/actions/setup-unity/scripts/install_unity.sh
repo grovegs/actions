@@ -1,22 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 3 ]; then
-  echo "::error::Usage: $0 <version> <modules> <download_dir>"
+if [ -z "${UNITY_VERSION:-}" ]; then
+  echo "::error::UNITY_VERSION environment variable is required"
   exit 1
 fi
 
-version="$1"
-modules="$2"
-download_dir="$3"
+if [ -z "${DOWNLOAD_DIR:-}" ]; then
+  echo "::error::DOWNLOAD_DIR environment variable is required"
+  exit 1
+fi
+
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
+
+UNITY_MODULES="${UNITY_MODULES:-}"
 
 validate_download_dir() {
-  if [ ! -d "${download_dir}" ]; then
-    echo "::error::Download directory does not exist: ${download_dir}"
+  if [ ! -d "${DOWNLOAD_DIR}" ]; then
+    echo "::error::Download directory does not exist: ${DOWNLOAD_DIR}"
     exit 1
   fi
 
-  echo "::notice::Using download directory: ${download_dir}"
+  echo "::notice::Using download directory: ${DOWNLOAD_DIR}"
 }
 
 run_mac_installer() {
@@ -29,17 +37,20 @@ run_mac_installer() {
     exit 1
   fi
 
-  echo "::notice::Installing ${installer_name}..."
+  echo "::notice::Installing ${installer_name}"
 
   if ! pkgutil --check-signature "${installer_path}" > /dev/null 2>&1; then
     echo "::warning::Installer signature could not be verified: ${installer_name}"
   fi
 
-  if sudo installer -pkg "${installer_path}" -target / -verbose; then
+  set +e
+  sudo installer -pkg "${installer_path}" -target / -verbose
+  local exit_code=$?
+  set -e
+
+  if [ "${exit_code}" -eq 0 ]; then
     echo "::notice::Successfully installed ${installer_name}"
   else
-    local exit_code
-    exit_code=$?
     echo "::error::Failed to install ${installer_name} (exit code: ${exit_code})"
     exit 1
   fi
@@ -56,18 +67,26 @@ extract_linux_archive() {
     exit 1
   fi
 
-  echo "::notice::Extracting ${archive_name} to ${extract_dir}..."
+  echo "::notice::Extracting ${archive_name} to ${extract_dir}"
 
   if ! mkdir -p "${extract_dir}"; then
     echo "::error::Failed to create extraction directory: ${extract_dir}"
     exit 1
   fi
 
-  if tar -xf "${archive_path}" -C "${extract_dir}" --verbose; then
+  if ! command -v tar > /dev/null 2>&1; then
+    echo "::error::tar is not installed or not in PATH"
+    exit 1
+  fi
+
+  set +e
+  tar -xf "${archive_path}" -C "${extract_dir}" --verbose
+  local exit_code=$?
+  set -e
+
+  if [ "${exit_code}" -eq 0 ]; then
     echo "::notice::Successfully extracted ${archive_name}"
   else
-    local exit_code
-    exit_code=$?
     echo "::error::Failed to extract ${archive_name} (exit code: ${exit_code})"
     exit 1
   fi
@@ -77,9 +96,9 @@ find_unity_installation() {
   local unity_version="$1"
   local unity_exe_path=""
 
-  echo "::notice::Searching for Unity ${unity_version} installation..." >&2
+  echo "::notice::Searching for Unity ${unity_version} installation" >&2
 
-  case "$RUNNER_OS" in
+  case "${RUNNER_OS}" in
     "macOS")
       local unity_app_path="/Applications/Unity/Unity-${unity_version}/Unity.app"
       unity_exe_path="${unity_app_path}/Contents/MacOS/Unity"
@@ -93,7 +112,7 @@ find_unity_installation() {
       ;;
 
     "Linux")
-      unity_exe_path="$HOME/Unity-${unity_version}/Editor/Unity"
+      unity_exe_path="${HOME}/Unity-${unity_version}/Editor/Unity"
 
       if [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
         echo "::notice::Found Unity installation: ${unity_exe_path}" >&2
@@ -104,7 +123,7 @@ find_unity_installation() {
       ;;
 
     *)
-      echo "::error::Unsupported platform: $RUNNER_OS" >&2
+      echo "::error::Unsupported platform: ${RUNNER_OS}" >&2
       exit 1
       ;;
   esac
@@ -125,10 +144,14 @@ verify_unity_installation() {
     return 1
   fi
 
-  echo "::notice::Verifying Unity installation..."
+  echo "::notice::Verifying Unity installation"
 
+  set +e
   local version_output
-  if version_output=$("${unity_path}" -version 2>&1 | head -5); then
+  version_output=$("${unity_path}" -version 2>&1 | head -5)
+  set -e
+
+  if [ -n "${version_output}" ]; then
     echo "::notice::Unity version verification successful:"
     echo "${version_output}" | while IFS= read -r line; do
       echo "::notice::  ${line}"
@@ -143,7 +166,7 @@ verify_unity_installation() {
 create_unity_wrapper() {
   local unity_path="$1"
 
-  echo "::notice::Creating Unity wrapper script..."
+  echo "::notice::Creating Unity wrapper script"
 
   if [ -L "/usr/local/bin/unity" ] || [ -f "/usr/local/bin/unity" ]; then
     echo "::notice::Removing existing unity command: /usr/local/bin/unity"
@@ -161,30 +184,30 @@ create_unity_wrapper() {
 
   echo "::notice::Creating wrapper script: /usr/local/bin/unity -> ${unity_path}"
 
-  local wrapper_script="#!/bin/bash
+  local wrapper_script="#!/usr/bin/env bash
 set -euo pipefail
 
-unity_real_path=\"${unity_path}\"
+UNITY_REAL_PATH=\"${unity_path}\"
 
-if [ ! -f \"\$unity_real_path\" ]; then
-    echo \"Error: Unity executable not found: \$unity_real_path\" >&2
+if [ ! -f \"\${UNITY_REAL_PATH}\" ]; then
+    echo \"Error: Unity executable not found: \${UNITY_REAL_PATH}\" >&2
     exit 1
 fi"
 
-  if [ "$RUNNER_OS" = "macOS" ]; then
+  if [ "${RUNNER_OS}" = "macOS" ]; then
     wrapper_script+="
 
-unity_app_dir=\$(dirname \$(dirname \$(dirname \"\$unity_real_path\")))
+UNITY_APP_DIR=\$(dirname \$(dirname \$(dirname \"\${UNITY_REAL_PATH}\")))
 
-cd \"\$unity_app_dir\""
+cd \"\${UNITY_APP_DIR}\""
   fi
 
   wrapper_script+="
 
-exec \"\$unity_real_path\" \"\$@\"
+exec \"\${UNITY_REAL_PATH}\" \"\$@\"
 "
 
-  if echo "$wrapper_script" | sudo tee /usr/local/bin/unity > /dev/null; then
+  if echo "${wrapper_script}" | sudo tee /usr/local/bin/unity > /dev/null; then
     if sudo chmod +x /usr/local/bin/unity; then
       echo "::notice::Successfully created Unity wrapper script"
     else
@@ -199,12 +222,11 @@ exec \"\$unity_real_path\" \"\$@\"
   if command -v unity > /dev/null 2>&1; then
     echo "::notice::Unity command is now available in PATH"
 
-    echo "::notice::Testing Unity wrapper script..."
-    if unity -version > /dev/null 2>&1; then
-      echo "::notice::Unity wrapper script test successful"
-    else
-      echo "::warning::Unity wrapper script test failed, but this may be normal for licensing checks"
-    fi
+    echo "::notice::Testing Unity wrapper script"
+    set +e
+    unity -version > /dev/null 2>&1
+    set -e
+    echo "::notice::Unity wrapper script test completed"
   else
     echo "::warning::Unity command may not be available in PATH"
   fi
@@ -215,71 +237,71 @@ configure_unity_environment() {
 
   echo "::notice::Configuring Unity environment for version ${unity_version}"
 
-  unity_exe_path=$(find_unity_installation "${unity_version}")
+  UNITY_EXE_PATH=$(find_unity_installation "${unity_version}")
 
-  if [ -z "${unity_exe_path}" ]; then
+  if [ -z "${UNITY_EXE_PATH}" ]; then
     echo "::error::Failed to locate Unity ${unity_version} installation"
     echo "::error::Please ensure Unity is properly installed"
     exit 1
   fi
 
-  if ! verify_unity_installation "${unity_exe_path}"; then
+  if ! verify_unity_installation "${UNITY_EXE_PATH}"; then
     exit 1
   fi
 
-  create_unity_wrapper "${unity_exe_path}"
+  create_unity_wrapper "${UNITY_EXE_PATH}"
 
-  echo "::notice::Unity environment configuration completed successfully"
-  echo "::notice::Unity executable: ${unity_exe_path}"
+  echo "::notice::✓ Unity environment configuration completed"
+  echo "::notice::Unity executable: ${UNITY_EXE_PATH}"
 }
 
 install_macos() {
-  echo "::notice::Installing Unity for macOS..."
+  echo "::notice::Installing Unity for macOS"
 
-  local editor_installer="${download_dir}/Unity-${version}.pkg"
+  local editor_installer="${DOWNLOAD_DIR}/Unity-${UNITY_VERSION}.pkg"
   run_mac_installer "${editor_installer}"
 
-  if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
-    echo "::notice::Installing macOS modules: ${modules}"
+  if [ -n "${UNITY_MODULES}" ]; then
+    echo "::notice::Installing macOS modules: ${UNITY_MODULES}"
 
-    IFS=',' read -ra module_array <<< "${modules}"
-    for module in "${module_array[@]}"; do
-      module_trimmed=$(echo "${module}" | xargs)
+    IFS=',' read -ra MODULE_ARRAY <<< "${UNITY_MODULES}"
+    for module in "${MODULE_ARRAY[@]}"; do
+      MODULE_TRIMMED=$(echo "${module}" | xargs)
 
-      if [ -z "${module_trimmed}" ]; then
+      if [ -z "${MODULE_TRIMMED}" ]; then
         continue
       fi
 
-      echo "::notice::Installing module: ${module_trimmed}"
+      echo "::notice::Installing module: ${MODULE_TRIMMED}"
 
       local installer_name=""
-      case "${module_trimmed}" in
-        "android") installer_name="UnitySetup-Android-Support-for-Editor-${version}.pkg" ;;
-        "ios") installer_name="UnitySetup-iOS-Support-for-Editor-${version}.pkg" ;;
+      case "${MODULE_TRIMMED}" in
+        "android") installer_name="UnitySetup-Android-Support-for-Editor-${UNITY_VERSION}.pkg" ;;
+        "ios") installer_name="UnitySetup-iOS-Support-for-Editor-${UNITY_VERSION}.pkg" ;;
         *)
-          echo "::warning::Unknown module for macOS: ${module_trimmed}"
+          echo "::warning::Unknown module for macOS: ${MODULE_TRIMMED}"
           continue
           ;;
       esac
 
-      module_installer="${download_dir}/${installer_name}"
-      if [ -f "${module_installer}" ]; then
-        run_mac_installer "${module_installer}"
+      MODULE_INSTALLER="${DOWNLOAD_DIR}/${installer_name}"
+      if [ -f "${MODULE_INSTALLER}" ]; then
+        run_mac_installer "${MODULE_INSTALLER}"
       else
         echo "::warning::Module installer not found: ${installer_name}"
       fi
     done
   fi
 
-  configure_unity_environment "${version}"
+  configure_unity_environment "${UNITY_VERSION}"
 }
 
 install_linux() {
-  echo "::notice::Installing Unity for Linux..."
+  echo "::notice::Installing Unity for Linux"
 
-  local install_location="$HOME/Unity-${version}"
+  local install_location="${HOME}/Unity-${UNITY_VERSION}"
 
-  local editor_archive="${download_dir}/Unity.tar.xz"
+  local editor_archive="${DOWNLOAD_DIR}/Unity.tar.xz"
   extract_linux_archive "${editor_archive}" "${install_location}"
 
   local unity_executable="${install_location}/Editor/Unity"
@@ -295,64 +317,47 @@ install_linux() {
 
   echo "::notice::Unity installed at: ${unity_executable}"
 
-  if [ -n "${modules}" ] && [ "${modules}" != "" ]; then
-    echo "::notice::Installing Linux modules: ${modules}"
+  if [ -n "${UNITY_MODULES}" ]; then
+    echo "::notice::Installing Linux modules: ${UNITY_MODULES}"
 
-    echo "::notice::Attempting to install modules using Unity's module installer..."
+    IFS=',' read -ra MODULE_ARRAY <<< "${UNITY_MODULES}"
+    for module in "${MODULE_ARRAY[@]}"; do
+      MODULE_TRIMMED=$(echo "${module}" | xargs)
 
-    install_command=(
-      "${unity_executable}"
-      -batchmode
-      -quit
-      -nographics
-      -logFile /tmp/unity_module_install.log
-      -installModules "${modules}"
-    )
+      if [ -z "${MODULE_TRIMMED}" ]; then
+        continue
+      fi
 
-    if "${install_command[@]}"; then
-      echo "::notice::Successfully installed modules using Unity's module installer"
-    else
-      echo "::warning::Unity module installer failed, attempting manual installation..."
+      echo "::notice::Manually installing module: ${MODULE_TRIMMED}"
 
-      IFS=',' read -ra module_array <<< "${modules}"
-      for module in "${module_array[@]}"; do
-        module_trimmed=$(echo "${module}" | xargs)
-
-        if [ -z "${module_trimmed}" ]; then
+      local archive_name=""
+      case "${MODULE_TRIMMED}" in
+        "android") archive_name="UnitySetup-Android-Support-for-Editor-${UNITY_VERSION}.tar.xz" ;;
+        *)
+          echo "::warning::Unknown module for Linux: ${MODULE_TRIMMED}"
           continue
-        fi
+          ;;
+      esac
 
-        echo "::notice::Manually installing module: ${module_trimmed}"
-
-        local archive_name=""
-        case "${module_trimmed}" in
-          "android") archive_name="UnitySetup-Android-Support-for-Editor-${version}.tar.xz" ;;
-          *)
-            echo "::warning::Unknown module for Linux: ${module_trimmed}"
-            continue
-            ;;
-        esac
-
-        module_archive="${download_dir}/${archive_name}"
-        if [ -f "${module_archive}" ]; then
-          extract_linux_archive "${module_archive}" "${install_location}"
-        else
-          echo "::warning::Module archive not found: ${archive_name}"
-        fi
-      done
-    fi
+      MODULE_ARCHIVE="${DOWNLOAD_DIR}/${archive_name}"
+      if [ -f "${MODULE_ARCHIVE}" ]; then
+        extract_linux_archive "${MODULE_ARCHIVE}" "${install_location}"
+      else
+        echo "::warning::Module archive not found: ${archive_name}"
+      fi
+    done
   fi
 
-  configure_unity_environment "${version}"
+  configure_unity_environment "${UNITY_VERSION}"
 }
 
 echo "::notice::Starting Unity installation for ${RUNNER_OS}"
-echo "::notice::Version: ${version}"
-echo "::notice::Modules: ${modules}"
+echo "::notice::Version: ${UNITY_VERSION}"
+echo "::notice::Modules: ${UNITY_MODULES}"
 
 validate_download_dir
 
-case "$RUNNER_OS" in
+case "${RUNNER_OS}" in
   "macOS")
     install_macos
     ;;
@@ -360,9 +365,9 @@ case "$RUNNER_OS" in
     install_linux
     ;;
   *)
-    echo "::error::Unsupported platform: $RUNNER_OS"
+    echo "::error::Unsupported platform: ${RUNNER_OS}"
     exit 1
     ;;
 esac
 
-echo "::notice::Unity installation completed successfully"
+echo "::notice::✓ Unity installation completed successfully"
