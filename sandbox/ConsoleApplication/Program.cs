@@ -1,4 +1,4 @@
-﻿namespace ConsoleApplication;
+namespace ConsoleApplication;
 
 public class Program
 {
