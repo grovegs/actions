@@ -28,7 +28,10 @@ echo "::notice::Preparing artifact: ${ARTIFACT_NAME}"
 rm -rf "${STAGING_DIR}"
 mkdir -p "${STAGING_DIR}"
 
-mapfile -t PATHS <<< "${ARTIFACT_PATH}"
+declare -a PATHS
+while IFS= read -r line; do
+  PATHS+=("${line}")
+done <<< "${ARTIFACT_PATH}"
 
 FILES_FOUND=0
 declare -a FILE_ENTRIES
@@ -49,8 +52,6 @@ for path_pattern in "${PATHS[@]}"; do
     continue
   fi
 
-  cd "${WORKSPACE}"
-
   for item in ${path_pattern}; do
     if [ ! -e "${item}" ]; then
       continue
@@ -66,23 +67,31 @@ for path_pattern in "${PATHS[@]}"; do
       continue
     fi
 
-    REL_PATH="${ABS_PATH#"${WORKSPACE}"/}"
+    if [[ "${ABS_PATH}" == "${WORKSPACE}"* ]]; then
+      REL_PATH="${ABS_PATH#"${WORKSPACE}"/}"
 
-    if [ "${REL_PATH}" = "${ABS_PATH}" ]; then
-      echo "::warning::Skipping item outside workspace: ${item}"
-      continue
+      TARGET_DIR="${STAGING_DIR}/$(dirname "${REL_PATH}")"
+      mkdir -p "${TARGET_DIR}"
+
+      if [ -f "${item}" ]; then
+        cp -p "${item}" "${STAGING_DIR}/${REL_PATH}"
+      elif [ -d "${item}" ]; then
+        cp -rp "${item}" "${STAGING_DIR}/${REL_PATH}"
+      fi
+
+      FILE_ENTRIES+=("${REL_PATH}")
+    else
+      FILENAME=$(basename "${ABS_PATH}")
+
+      if [ -f "${ABS_PATH}" ]; then
+        cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+      elif [ -d "${ABS_PATH}" ]; then
+        cp -rp "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+      fi
+
+      FILE_ENTRIES+=("${FILENAME}")
     fi
 
-    TARGET_DIR="${STAGING_DIR}/$(dirname "${REL_PATH}")"
-    mkdir -p "${TARGET_DIR}"
-
-    if [ -f "${item}" ]; then
-      cp -p "${item}" "${STAGING_DIR}/${REL_PATH}"
-    elif [ -d "${item}" ]; then
-      cp -rp "${item}" "${STAGING_DIR}/${REL_PATH}"
-    fi
-
-    FILE_ENTRIES+=("${REL_PATH}")
     FILES_FOUND=$((FILES_FOUND + 1))
   done
 done
