@@ -21,7 +21,7 @@ if [ -z "${PACKAGE_NAME:-}" ]; then
   exit 1
 fi
 
-declare -a MODIFIED_FILES
+declare -a MODIFIED_FILES=()
 
 update_version_in_file() {
   local file="$1"
@@ -155,12 +155,10 @@ fi
 
 echo "::notice::✓ Successfully created package: ${PACKAGE_FILE}"
 
-{
-  echo "package=${PACKAGE_FILE}"
+echo "package=${PACKAGE_FILE}" >> "${GITHUB_OUTPUT}"
 
-  echo "modified-files<<EOF"
-  if [ ${#MODIFIED_FILES[@]} -gt 0 ]; then
-    printf '%s\n' "${MODIFIED_FILES[@]}"
-  fi
-  echo "EOF"
-} >> "${GITHUB_OUTPUT}"
+echo "modified-files<<EOF" >> "${GITHUB_OUTPUT}"
+if [ ${#MODIFIED_FILES[@]} -gt 0 ]; then
+  printf '%s\n' "${MODIFIED_FILES[@]}" >> "${GITHUB_OUTPUT}"
+fi
+echo "EOF" >> "${GITHUB_OUTPUT}"
