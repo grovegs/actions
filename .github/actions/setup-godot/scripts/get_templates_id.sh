@@ -1,22 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "::error::Usage: $0 <platform_templates>"
+if [ -z "${TARGET_PLATFORMS:-}" ]; then
+  echo "::error::TARGET_PLATFORMS environment variable is required"
   exit 1
 fi
 
-platform_templates="$1"
-
 echo "::notice::Processing platform templates"
 
-templates_id=$(echo "$platform_templates" \
-  | tr '[:upper:]' '[:lower:]' | tr -d ' ' | tr ',' '\n' | sort \
+TEMPLATES_ID=$(echo "${TARGET_PLATFORMS}" \
+  | tr '[:upper:]' '[:lower:]' \
+  | tr -d ' ' \
+  | tr ',' '\n' \
+  | sort \
   | awk '{ printf "%s", substr($0, 1, 1) }')
 
-if [[ -z "$templates_id" ]]; then
+if [ -z "${TEMPLATES_ID}" ]; then
   echo "::warning::No templates ID generated"
 else
-  echo "::notice::Templates ID generated successfully"
+  echo "::notice::Templates ID: ${TEMPLATES_ID}"
 fi
 
-echo templates_id="${templates_id}" >> "$GITHUB_OUTPUT"
+{
+  echo "templates-id=${TEMPLATES_ID}"
+} >> "${GITHUB_OUTPUT}"
