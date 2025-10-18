@@ -1,19 +1,23 @@
 name: Publish to TestFlight
-description: Uploads an IPA file to TestFlight using App Store Connect API.
+description: Upload an IPA file to TestFlight using App Store Connect API with automatic retry logic.
 
 inputs:
     file:
-        description: The path to the IPA file to be uploaded to TestFlight.
+        description: Path to the IPA file to be uploaded to TestFlight
         required: true
     api-key:
-        description: The base64-encoded App Store Connect API private key (.p8 file).
+        description: Base64-encoded App Store Connect API private key from .p8 file
         required: true
     api-key-id:
-        description: The App Store Connect API Key ID.
+        description: The App Store Connect API Key ID
         required: true
     api-issuer-id:
-        description: The App Store Connect API Issuer ID.
+        description: The App Store Connect API Issuer ID
         required: true
+    max-retries:
+        description: Maximum number of retry attempts for transient errors
+        required: false
+        default: "5"
 
 runs:
     using: composite
@@ -25,6 +29,7 @@ runs:
               API_KEY: ${{ inputs.api-key }}
               API_KEY_ID: ${{ inputs.api-key-id }}
               API_ISSUER_ID: ${{ inputs.api-issuer-id }}
+              MAX_RETRIES: ${{ inputs.max-retries }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/upload_testflight.sh"
               "${{ github.action_path }}/scripts/upload_testflight.sh"
