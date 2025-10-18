@@ -17,7 +17,6 @@ jobs:
     format-dotnet:
         name: Format .NET Files
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5
@@ -40,7 +39,6 @@ jobs:
     format-files:
         name: Format Files
         runs-on: ubuntu-latest
-
         steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v5

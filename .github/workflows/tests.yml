@@ -59,17 +59,17 @@ jobs:
               run: |
                   PACKAGE_PATH="${{ steps.pack-dotnet.outputs.package }}"
 
-                  if [ -z "$PACKAGE_PATH" ]; then
+                  if [ -z "${PACKAGE_PATH}" ]; then
                     echo "::error::Package path is empty"
                     exit 1
                   fi
 
-                  if [ ! -f "$PACKAGE_PATH" ]; then
-                    echo "::error::Package file not found: $PACKAGE_PATH"
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
                     exit 1
                   fi
 
-                  echo "✅ Package verified: $PACKAGE_PATH"
+                  echo "✅ Package verified: ${PACKAGE_PATH}"
 
     test-godot-actions:
         name: Test Godot Actions
@@ -88,7 +88,7 @@ jobs:
               with:
                   global-json-file: sandbox/GodotApplication/global.json
                   target-platforms: Android
-                  cache: true
+                  cache: "true"
 
             - name: 🧪 Test Godot Project
               uses: ./.github/actions/test-godot
@@ -106,7 +106,7 @@ jobs:
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
               with:
-                  java-version: 17
+                  java-version: "17"
                   android-packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
 
             - name: 🎮 Setup Unity
@@ -114,7 +114,7 @@ jobs:
               with:
                   project: sandbox/UnityApplication
                   unity-modules: android
-                  cache: true
+                  cache: "true"
 
     test-android-setup:
         name: Test Android Setup
@@ -126,7 +126,7 @@ jobs:
             - name: 🤖 Setup Android
               uses: ./.github/actions/setup-android
               with:
-                  java-version: 17
+                  java-version: "17"
                   android-packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
     test-xcode-setup:
@@ -182,34 +182,34 @@ jobs:
                   PACKAGE_PATH="${{ steps.pack-godot.outputs.package }}"
                   MODIFIED_FILES="${{ steps.pack-godot.outputs.modified-files }}"
 
-                  if [ -z "$PACKAGE_PATH" ]; then
+                  if [ -z "${PACKAGE_PATH}" ]; then
                     echo "::error::Package path is empty"
                     exit 1
                   fi
 
-                  if [ ! -f "$PACKAGE_PATH" ]; then
-                    echo "::error::Package file not found: $PACKAGE_PATH"
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
                     exit 1
                   fi
 
-                  if [ -z "$MODIFIED_FILES" ]; then
+                  if [ -z "${MODIFIED_FILES}" ]; then
                     echo "::error::Modified files path is empty"
                     exit 1
                   fi
 
-                  if [ ! -f "$MODIFIED_FILES" ]; then
-                    echo "::error::Modified file not found: $MODIFIED_FILES"
+                  if [ ! -f "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified file not found: ${MODIFIED_FILES}"
                     exit 1
                   fi
 
-                  if ! grep -q 'version="1.0.0-test"' "$MODIFIED_FILES"; then
+                  if ! grep -q 'version="1.0.0-test"' "${MODIFIED_FILES}"; then
                     echo "::error::Version not updated in plugin.cfg"
                     exit 1
                   fi
 
                   echo "✅ Godot package verified"
-                  echo "  Package: $PACKAGE_PATH"
-                  echo "  Modified: $MODIFIED_FILES"
+                  echo "  Package: ${PACKAGE_PATH}"
+                  echo "  Modified: ${MODIFIED_FILES}"
 
             - name: 📦 Pack Unity Package
               id: pack-unity
@@ -225,34 +225,34 @@ jobs:
                   PACKAGE_PATH="${{ steps.pack-unity.outputs.package }}"
                   MODIFIED_FILES="${{ steps.pack-unity.outputs.modified-files }}"
 
-                  if [ -z "$PACKAGE_PATH" ]; then
+                  if [ -z "${PACKAGE_PATH}" ]; then
                     echo "::error::Package path is empty"
                     exit 1
                   fi
 
-                  if [ ! -f "$PACKAGE_PATH" ]; then
-                    echo "::error::Package file not found: $PACKAGE_PATH"
+                  if [ ! -f "${PACKAGE_PATH}" ]; then
+                    echo "::error::Package file not found: ${PACKAGE_PATH}"
                     exit 1
                   fi
 
-                  if [ -z "$MODIFIED_FILES" ]; then
+                  if [ -z "${MODIFIED_FILES}" ]; then
                     echo "::error::Modified files path is empty"
                     exit 1
                   fi
 
-                  if [ ! -f "$MODIFIED_FILES" ]; then
-                    echo "::error::Modified file not found: $MODIFIED_FILES"
+                  if [ ! -f "${MODIFIED_FILES}" ]; then
+                    echo "::error::Modified file not found: ${MODIFIED_FILES}"
                     exit 1
                   fi
 
-                  if ! grep -q '"version": "2.0.0-test"' "$MODIFIED_FILES"; then
+                  if ! grep -q '"version": "2.0.0-test"' "${MODIFIED_FILES}"; then
                     echo "::error::Version not updated in package.json"
                     exit 1
                   fi
 
                   echo "✅ Unity package verified"
-                  echo "  Package: $PACKAGE_PATH"
-                  echo "  Modified: $MODIFIED_FILES"
+                  echo "  Package: ${PACKAGE_PATH}"
+                  echo "  Modified: ${MODIFIED_FILES}"
 
     test-dotnet-version-update:
         name: Test .NET Version Update
@@ -302,15 +302,15 @@ jobs:
               run: |
                   MODIFIED_FILES="${{ steps.pack-with-props.outputs.modified-files }}"
 
-                  if [ -z "$MODIFIED_FILES" ]; then
+                  if [ -z "${MODIFIED_FILES}" ]; then
                     echo "::error::No modified files reported"
                     exit 1
                   fi
 
                   echo "Modified files:"
-                  echo "$MODIFIED_FILES"
+                  echo "${MODIFIED_FILES}"
 
-                  if ! echo "$MODIFIED_FILES" | grep -q "Directory.Build.props"; then
+                  if ! echo "${MODIFIED_FILES}" | grep -q "Directory.Build.props"; then
                     echo "::error::Directory.Build.props not in modified files"
                     exit 1
                   fi
@@ -396,18 +396,20 @@ jobs:
             - name: ✅ Verify Downloaded Files (Custom Path)
               shell: bash
               run: |
-                  [ -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ] || {
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not in custom path"
                     exit 1
-                  }
-                  [ -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ] || {
+                  fi
+
+                  if [ ! -f "downloaded-artifacts/test-artifacts/dir2/file2.txt" ]; then
                     echo "::error::file2.txt not in custom path"
                     exit 1
-                  }
-                  [ -f "downloaded-artifacts/test-artifacts/root.txt" ] || {
+                  fi
+
+                  if [ ! -f "downloaded-artifacts/test-artifacts/root.txt" ]; then
                     echo "::error::root.txt not in custom path"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "downloaded-artifacts/test-artifact.meta" ]; then
                     echo "::error::Metadata file should be removed"
@@ -428,18 +430,20 @@ jobs:
             - name: ✅ Verify Restored Files
               shell: bash
               run: |
-                  [ -f "test-artifacts/dir1/file1.txt" ] || {
+                  if [ ! -f "test-artifacts/dir1/file1.txt" ]; then
                     echo "::error::file1.txt not restored"
                     exit 1
-                  }
-                  [ -f "test-artifacts/dir2/file2.txt" ] || {
+                  fi
+
+                  if [ ! -f "test-artifacts/dir2/file2.txt" ]; then
                     echo "::error::file2.txt not restored"
                     exit 1
-                  }
-                  [ -f "test-artifacts/root.txt" ] || {
+                  fi
+
+                  if [ ! -f "test-artifacts/root.txt" ]; then
                     echo "::error::root.txt not restored"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "test-artifacts/test-artifact.meta" ]; then
                     echo "::error::Metadata should not be in restored files"
@@ -455,18 +459,20 @@ jobs:
                   CONTENT2=$(cat test-artifacts/dir2/file2.txt)
                   CONTENT3=$(cat test-artifacts/root.txt)
 
-                  [ "$CONTENT1" = "Test file 1" ] || {
+                  if [ "${CONTENT1}" != "Test file 1" ]; then
                     echo "::error::file1.txt wrong content"
                     exit 1
-                  }
-                  [ "$CONTENT2" = "Test file 2" ] || {
+                  fi
+
+                  if [ "${CONTENT2}" != "Test file 2" ]; then
                     echo "::error::file2.txt wrong content"
                     exit 1
-                  }
-                  [ "$CONTENT3" = "Root file" ] || {
+                  fi
+
+                  if [ "${CONTENT3}" != "Root file" ]; then
                     echo "::error::root.txt wrong content"
                     exit 1
-                  }
+                  fi
 
                   echo "✅ All files verified in original paths, no metadata"
 
@@ -515,19 +521,21 @@ jobs:
             - name: ✅ Verify File Extension Artifacts
               shell: bash
               run: |
-                  [ -f "outputs/report.txt" ] || {
+                  if [ ! -f "outputs/report.txt" ]; then
                     echo "::error::report.txt not restored"
                     exit 1
-                  }
-                  [ -f "outputs/data.json" ] || {
+                  fi
+
+                  if [ ! -f "outputs/data.json" ]; then
                     echo "::error::data.json not restored"
                     exit 1
-                  }
+                  fi
 
                   if [ -f "outputs/report.txt.meta" ] || [ -f "report.txt.meta" ]; then
                     echo "::error::report.txt.meta should be removed"
                     exit 1
                   fi
+
                   if [ -f "outputs/data.json.meta" ] || [ -f "data.json.meta" ]; then
                     echo "::error::data.json.meta should be removed"
                     exit 1
@@ -536,13 +544,14 @@ jobs:
                   REPORT_CONTENT=$(cat outputs/report.txt)
                   DATA_CONTENT=$(cat outputs/data.json)
 
-                  [ "$REPORT_CONTENT" = "Report content" ] || {
+                  if [ "${REPORT_CONTENT}" != "Report content" ]; then
                     echo "::error::report.txt wrong content"
                     exit 1
-                  }
-                  [ "$DATA_CONTENT" = '{"data": "test"}' ] || {
+                  fi
+
+                  if [ "${DATA_CONTENT}" != '{"data": "test"}' ]; then
                     echo "::error::data.json wrong content"
                     exit 1
-                  }
+                  fi
 
                   echo "✅ File extension artifacts verified"
