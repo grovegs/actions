@@ -477,6 +477,248 @@ jobs:
 
                   echo "✅ All files verified in original paths, no metadata"
 
+    test-artifact-workspace-boundaries:
+        name: Test Workspace Boundary Handling
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 📝 Create Files Inside Workspace
+              shell: bash
+              run: |
+                  mkdir -p workspace-files/subdir
+                  echo "Inside workspace" > workspace-files/inside.txt
+                  echo "Nested file" > workspace-files/subdir/nested.txt
+
+            - name: 📝 Create Files Outside Workspace
+              shell: bash
+              run: |
+                  mkdir -p ~/.external-files
+                  echo "Outside workspace" > ~/.external-files/outside.txt
+                  echo "External data" > ~/.external-files/data.bin
+
+            - name: 📤 Upload Mixed Location Files
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: mixed-locations
+                  path: |
+                      workspace-files/**
+                      ~/.external-files/outside.txt
+                      ~/.external-files/data.bin
+                  retention-days: 1
+
+            - name: 🧹 Clean All Files
+              shell: bash
+              run: |
+                  rm -rf workspace-files
+                  rm -rf ~/.external-files
+
+            - name: 📥 Download Mixed Location Files (Custom Path)
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: mixed-locations
+                  path: downloaded-mixed
+
+            - name: ✅ Verify Mixed Location Structure (Custom Path)
+              shell: bash
+              run: |
+                  echo "Checking downloaded structure..."
+                  find downloaded-mixed -type f
+
+                  # Workspace files should preserve structure
+                  if [ ! -f "downloaded-mixed/workspace-files/inside.txt" ]; then
+                    echo "::error::Workspace file structure not preserved"
+                    exit 1
+                  fi
+
+                  if [ ! -f "downloaded-mixed/workspace-files/subdir/nested.txt" ]; then
+                    echo "::error::Nested workspace file not found"
+                    exit 1
+                  fi
+
+                  # External files should be in flat structure
+                  if [ ! -f "downloaded-mixed/outside.txt" ]; then
+                    echo "::error::External file not found in flat structure"
+                    exit 1
+                  fi
+
+                  if [ ! -f "downloaded-mixed/data.bin" ]; then
+                    echo "::error::External binary file not found"
+                    exit 1
+                  fi
+
+                  # Verify external files are NOT in nested structure
+                  if [ -f "downloaded-mixed/.external-files/outside.txt" ]; then
+                    echo "::error::External files should not preserve home directory structure"
+                    exit 1
+                  fi
+
+                  echo "✅ Mixed location structure verified in custom path"
+
+            - name: 🧹 Clean Downloaded Files
+              shell: bash
+              run: rm -rf downloaded-mixed
+
+            - name: 📥 Download Mixed Location Files (Restore Paths)
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: mixed-locations
+
+            - name: ✅ Verify Restored Paths
+              shell: bash
+              run: |
+                  echo "Checking restored structure..."
+                  find workspace-files -type f || echo "No workspace-files directory"
+                  ls -la outside.txt data.bin 2>/dev/null || echo "External files not in workspace root"
+
+                  # Workspace files should be restored to original paths
+                  if [ ! -f "workspace-files/inside.txt" ]; then
+                    echo "::error::Workspace file not restored to original path"
+                    exit 1
+                  fi
+
+                  if [ ! -f "workspace-files/subdir/nested.txt" ]; then
+                    echo "::error::Nested workspace file not restored"
+                    exit 1
+                  fi
+
+                  # External files cannot be restored (they were outside workspace)
+                  # They should be in workspace root after download with no path
+                  if [ ! -f "outside.txt" ]; then
+                    echo "::error::External file not found in workspace root"
+                    exit 1
+                  fi
+
+                  if [ ! -f "data.bin" ]; then
+                    echo "::error::External binary not found in workspace root"
+                    exit 1
+                  fi
+
+                  # Verify contents
+                  INSIDE_CONTENT=$(cat workspace-files/inside.txt)
+                  NESTED_CONTENT=$(cat workspace-files/subdir/nested.txt)
+                  OUTSIDE_CONTENT=$(cat outside.txt)
+                  DATA_CONTENT=$(cat data.bin)
+
+                  if [ "${INSIDE_CONTENT}" != "Inside workspace" ]; then
+                    echo "::error::Inside workspace file has wrong content"
+                    exit 1
+                  fi
+
+                  if [ "${NESTED_CONTENT}" != "Nested file" ]; then
+                    echo "::error::Nested file has wrong content"
+                    exit 1
+                  fi
+
+                  if [ "${OUTSIDE_CONTENT}" != "Outside workspace" ]; then
+                    echo "::error::Outside workspace file has wrong content"
+                    exit 1
+                  fi
+
+                  if [ "${DATA_CONTENT}" != "External data" ]; then
+                    echo "::error::External data file has wrong content"
+                    exit 1
+                  fi
+
+                  echo "✅ All files restored correctly with proper boundary handling"
+
+    test-artifact-package-simulation:
+        name: Test Package Artifact Simulation
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 📝 Create Workspace Source Files
+              shell: bash
+              run: |
+                  mkdir -p src/MyProject
+                  echo '<Project><Version>1.0.0</Version></Project>' > src/MyProject/MyProject.csproj
+                  echo '<Project><Version>1.0.0</Version></Project>' > Directory.Build.props
+
+            - name: 📦 Simulate Package Creation Outside Workspace
+              shell: bash
+              run: |
+                  mkdir -p ~/.nupkgs
+                  echo "Mock NuGet Package Content" > ~/.nupkgs/MyProject-1.2.3.nupkg
+
+            - name: 📝 Simulate Version Update in Workspace
+              shell: bash
+              run: |
+                  sed -i 's/<Version>1.0.0<\/Version>/<Version>1.2.3<\/Version>/' src/MyProject/MyProject.csproj
+                  sed -i 's/<Version>1.0.0<\/Version>/<Version>1.2.3<\/Version>/' Directory.Build.props
+
+            - name: 📤 Upload Package (Outside Workspace)
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: package-nupkg
+                  path: ~/.nupkgs/MyProject-1.2.3.nupkg
+                  retention-days: 1
+
+            - name: 📤 Upload Modified Files (Inside Workspace)
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: modified-source-files
+                  path: |
+                      src/MyProject/MyProject.csproj
+                      Directory.Build.props
+                  retention-days: 1
+
+            - name: 🧹 Clean Everything
+              shell: bash
+              run: |
+                  rm -rf ~/.nupkgs
+                  rm -rf src
+                  rm -f Directory.Build.props
+
+            - name: 📥 Download Package
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: package-nupkg
+                  path: packages
+
+            - name: 📥 Download Modified Files
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: modified-source-files
+
+            - name: ✅ Verify Package and Modified Files
+              shell: bash
+              run: |
+                  # Package should be in custom path (flat structure)
+                  if [ ! -f "packages/MyProject-1.2.3.nupkg" ]; then
+                    echo "::error::Package not found in custom path"
+                    exit 1
+                  fi
+
+                  # Modified files should be restored to original workspace paths
+                  if [ ! -f "src/MyProject/MyProject.csproj" ]; then
+                    echo "::error::csproj not restored to original path"
+                    exit 1
+                  fi
+
+                  if [ ! -f "Directory.Build.props" ]; then
+                    echo "::error::Directory.Build.props not restored to workspace root"
+                    exit 1
+                  fi
+
+                  # Verify version updates persisted
+                  if ! grep -q '<Version>1.2.3</Version>' src/MyProject/MyProject.csproj; then
+                    echo "::error::Version not updated in csproj"
+                    exit 1
+                  fi
+
+                  if ! grep -q '<Version>1.2.3</Version>' Directory.Build.props; then
+                    echo "::error::Version not updated in Directory.Build.props"
+                    exit 1
+                  fi
+
+                  echo "✅ Package simulation test passed"
+                  echo "  ✓ External package uploaded correctly"
+                  echo "  ✓ Workspace files restored to original paths"
+                  echo "  ✓ Version updates preserved"
+
     test-artifact-file-extensions:
         name: Test Artifact File Extensions
         runs-on: ubuntu-latest
@@ -556,3 +798,87 @@ jobs:
                   fi
 
                   echo "✅ File extension artifacts verified"
+
+    test-artifact-macos-compatibility:
+        name: Test Artifact Actions on macOS
+        runs-on: macos-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 📝 Create Test Files
+              shell: bash
+              run: |
+                  mkdir -p test-files/nested
+                  echo "macOS test 1" > test-files/file1.txt
+                  echo "macOS test 2" > test-files/nested/file2.txt
+
+            - name: 📝 Create External Files
+              shell: bash
+              run: |
+                  mkdir -p ~/.macos-external
+                  echo "External macOS file" > ~/.macos-external/external.txt
+
+            - name: 📤 Upload Mixed Files on macOS
+              uses: ./.github/actions/upload-artifact
+              with:
+                  name: macos-test
+                  path: |
+                      test-files/**
+                      ~/.macos-external/external.txt
+                  retention-days: 1
+
+            - name: 🧹 Clean Files
+              shell: bash
+              run: |
+                  rm -rf test-files
+                  rm -rf ~/.macos-external
+
+            - name: 📥 Download Files
+              uses: ./.github/actions/download-artifact
+              with:
+                  name: macos-test
+
+            - name: ✅ Verify macOS Compatibility
+              shell: bash
+              run: |
+                  # Check workspace files restored
+                  if [ ! -f "test-files/file1.txt" ]; then
+                    echo "::error::file1.txt not restored on macOS"
+                    exit 1
+                  fi
+
+                  if [ ! -f "test-files/nested/file2.txt" ]; then
+                    echo "::error::Nested file not restored on macOS"
+                    exit 1
+                  fi
+
+                  # Check external file in workspace root
+                  if [ ! -f "external.txt" ]; then
+                    echo "::error::External file not found on macOS"
+                    exit 1
+                  fi
+
+                  CONTENT1=$(cat test-files/file1.txt)
+                  CONTENT2=$(cat test-files/nested/file2.txt)
+                  CONTENT3=$(cat external.txt)
+
+                  if [ "${CONTENT1}" != "macOS test 1" ]; then
+                    echo "::error::file1.txt wrong content on macOS"
+                    exit 1
+                  fi
+
+                  if [ "${CONTENT2}" != "macOS test 2" ]; then
+                    echo "::error::file2.txt wrong content on macOS"
+                    exit 1
+                  fi
+
+                  if [ "${CONTENT3}" != "External macOS file" ]; then
+                    echo "::error::External file wrong content on macOS"
+                    exit 1
+                  fi
+
+                  echo "✅ macOS artifact handling verified"
+                  echo "  ✓ bash 3.2 compatibility confirmed"
+                  echo "  ✓ Workspace boundary handling works"
+                  echo "  ✓ Path restoration successful"
