@@ -21,7 +21,7 @@ A comprehensive collection of reusable GitHub Actions designed specifically for 
 - Game studios automating their CI/CD pipeline
 - Independent developers needing reliable build automation
 - Teams requiring consistent cross-platform builds
-- Projects targeting Native AOT compilation or mobile platforms
+- Projects targeting mobile platforms with code signing
 
 ---
 
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build Project
         uses: grovegs/actions/build-unity@v1.0.0
         with:
@@ -217,17 +217,18 @@ jobs:
           version: 1.0.0
 
       - name: Pack
+        id: pack
         uses: grovegs/actions/pack-dotnet@v1.0.0
         with:
           project: ./MyLibrary
           configuration: Release
           version: 1.0.0
-          filename: MyLibrary
+          name: MyLibrary
 
       - name: Publish to NuGet
         uses: grovegs/actions/publish-nuget@v1.0.0
         with:
-          file: ~/.nupkgs/MyLibrary.nupkg
+          file: ${{ steps.pack.outputs.package }}
           api-key: ${{ secrets.NUGET_API_KEY }}
 ```
 
@@ -238,94 +239,124 @@ jobs:
 ### Setup Actions
 
 **setup-dotnet** - Configure .NET environment
+
 - Inputs: `global-json-file`, `cache`
 - Outputs: `dotnet-version`
 
 **setup-godot** - Install Godot engine and export templates
+
 - Inputs: `global-json-file`, `target-platforms`, `cache`
 - Supports: Linux, macOS
 
 **setup-unity** - Install Unity editor and modules
+
 - Inputs: `project`, `unity-version`, `unity-modules`, `cache`
 - Supports: Linux, macOS with iOS/Android modules
 
 **setup-android** - Configure Android SDK, NDK, and Java
+
 - Inputs: `java-version`, `java-distribution`, `android-packages`
 
 **setup-xcode** - Select and configure Xcode version
+
 - Inputs: `xcode-version`
 - Requires: macOS runner
 
 ### Build Actions
 
 **build-dotnet** - Build .NET projects
+
 - Inputs: `project`, `configuration`, `version`, `define-symbols`
 
 **build-godot** - Build Godot projects for mobile platforms
+
 - Inputs: `project`, `global-json-file`, `version`, `platform`, `preset`, `configuration`, `filename`
 - Supports: Android (APK/AAB), iOS (IPA)
 
 **build-unity** - Build Unity projects using Build Profiles
+
 - Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`
 - Supports: Android (APK/AAB), iOS (IPA)
 
 ### Test Actions
 
 **test-dotnet** - Run .NET unit tests
+
 - Inputs: `project`, `configuration`
 
 **test-godot** - Run Godot project tests
+
 - Inputs: `project`, `global-json-file`
 
 **test-unity** - Run Unity project tests
+
 - Inputs: `project`
 
 ### Format Actions
 
 **format-dotnet** - Format C# code using dotnet format
+
 - Inputs: `project`
 
 **format-files** - Format YAML, JSON, Markdown, Shell scripts using Prettier
+
 - Inputs: `files`, `ignore-path`
 
 ### Package Actions
 
 **pack-dotnet** - Create NuGet packages
-- Inputs: `project`, `configuration`, `version`, `filename`
-- Outputs: `file`
+
+- Inputs: `project`, `configuration`, `version`, `name`, `directory-build-props`
+- Outputs: `package`, `modified-files`
 
 **pack-godot-addon** - Package Godot addons
+
 - Inputs: `addon`, `version`, `filename`
-- Outputs: `file`
+- Outputs: `package`, `modified-files`
 
 **pack-unity-package** - Package Unity packages as tarballs
+
 - Inputs: `package`, `version`, `filename`
-- Outputs: `file`
+- Outputs: `package`, `modified-files`
 
 ### Publish Actions
 
 **publish-firebase** - Upload to Firebase App Distribution
+
 - Inputs: `file`, `app-id`, `credentials`, `release-notes`, `tester-groups`
 
 **publish-testflight** - Upload to Apple TestFlight
+
 - Inputs: `file`, `api-key`, `api-key-id`, `api-issuer-id`
 - Requires: macOS runner
 
 **publish-nuget** - Publish to NuGet.org
+
 - Inputs: `file`, `api-key`
 
 **publish-github** - Create GitHub releases with assets
+
 - Inputs: `title`, `version`, `changelog`, `github-token`, `assets`
 
 ### Utility Actions
 
 **bump-version** - Automatic version bumping based on Git tags
+
 - Inputs: `version-type` (major, minor, patch)
 - Outputs: `latest-version`, `next-version`
 
 **generate-changelog** - Generate structured release notes
+
 - Inputs: `next-version`
 - Outputs: `changelog-raw`, `changelog-plain`, `changelog-markdown`
+
+**upload-artifact** - Upload artifacts with metadata
+
+- Inputs: `name`, `path`, `retention-days`
+
+**download-artifact** - Download artifacts with metadata restoration
+
+- Inputs: `name`, `path`
 
 ---
 
@@ -390,6 +421,7 @@ jobs:
           unity-modules: ${{ matrix.platform == 'Android' && 'android' || 'ios' }}
 
       - name: Build
+        id: build
         uses: grovegs/actions/build-unity@v1.0.0
         with:
           project: ./Game
@@ -397,11 +429,23 @@ jobs:
           version: ${{ needs.prepare.outputs.version }}
           # ... additional inputs
 
+      - name: Upload Build
+        uses: grovegs/actions/upload-artifact@v1.0.0
+        with:
+          name: build-${{ matrix.platform }}
+          path: ${{ steps.build.outputs.file }}
+
   publish:
     needs: [prepare, build-unity]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: grovegs/actions/download-artifact@v1.0.0
+        with:
+          name: build-*
+          path: ./builds
 
       - name: Create GitHub Release
         uses: grovegs/actions/publish-github@v1.0.0
@@ -410,6 +454,7 @@ jobs:
           version: "v${{ needs.prepare.outputs.version }}"
           changelog: ${{ needs.prepare.outputs.changelog }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          assets: ./builds/*
 ```
 
 ### Multi-Platform Build Matrix
@@ -430,7 +475,7 @@ jobs:
           - platform: Windows
             runner: windows-latest
             format: exe
-    
+
     runs-on: ${{ matrix.runner }}
     steps:
       # Build steps using matrix values
@@ -450,6 +495,48 @@ jobs:
 
 ---
 
+## Package Actions Pattern
+
+All pack actions follow a consistent pattern:
+
+1. **Update version** in source files (in workspace)
+2. **Create package** outside workspace (`~/.nupkgs`, `~/.godot/addons`, `~/.unity/packages`)
+3. **Return paths** to both package and modified files
+
+**Outputs:**
+
+- `package` - Path to the created package file
+- `modified-files` - Newline-separated paths to modified files in workspace
+
+**Example workflow:**
+
+```yaml
+- name: Pack Project
+  id: pack
+  uses: grovegs/actions/pack-dotnet@v1.0.0
+  with:
+    project: ./MyLibrary
+    configuration: Release
+    version: 1.0.0
+    name: MyLibrary
+    directory-build-props: Directory.Build.props
+
+- name: Upload Package
+  uses: actions/upload-artifact@v4
+  with:
+    name: nuget-package
+    path: ${{ steps.pack.outputs.package }}
+
+- name: Commit Version Changes
+  if: steps.pack.outputs.modified-files != ''
+  run: |
+    git add ${{ steps.pack.outputs.modified-files }}
+    git commit -m "chore: update version to 1.0.0"
+    git push
+```
+
+---
+
 ## Troubleshooting
 
 ### Common Issues
@@ -457,6 +544,7 @@ jobs:
 **Issue: Unity build fails with licensing error**
 
 **Solution:** Ensure you have set up the required secrets:
+
 ```yaml
 UNITY_EMAIL: Your Unity account email
 UNITY_PASSWORD: Your Unity account password
@@ -468,6 +556,7 @@ UNITY_LICENSE: Your Unity serial key
 **Issue: Android build fails with keystore error**
 
 **Solution:** Keystore must be base64 encoded:
+
 ```bash
 base64 -i your-keystore.jks | pbcopy  # macOS
 base64 -i your-keystore.jks          # Linux
@@ -482,6 +571,7 @@ Then add as a secret: `ANDROID_KEYSTORE`
 **Cause:** Missing or incorrect provisioning profile configuration
 
 **Solution:** Ensure all iOS secrets are properly configured:
+
 ```yaml
 IOS_TEAM_ID: Your Apple Developer Team ID
 IOS_CERTIFICATE: Base64-encoded .p12 certificate
@@ -495,6 +585,7 @@ IOS_PROVISIONING_PROFILE_UUID: Profile UUID
 **Issue: Cache not working or builds are slow**
 
 **Solution:** Enable caching in setup actions:
+
 ```yaml
 - uses: grovegs/actions/setup-unity@v1.0.0
   with:
