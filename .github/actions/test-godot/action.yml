@@ -1,12 +1,12 @@
 name: Test Godot
-description: Tests a Godot project.
+description: Test a Godot project by building C# code and importing assets.
 
 inputs:
     project:
-        description: The relative path to the Godot project folder containing the `project.godot` file.
+        description: Path to the Godot project folder containing the project.godot file
         required: true
     global-json-file:
-        description: The file path to `global.json`, which specifies the Godot version for the build.
+        description: Path to global.json which specifies the Godot version for the build
         required: true
 
 runs:
@@ -14,6 +14,8 @@ runs:
     steps:
         - name: 🧪 Test Project
           shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
-              "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}"
+              "${{ github.action_path }}/scripts/test_project.sh"
