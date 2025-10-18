@@ -1,16 +1,16 @@
 name: Setup Android
-description: Sets up Java and Android SDK with specified packages using established actions.
+description: Set up Java and Android SDK with specified packages using established actions.
 
 inputs:
     java-version:
-        description: "Target Java version (e.g., 17)"
+        description: Target Java version such as 17
         required: true
     java-distribution:
-        description: "Java distribution (e.g., temurin)"
+        description: Java distribution such as temurin or adopt
         required: false
         default: "temurin"
     android-packages:
-        description: "Space-separated list of Android SDK packages to install"
+        description: Space-separated list of Android SDK packages to install
         required: true
 
 runs:
@@ -29,6 +29,8 @@ runs:
 
         - name: 🔧 Configure Android Environment
           shell: bash
+          env:
+              ANDROID_PACKAGES: ${{ inputs.android-packages }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/configure_android.sh"
-              "${{ github.action_path }}/scripts/configure_android.sh" "${{ inputs.android-packages }}"
+              "${{ github.action_path }}/scripts/configure_android.sh"
