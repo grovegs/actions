@@ -24,23 +24,23 @@ jobs:
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
               with:
-                  global-json-file: sandbox/ConsoleApp/global.json
+                  global-json-file: sandbox/ConsoleApplication/global.json
 
             - name: 🧪 Test .NET Project
               uses: ./.github/actions/test-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Debug
 
             - name: 🎨 Format .NET Project
               uses: ./.github/actions/format-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
 
             - name: 🏗️ Build .NET Project
               uses: ./.github/actions/build-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 1.0.0-test
                   define-symbols: TEST_BUILD
@@ -49,10 +49,10 @@ jobs:
               id: pack-dotnet
               uses: ./.github/actions/pack-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 1.0.0-test
-                  name: ConsoleApp-test
+                  name: ConsoleApplication-test
 
             - name: ✅ Verify .NET Package
               shell: bash
@@ -264,12 +264,12 @@ jobs:
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
               with:
-                  global-json-file: sandbox/ConsoleApp/global.json
+                  global-json-file: sandbox/ConsoleApplication/global.json
 
             - name: 🏗️ Build .NET Project
               uses: ./.github/actions/build-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 2.5.7-test
 
@@ -291,10 +291,10 @@ jobs:
               id: pack-with-props
               uses: ./.github/actions/pack-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
                   configuration: Release
                   version: 2.5.7-test
-                  name: ConsoleApp-version-test
+                  name: ConsoleApplication-version-test
                   directory-build-props: Directory.Build.props
 
             - name: ✅ Verify Version Updates
@@ -347,7 +347,7 @@ jobs:
             - name: 🔧 Setup .NET
               uses: ./.github/actions/setup-dotnet
               with:
-                  global-json-file: sandbox/ConsoleApp/global.json
+                  global-json-file: sandbox/ConsoleApplication/global.json
 
             - name: 🎨 Test Format Files Action
               uses: ./.github/actions/format-files
@@ -358,7 +358,7 @@ jobs:
             - name: 🎨 Test Format .NET Action
               uses: ./.github/actions/format-dotnet
               with:
-                  project: sandbox/ConsoleApp
+                  project: sandbox/ConsoleApplication
 
     test-artifact-actions:
         name: Test Artifact Actions
