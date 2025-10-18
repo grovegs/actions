@@ -1,5 +1,5 @@
 name: Upload Artifact
-description: Upload a build artifact with metadata that will be available for download.
+description: Upload a build artifact with metadata for path restoration.
 
 inputs:
     name:
@@ -36,6 +36,9 @@ outputs:
     artifact-url:
         description: URL to download an Artifact. Users must be authenticated to use this URL.
         value: ${{ steps.upload.outputs.artifact-url }}
+    artifact-digest:
+        description: A SHA256 hash of the artifact file. Can be used to validate the artifact later.
+        value: ${{ steps.upload.outputs.artifact-digest }}
 
 runs:
     using: composite

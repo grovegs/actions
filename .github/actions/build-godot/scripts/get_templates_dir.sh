@@ -10,10 +10,10 @@ echo "::notice::Processing templates directory for ${RUNNER_OS}"
 
 case "${RUNNER_OS}" in
   "Linux")
-    TEMPLATES_DIR=~/.local/share/godot/export_templates
+    TEMPLATES_DIR="${HOME}/.local/share/godot/export_templates"
     ;;
   "macOS")
-    TEMPLATES_DIR=~/Library/Application\ Support/Godot/export_templates
+    TEMPLATES_DIR="${HOME}/Library/Application Support/Godot/export_templates"
     ;;
   *)
     echo "::error::Unsupported platform: ${RUNNER_OS}"
