@@ -52,17 +52,13 @@ for path_pattern in "${PATHS[@]}"; do
     continue
   fi
 
-  for item in ${path_pattern}; do
-    if [ ! -e "${item}" ]; then
-      continue
-    fi
+  path_pattern="${path_pattern/#\~/$HOME}"
 
-    if [ -f "${item}" ]; then
-      ITEM_DIR=$(cd "$(dirname "${item}")" && pwd)
-      ITEM_NAME=$(basename "${item}")
+  if [ -e "${path_pattern}" ] && [ ! -d "${path_pattern}" ] && [[ "${path_pattern}" != *\** ]] && [[ "${path_pattern}" != *\?* ]]; then
+    if [ -f "${path_pattern}" ]; then
+      ITEM_DIR=$(cd "$(dirname "${path_pattern}")" && pwd)
+      ITEM_NAME=$(basename "${path_pattern}")
       ABS_PATH="${ITEM_DIR}/${ITEM_NAME}"
-    elif [ -d "${item}" ]; then
-      ABS_PATH=$(cd "${item}" && pwd)
     else
       continue
     fi
@@ -73,27 +69,62 @@ for path_pattern in "${PATHS[@]}"; do
       TARGET_DIR="${STAGING_DIR}/$(dirname "${REL_PATH}")"
       mkdir -p "${TARGET_DIR}"
 
-      if [ -f "${item}" ]; then
-        cp -p "${item}" "${STAGING_DIR}/${REL_PATH}"
-      elif [ -d "${item}" ]; then
-        cp -rp "${item}" "${STAGING_DIR}/${REL_PATH}"
-      fi
+      cp -p "${path_pattern}" "${STAGING_DIR}/${REL_PATH}"
 
       FILE_ENTRIES+=("${REL_PATH}")
     else
       FILENAME=$(basename "${ABS_PATH}")
 
-      if [ -f "${ABS_PATH}" ]; then
-        cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
-      elif [ -d "${ABS_PATH}" ]; then
-        cp -rp "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
-      fi
+      cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
 
       FILE_ENTRIES+=("${FILENAME}")
     fi
 
     FILES_FOUND=$((FILES_FOUND + 1))
-  done
+  else
+    for item in ${path_pattern}; do
+      if [ ! -e "${item}" ]; then
+        continue
+      fi
+
+      if [ -f "${item}" ]; then
+        ITEM_DIR=$(cd "$(dirname "${item}")" && pwd)
+        ITEM_NAME=$(basename "${item}")
+        ABS_PATH="${ITEM_DIR}/${ITEM_NAME}"
+      elif [ -d "${item}" ]; then
+        ABS_PATH=$(cd "${item}" && pwd)
+      else
+        continue
+      fi
+
+      if [[ "${ABS_PATH}" == "${WORKSPACE}"* ]]; then
+        REL_PATH="${ABS_PATH#"${WORKSPACE}"/}"
+
+        TARGET_DIR="${STAGING_DIR}/$(dirname "${REL_PATH}")"
+        mkdir -p "${TARGET_DIR}"
+
+        if [ -f "${item}" ]; then
+          cp -p "${item}" "${STAGING_DIR}/${REL_PATH}"
+        elif [ -d "${item}" ]; then
+          cp -rp "${item}" "${STAGING_DIR}/${REL_PATH}"
+        fi
+
+        FILE_ENTRIES+=("${REL_PATH}")
+      else
+        FILENAME=$(basename "${ABS_PATH}")
+
+        if [ -f "${ABS_PATH}" ]; then
+          cp -p "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+        elif [ -d "${ABS_PATH}" ]; then
+          cp -rp "${ABS_PATH}" "${STAGING_DIR}/${FILENAME}"
+        fi
+
+        FILE_ENTRIES+=("${FILENAME}")
+      fi
+
+      FILES_FOUND=$((FILES_FOUND + 1))
+    done
+  fi
 done
 
 shopt -u nullglob
