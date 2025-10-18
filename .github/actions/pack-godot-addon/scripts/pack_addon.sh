@@ -58,14 +58,14 @@ ADDON_DIR="${TEMP_DIR}/$(basename "${ADDON_PATH}")"
 
 if [ -f "README.md" ]; then
   echo "::notice::Including README.md"
-  if ! cp README.md "${ADDON_DIR}"; then
+  if ! cp "README.md" "${ADDON_DIR}"; then
     echo "::warning::Failed to copy README.md to '${ADDON_DIR}'"
   fi
 fi
 
 if [ -f "LICENSE" ]; then
   echo "::notice::Including LICENSE"
-  if ! cp LICENSE "${ADDON_DIR}"; then
+  if ! cp "LICENSE" "${ADDON_DIR}"; then
     echo "::warning::Failed to copy LICENSE to '${ADDON_DIR}'"
   fi
 fi
