@@ -1,9 +1,9 @@
 name: Test Unity
-description: Tests a Unity project.
+description: Run EditMode and PlayMode tests for a Unity project.
 
 inputs:
     project:
-        description: The relative path to the Unity project folder.
+        description: Path to the Unity project folder
         required: true
 
 runs:
@@ -11,6 +11,8 @@ runs:
     steps:
         - name: 🧪 Test Project
           shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
-              "${{ github.action_path }}/scripts/test_project.sh" "${{ inputs.project }}"
+              "${{ github.action_path }}/scripts/test_project.sh"
