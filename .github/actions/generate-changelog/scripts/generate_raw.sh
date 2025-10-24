@@ -6,7 +6,7 @@ if ! command -v git > /dev/null 2>&1; then
   exit 1
 fi
 
-latest_version=$(git describe --tags --abbrev=0 HEAD 2> /dev/null || echo "")
+latest_version=$(git tag --merged HEAD --sort=-version:refname | head -n 1 2> /dev/null || echo "")
 
 if [ -z "${latest_version}" ]; then
   commits=$(git log --pretty=format:"%s")
