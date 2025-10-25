@@ -36,16 +36,11 @@ if [ -z "${IOS_PROVISIONING_PROFILE:-}" ]; then
   exit 1
 fi
 
-if [ -z "${IOS_PROVISIONING_PROFILE_UUID:-}" ]; then
-  echo "::error::IOS_PROVISIONING_PROFILE_UUID is required for iOS builds"
-  exit 1
-fi
-
 BUILDS_DIR="${HOME}/.builds/ios"
 KEYCHAINS_DIR="${RUNNER_TEMP}/Keychains"
 KEYCHAIN_FILE="${KEYCHAINS_DIR}/ios.keychain-db"
 CERTIFICATE_FILE="${RUNNER_TEMP}/ios.p12"
-PROVISIONING_PROFILE_FILE="${RUNNER_TEMP}/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
+PROVISIONING_PROFILE_FILE="${RUNNER_TEMP}/profile.mobileprovision"
 PROVISIONING_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 PROJECT_NAME="$(basename "${PROJECT_DIR}")"
@@ -85,6 +80,19 @@ echo -n "${IOS_PROVISIONING_PROFILE}" | base64 -d > "${PROVISIONING_PROFILE_FILE
   exit 1
 }
 
+echo "::notice::Extracting UUID from provisioning profile..."
+IOS_PROVISIONING_PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "${PROVISIONING_PROFILE_FILE}")") || {
+  echo "::error::Failed to extract UUID from provisioning profile"
+  exit 1
+}
+
+if [ -z "${IOS_PROVISIONING_PROFILE_UUID}" ]; then
+  echo "::error::Extracted UUID is empty"
+  exit 1
+fi
+
+echo "::notice::Extracted provisioning profile UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
+
 echo "::notice::Creating temporary keychain..."
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}" || {
   echo "::error::Failed to create keychain"
@@ -103,7 +111,7 @@ security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICAT
 }
 
 echo "::notice::Copying provisioning profile to local directory..."
-cp "${PROVISIONING_PROFILE_FILE}" "${PROVISIONING_DIR}/" || {
+cp "${PROVISIONING_PROFILE_FILE}" "${PROVISIONING_DIR}/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision" || {
   echo "::error::Failed to copy the provisioning profile"
   exit 1
 }

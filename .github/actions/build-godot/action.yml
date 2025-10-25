@@ -50,9 +50,6 @@ inputs:
     ios-provisioning-profile:
         description: The Base64-encoded iOS provisioning profile in mobileprovision format.
         required: false
-    ios-provisioning-profile-uuid:
-        description: The UUID of the iOS provisioning profile.
-        required: false
 
 outputs:
     file:
@@ -131,7 +128,6 @@ runs:
               IOS_CERTIFICATE: ${{ inputs.ios-certificate }}
               IOS_CERTIFICATE_PASSWORD: ${{ inputs.ios-certificate-password }}
               IOS_PROVISIONING_PROFILE: ${{ inputs.ios-provisioning-profile }}
-              IOS_PROVISIONING_PROFILE_UUID: ${{ inputs.ios-provisioning-profile-uuid }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/export_project.sh"
               "${{ github.action_path }}/scripts/export_project.sh"
