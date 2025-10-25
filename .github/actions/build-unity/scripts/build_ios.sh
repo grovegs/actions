@@ -56,11 +56,6 @@ if [ -z "${IOS_PROVISIONING_PROFILE:-}" ]; then
   exit 1
 fi
 
-if [ -z "${IOS_PROVISIONING_PROFILE_UUID:-}" ]; then
-  echo "::error::IOS_PROVISIONING_PROFILE_UUID is required for iOS builds"
-  exit 1
-fi
-
 if [ -z "${IOS_EXPORT_METHOD:-}" ]; then
   echo "::error::IOS_EXPORT_METHOD is required for iOS builds"
   exit 1
@@ -73,10 +68,6 @@ fi
 
 if [[ ! "${IOS_TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]]; then
   echo "::warning::iOS Team ID format appears invalid. Expected 10 uppercase alphanumeric characters."
-fi
-
-if [[ ! "${IOS_PROVISIONING_PROFILE_UUID}" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]]; then
-  echo "::warning::iOS provisioning profile UUID format appears invalid. Expected UUID format."
 fi
 
 if [[ "${PROJECT_DIR}" != /* ]]; then
@@ -103,6 +94,33 @@ echo "::notice::Creating build directories..."
 mkdir -p "${BUILDS_DIR}"
 mkdir -p "${XCODE_PROJECT_DIR}"
 
+echo "::notice::Decoding certificate and provisioning profile..."
+echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}" || {
+  echo "::error::Failed to decode iOS certificate"
+  exit 1
+}
+echo -n "${IOS_PROVISIONING_PROFILE}" | base64 -d > "${PROVISIONING_FILE}" || {
+  echo "::error::Failed to decode provisioning profile"
+  exit 1
+}
+
+echo "::notice::Extracting UUID from provisioning profile..."
+IOS_PROVISIONING_PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "${PROVISIONING_FILE}")") || {
+  echo "::error::Failed to extract UUID from provisioning profile"
+  exit 1
+}
+
+if [ -z "${IOS_PROVISIONING_PROFILE_UUID}" ]; then
+  echo "::error::Extracted UUID is empty"
+  exit 1
+fi
+
+echo "::notice::Extracted provisioning profile UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
+
+if [[ ! "${IOS_PROVISIONING_PROFILE_UUID}" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]]; then
+  echo "::warning::iOS provisioning profile UUID format appears invalid. Expected UUID format."
+fi
+
 {
   echo "::notice::Build configuration:"
   echo "::notice::  Project: ${PROJECT_DIR}"
@@ -112,6 +130,7 @@ mkdir -p "${XCODE_PROJECT_DIR}"
   echo "::notice::  Profile: ${PROFILE_NAME:-default}"
   echo "::notice::  Team ID: ${IOS_TEAM_ID}"
   echo "::notice::  Export Method: ${IOS_EXPORT_METHOD}"
+  echo "::notice::  Provisioning UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -180,9 +199,6 @@ xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2>/dev/null || echo "::debug::
 
 echo "::notice::Setting up iOS signing..."
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-
-echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}"
-echo -n "${IOS_PROVISIONING_PROFILE}" | base64 -d > "${PROVISIONING_FILE}"
 
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"

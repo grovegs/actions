@@ -55,9 +55,6 @@ inputs:
     ios-provisioning-profile:
         description: The Base64-encoded iOS provisioning profile in mobileprovision format.
         required: false
-    ios-provisioning-profile-uuid:
-        description: The UUID of the iOS provisioning profile.
-        required: false
     ios-export-method:
         description: iOS export method such as ad-hoc for Firebase/testing or app-store for App Store/TestFlight.
         required: false
@@ -203,7 +200,6 @@ runs:
               IOS_CERTIFICATE: ${{ inputs.ios-certificate }}
               IOS_CERTIFICATE_PASSWORD: ${{ inputs.ios-certificate-password }}
               IOS_PROVISIONING_PROFILE: ${{ inputs.ios-provisioning-profile }}
-              IOS_PROVISIONING_PROFILE_UUID: ${{ inputs.ios-provisioning-profile-uuid }}
               IOS_EXPORT_METHOD: ${{ inputs.ios-export-method }}
               BUILD_METHOD: ${{ inputs.build-method }}
               CACHE_ENABLED: ${{ inputs.cache }}
