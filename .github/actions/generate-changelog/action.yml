@@ -5,6 +5,10 @@ inputs:
     next-version:
         description: The next version tag to compare such as 1.1.0
         required: true
+    branch-name:
+        description: The branch name to include in changelog (optional, omit for main/production branches)
+        required: false
+        default: ""
 
 outputs:
     changelog-raw:
@@ -33,6 +37,7 @@ runs:
           env:
               RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
               VERSION: ${{ inputs.next-version }}
+              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_plain.sh"
               "${{ github.action_path }}/scripts/format_plain.sh"
@@ -43,6 +48,7 @@ runs:
           env:
               RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
               VERSION: ${{ inputs.next-version }}
+              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_markdown.sh"
               "${{ github.action_path }}/scripts/format_markdown.sh"

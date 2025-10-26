@@ -17,10 +17,24 @@ sanitize_text() {
   printf "%s" "${text}"
 }
 
+branch_name=""
+if [[ "${RAW_CHANGELOG}" =~ ^BRANCH:([^$'\n']+) ]]; then
+  branch_name="${BASH_REMATCH[1]}"
+  RAW_CHANGELOG=$(printf "%s" "${RAW_CHANGELOG}" | sed '1d')
+fi
+
 if [[ "${RAW_CHANGELOG}" == "No changes in this release." ]]; then
-  formatted="## Release Notes v${VERSION}\n\nNo changes in this release."
+  if [ -n "${branch_name}" ]; then
+    formatted="## Release Notes v${VERSION} (\`${branch_name}\`)\n\nNo changes in this release."
+  else
+    formatted="## Release Notes v${VERSION}\n\nNo changes in this release."
+  fi
 else
-  formatted="## Release Notes v${VERSION}\n\n"
+  if [ -n "${branch_name}" ]; then
+    formatted="## Release Notes v${VERSION} (\`${branch_name}\`)\n\n"
+  else
+    formatted="## Release Notes v${VERSION}\n\n"
+  fi
 
   while IFS= read -r line; do
     line=$(sanitize_text "${line}")
