@@ -17,7 +17,7 @@ permissions:
     contents: write
 
 jobs:
-    shared:
+    prepare:
         name: Prepare Release
         runs-on: ubuntu-latest
         outputs:
@@ -41,10 +41,11 @@ jobs:
               uses: ./.github/actions/generate-changelog
               with:
                   next-version: ${{ steps.bump-version.outputs.next-version }}
+                  branch-name: ${{ github.ref_name != github.event.repository.default_branch && github.ref_name || '' }}
 
-    release-github:
-        name: Publish GitHub Release
-        needs: [shared]
+    release:
+        name: Release Platforms
+        needs: prepare
         runs-on: ubuntu-latest
         steps:
             - name: 📂 Checkout Code
@@ -53,9 +54,9 @@ jobs:
             - name: 🚀 Publish to GitHub
               uses: ./.github/actions/publish-github
               with:
-                  title: "Release v${{ needs.shared.outputs.version }}"
-                  version: "v${{ needs.shared.outputs.version }}"
-                  changelog: ${{ needs.shared.outputs.changelog-markdown }}
+                  title: "Release v${{ needs.prepare.outputs.version }}"
+                  version: "v${{ needs.prepare.outputs.version }}"
+                  changelog: ${{ needs.prepare.outputs.changelog-markdown }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: 📢 Notify Discord Success
@@ -63,11 +64,11 @@ jobs:
               uses: ./.github/actions/notify-discord
               with:
                   webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-                  title: "✅ ${{ github.event.repository.name }}"
+                  title: ✅ ${{ github.event.repository.name }} v${{ needs.prepare.outputs.version }} (${{ github.ref_name }})
                   description: |
-                      ${{ needs.shared.outputs.changelog-markdown }}
+                      ${{ needs.prepare.outputs.changelog-markdown }}
 
-                      [View Release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.shared.outputs.version }})
+                      [View Release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.prepare.outputs.version }})
                   color: "3066993"
 
             - name: 📢 Notify Discord Failure
@@ -75,7 +76,7 @@ jobs:
               uses: ./.github/actions/notify-discord
               with:
                   webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-                  title: "❌ ${{ github.event.repository.name }}"
+                  title: ❌ ${{ github.event.repository.name }} (${{ github.ref_name }})
                   description: |
                       Release publication failed.
 
