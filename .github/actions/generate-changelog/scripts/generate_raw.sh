@@ -6,6 +6,14 @@ if ! command -v git > /dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v jq > /dev/null 2>&1; then
+  echo "::error::jq is not installed or not in PATH"
+  exit 1
+fi
+
+branch_name="${BRANCH_NAME:-}"
+version="${VERSION:-}"
+
 latest_version=$(git tag --merged HEAD --sort=-version:refname | head -n 1 2> /dev/null || echo "")
 
 if [ -z "${latest_version}" ]; then
@@ -14,28 +22,15 @@ else
   commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
 fi
 
-if [ -z "${commits}" ]; then
-  {
-    echo "changelog-raw<<EOF"
-    echo "No changes in this release."
-    echo "EOF"
-  } >> "${GITHUB_OUTPUT}"
-  exit 0
-fi
-
-declare -a categories
-categories=("Features" "Bug Fixes" "Chores" "Refactors" "Tests" "CI/CD" "Reverts" "Documentation" "Other")
-
-declare -a commits_by_category
-for i in "${!categories[@]}"; do
-  commits_by_category[i]=""
-done
-
-sanitize_text() {
-  local text="$1"
-  text="${text//\`/\\\`}"
-  printf "%s" "${text}"
-}
+declare -a features
+declare -a fixes
+declare -a chores
+declare -a refactors
+declare -a tests
+declare -a ci
+declare -a reverts
+declare -a docs
+declare -a other
 
 clean_commit() {
   local commit="$1"
@@ -143,61 +138,55 @@ while IFS= read -r commit; do
 
   commit_type=$(get_commit_type "${clean_commit_msg}")
 
-  case ${commit_type} in
-    feat) category_index=0 ;;
-    fix) category_index=1 ;;
-    chore) category_index=2 ;;
-    refactor) category_index=3 ;;
-    test) category_index=4 ;;
-    ci) category_index=5 ;;
-    revert) category_index=6 ;;
-    docs) category_index=7 ;;
-    *)
-      category_index=8
-      commit_type="other"
-      ;;
-  esac
-
-  if [ "${commit_type}" = "other" ]; then
+  if [ -z "${commit_type}" ]; then
     formatted_commit="${clean_commit_msg}"
+    other+=("${formatted_commit}")
   else
     formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}")
-  fi
 
-  formatted_commit=$(sanitize_text "${formatted_commit}")
-
-  if [ -n "${formatted_commit}" ]; then
-    if [ -z "${commits_by_category[category_index]}" ]; then
-      commits_by_category[category_index]="${formatted_commit}"
-    else
-      commits_by_category[category_index]="${commits_by_category[category_index]}
-${formatted_commit}"
-    fi
+    case ${commit_type} in
+      feat) features+=("${formatted_commit}") ;;
+      fix) fixes+=("${formatted_commit}") ;;
+      chore) chores+=("${formatted_commit}") ;;
+      refactor) refactors+=("${formatted_commit}") ;;
+      test) tests+=("${formatted_commit}") ;;
+      ci) ci+=("${formatted_commit}") ;;
+      revert) reverts+=("${formatted_commit}") ;;
+      docs) docs+=("${formatted_commit}") ;;
+    esac
   fi
 done <<< "${commits}"
 
-changelog=""
-for i in "${!categories[@]}"; do
-  if [ -n "${commits_by_category[i]}" ]; then
-    category_name=${categories[i]}
-    if [ -z "${changelog}" ]; then
-      changelog="${category_name}
-${commits_by_category[i]}"
-    else
-      changelog="${changelog}
-
-${category_name}
-${commits_by_category[i]}"
-    fi
-  fi
-done
+json_obj=$(jq -n \
+  --arg version "${version}" \
+  --arg branch "${branch_name}" \
+  --argjson features "$(printf '%s\n' "${features[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson fixes "$(printf '%s\n' "${fixes[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson chores "$(printf '%s\n' "${chores[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson refactors "$(printf '%s\n' "${refactors[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson tests "$(printf '%s\n' "${tests[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson ci "$(printf '%s\n' "${ci[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson reverts "$(printf '%s\n' "${reverts[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson docs "$(printf '%s\n' "${docs[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson other "$(printf '%s\n' "${other[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  '{
+    version: $version,
+    branch: $branch,
+    features: $features,
+    fixes: $fixes,
+    chores: $chores,
+    refactors: $refactors,
+    tests: $tests,
+    ci: $ci,
+    reverts: $reverts,
+    docs: $docs,
+    other: $other
+  }'
+)
 
 {
   echo "changelog-raw<<EOF"
-  if [ -n "${changelog}" ]; then
-    printf "%s\n" "${changelog}"
-  else
-    echo "No changes in this release."
-  fi
+  printf "%s" "${json_obj}"
+  echo ""
   echo "EOF"
 } >> "${GITHUB_OUTPUT}"

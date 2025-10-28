@@ -6,50 +6,109 @@ if [ -z "${RAW_CHANGELOG:-}" ]; then
   exit 1
 fi
 
-if [ -z "${VERSION:-}" ]; then
-  echo "::error::VERSION environment variable is required"
+if ! command -v jq > /dev/null 2>&1; then
+  echo "::error::jq is not installed or not in PATH"
   exit 1
 fi
 
-sanitize_text() {
-  local text="$1"
-  text="${text//\`/\\\`}"
-  printf "%s" "${text}"
-}
+version=$(echo "${RAW_CHANGELOG}" | jq -r '.version // ""')
+branch=$(echo "${RAW_CHANGELOG}" | jq -r '.branch // ""')
 
-branch_name=""
-if [[ "${RAW_CHANGELOG}" =~ ^BRANCH:([^$'\n']+) ]]; then
-  branch_name="${BASH_REMATCH[1]}"
-  RAW_CHANGELOG=$(printf "%s" "${RAW_CHANGELOG}" | sed '1d')
+if [ -n "${branch}" ]; then
+  formatted="Release Notes v${version} (${branch})\n\n"
+else
+  formatted="Release Notes v${version}\n\n"
 fi
 
-if [[ "${RAW_CHANGELOG}" == "No changes in this release." ]]; then
-  if [ -n "${branch_name}" ]; then
-    formatted="Release Notes v${VERSION} (${branch_name})\n\nNo changes in this release."
-  else
-    formatted="Release Notes v${VERSION}\n\nNo changes in this release."
-  fi
-else
-  if [ -n "${branch_name}" ]; then
-    formatted="Release Notes v${VERSION} (${branch_name})\n\n"
-  else
-    formatted="Release Notes v${VERSION}\n\n"
-  fi
+has_content=false
 
-  while IFS= read -r line; do
-    line=$(sanitize_text "${line}")
+features=$(echo "${RAW_CHANGELOG}" | jq -r '.features[]?' 2>/dev/null || echo "")
+if [ -n "${features}" ]; then
+  formatted+="\nFeatures:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${features}"
+  has_content=true
+fi
 
-    if [[ "${line}" =~ ^[A-Z] ]] && [[ ! "${line}" =~ ^[A-Za-z]+: ]]; then
-      formatted+="\n${line}:\n"
-    elif [ -n "${line}" ]; then
-      formatted+="• ${line}\n"
-    fi
-  done <<< "${RAW_CHANGELOG}"
+fixes=$(echo "${RAW_CHANGELOG}" | jq -r '.fixes[]?' 2>/dev/null || echo "")
+if [ -n "${fixes}" ]; then
+  formatted+="\nBug Fixes:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${fixes}"
+  has_content=true
+fi
+
+chores=$(echo "${RAW_CHANGELOG}" | jq -r '.chores[]?' 2>/dev/null || echo "")
+if [ -n "${chores}" ]; then
+  formatted+="\nChores:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${chores}"
+  has_content=true
+fi
+
+refactors=$(echo "${RAW_CHANGELOG}" | jq -r '.refactors[]?' 2>/dev/null || echo "")
+if [ -n "${refactors}" ]; then
+  formatted+="\nRefactors:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${refactors}"
+  has_content=true
+fi
+
+tests=$(echo "${RAW_CHANGELOG}" | jq -r '.tests[]?' 2>/dev/null || echo "")
+if [ -n "${tests}" ]; then
+  formatted+="\nTests:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${tests}"
+  has_content=true
+fi
+
+ci=$(echo "${RAW_CHANGELOG}" | jq -r '.ci[]?' 2>/dev/null || echo "")
+if [ -n "${ci}" ]; then
+  formatted+="\nCI/CD:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${ci}"
+  has_content=true
+fi
+
+reverts=$(echo "${RAW_CHANGELOG}" | jq -r '.reverts[]?' 2>/dev/null || echo "")
+if [ -n "${reverts}" ]; then
+  formatted+="\nReverts:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${reverts}"
+  has_content=true
+fi
+
+docs=$(echo "${RAW_CHANGELOG}" | jq -r '.docs[]?' 2>/dev/null || echo "")
+if [ -n "${docs}" ]; then
+  formatted+="\nDocumentation:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${docs}"
+  has_content=true
+fi
+
+other=$(echo "${RAW_CHANGELOG}" | jq -r '.other[]?' 2>/dev/null || echo "")
+if [ -n "${other}" ]; then
+  formatted+="\nOther:\n"
+  while IFS= read -r item; do
+    [ -n "${item}" ] && formatted+="• ${item}\n"
+  done <<< "${other}"
+  has_content=true
+fi
+
+if [ "${has_content}" = false ]; then
+  formatted+="No changes in this release.\n"
 fi
 
 {
   echo "changelog-plain<<EOF"
   printf "%b" "${formatted}"
-  echo ""
   echo "EOF"
 } >> "${GITHUB_OUTPUT}"
