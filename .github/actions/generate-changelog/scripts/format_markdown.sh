@@ -11,13 +11,12 @@ if ! command -v jq > /dev/null 2>&1; then
   exit 1
 fi
 
-version=$(echo "${RAW_CHANGELOG}" | jq -r '.version // ""')
 branch=$(echo "${RAW_CHANGELOG}" | jq -r '.branch // ""')
 
 if [ -n "${branch}" ]; then
-  formatted="## Release Notes v${version} (\`${branch}\`)\n\n"
+  formatted="## What's New (\`${branch}\`)\n\n"
 else
-  formatted="## Release Notes v${version}\n\n"
+  formatted="## What's New\n\n"
 fi
 
 has_content=false

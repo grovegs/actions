@@ -27,17 +27,17 @@ runs:
         - name: 📝 Generate Raw Structured Changelog
           id: generate-raw
           shell: bash
+          env:
+              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
-              chmod +x "${{ github.action_path }}/scripts/generate_raw.sh"
-              "${{ github.action_path }}/scripts/generate_raw.sh"
+              chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
+              "${{ github.action_path }}/scripts/generate_changelog.sh"
 
         - name: 📄 Format to Plain Text
           id: format-plain
           shell: bash
           env:
               RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
-              VERSION: ${{ inputs.next-version }}
-              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_plain.sh"
               "${{ github.action_path }}/scripts/format_plain.sh"
@@ -47,8 +47,6 @@ runs:
           shell: bash
           env:
               RAW_CHANGELOG: ${{ steps.generate-raw.outputs.changelog-raw }}
-              VERSION: ${{ inputs.next-version }}
-              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/format_markdown.sh"
               "${{ github.action_path }}/scripts/format_markdown.sh"
