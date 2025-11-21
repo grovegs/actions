@@ -16,14 +16,22 @@ if [ -z "${RUNNER_OS:-}" ]; then
   exit 1
 fi
 
+GODOT_PATH_INPUT="${GODOT_PATH:-}"
+
+if [ -n "${GODOT_PATH_INPUT}" ]; then
+  EDITOR_DIR="${GODOT_PATH_INPUT}"
+else
+  EDITOR_DIR="${HOME}/.godot"
+fi
+
 case "${RUNNER_OS}" in
   "Linux")
-    GODOT_EXECUTABLE="${HOME}/.godot/Godot_v${GODOT_VERSION}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux.x86_64"
-    GODOT_SHARP="${HOME}/.godot/Godot_v${GODOT_VERSION}/GodotSharp"
+    GODOT_EXECUTABLE="${EDITOR_DIR}/Godot_v${GODOT_VERSION}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux.x86_64"
+    GODOT_SHARP="${EDITOR_DIR}/Godot_v${GODOT_VERSION}/GodotSharp"
     ;;
   "macOS")
-    GODOT_EXECUTABLE="${HOME}/.godot/Godot_v${GODOT_VERSION}.app/Contents/MacOS/Godot"
-    GODOT_SHARP="${HOME}/.godot/Godot_v${GODOT_VERSION}.app/Contents/Resources/GodotSharp"
+    GODOT_EXECUTABLE="${EDITOR_DIR}/Godot_v${GODOT_VERSION}.app/Contents/MacOS/Godot"
+    GODOT_SHARP="${EDITOR_DIR}/Godot_v${GODOT_VERSION}.app/Contents/Resources/GodotSharp"
     ;;
   *)
     echo "::error::Unsupported platform: ${RUNNER_OS}"
@@ -41,20 +49,12 @@ if [ ! -d "${GODOT_SHARP}" ]; then
   exit 1
 fi
 
-if [ -L "/usr/local/bin/godot" ]; then
-  echo "::notice::Removing existing Godot symlink"
-  sudo rm -f /usr/local/bin/godot
-fi
+echo "::notice::Exporting Godot environment variables"
 
-if [ -L "/usr/local/bin/GodotSharp" ]; then
-  echo "::notice::Removing existing GodotSharp symlink"
-  sudo rm -f /usr/local/bin/GodotSharp
-fi
+echo "GODOT_PATH=${EDITOR_DIR}" >> "${GITHUB_ENV}"
+echo "godot-path=${EDITOR_DIR}" >> "${GITHUB_OUTPUT}"
 
-echo "::notice::Creating symlink for Godot executable"
-sudo ln -s "${GODOT_EXECUTABLE}" /usr/local/bin/godot
+echo "::notice::Environment variables exported:"
+echo "::notice::  GODOT_PATH=${EDITOR_DIR}"
 
-echo "::notice::Creating symlink for GodotSharp"
-sudo ln -s "${GODOT_SHARP}" /usr/local/bin/GodotSharp
-
-echo "::notice::✓ Godot installation completed successfully"
+echo "::notice::✅ Godot installation completed successfully"

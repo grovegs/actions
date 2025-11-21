@@ -9,10 +9,18 @@ inputs:
         description: Comma-separated list of target platforms for export templates such as iOS, Android, macOS, Linux, Windows
         required: false
         default: ""
-    cache:
-        description: Cache Godot editor and export templates
+    godot-path:
+        description: Custom directory for Godot installation (default $HOME/.godot)
         required: false
-        default: "false"
+        default: ""
+
+outputs:
+    godot-path:
+        description: Directory containing Godot installation
+        value: ${{ steps.install-editor.outputs.godot-path }}
+    godot-version:
+        description: Installed Godot version
+        value: ${{ steps.get-godot-info.outputs.version }}
 
 runs:
     using: composite
@@ -26,20 +34,24 @@ runs:
               chmod +x "${{ github.action_path }}/scripts/get_godot_info.sh"
               "${{ github.action_path }}/scripts/get_godot_info.sh"
 
-        - name: 💾 Cache Editor
-          id: cache-editor
-          if: inputs.cache == 'true'
-          uses: actions/cache@v4
-          with:
-              key: godot-editor-${{ steps.get-godot-info.outputs.version }}-${{ steps.get-godot-info.outputs.stage }}-${{ runner.os }}
-              path: ~/.godot
-
-        - name: ⬇️ Download Editor
-          if: steps.cache-editor.outputs.cache-hit != 'true' || inputs.cache != 'true'
+        - name: 🔧 Prepare Download Directory
+          id: prepare-paths
           shell: bash
           env:
               GODOT_VERSION: ${{ steps.get-godot-info.outputs.version }}
               GODOT_STAGE: ${{ steps.get-godot-info.outputs.stage }}
+          run: |
+              DOWNLOAD_DIR="${RUNNER_TEMP}/.downloads/godot/${GODOT_VERSION}-${GODOT_STAGE}"
+              echo "download-dir=${DOWNLOAD_DIR}" >> "${GITHUB_OUTPUT}"
+              echo "::notice::Download directory: ${DOWNLOAD_DIR}"
+
+        - name: ⬇️ Download Editor
+          shell: bash
+          env:
+              GODOT_VERSION: ${{ steps.get-godot-info.outputs.version }}
+              GODOT_STAGE: ${{ steps.get-godot-info.outputs.stage }}
+              GODOT_PATH: ${{ inputs.godot-path }}
+              DOWNLOAD_DIR: ${{ steps.prepare-paths.outputs.download-dir }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/download_editor.sh"
               "${{ github.action_path }}/scripts/download_editor.sh"
@@ -52,41 +64,26 @@ runs:
               chmod +x "${{ github.action_path }}/scripts/get_templates_dir.sh"
               "${{ github.action_path }}/scripts/get_templates_dir.sh"
 
-        - name: 💾 Get Templates ID
-          id: get-templates-id
-          if: inputs.cache == 'true' && inputs.target-platforms != ''
-          shell: bash
-          env:
-              TARGET_PLATFORMS: ${{ inputs.target-platforms }}
-          run: |
-              chmod +x "${{ github.action_path }}/scripts/get_templates_id.sh"
-              "${{ github.action_path }}/scripts/get_templates_id.sh"
-
-        - name: 💾 Cache Templates
-          id: cache-templates
-          if: inputs.cache == 'true' && inputs.target-platforms != ''
-          uses: actions/cache@v4
-          with:
-              key: godot-templates-${{ steps.get-templates-id.outputs.templates-id }}-${{ steps.get-godot-info.outputs.version }}-${{ steps.get-godot-info.outputs.stage }}-${{ runner.os }}
-              path: ${{ steps.get-templates-dir.outputs.templates-dir }}
-
         - name: ⬇️ Download Templates
-          if: (steps.cache-templates.outputs.cache-hit != 'true' || inputs.cache != 'true') && inputs.target-platforms != ''
+          if: inputs.target-platforms != ''
           shell: bash
           env:
               GODOT_VERSION: ${{ steps.get-godot-info.outputs.version }}
               GODOT_STAGE: ${{ steps.get-godot-info.outputs.stage }}
               TEMPLATES_DIR: ${{ steps.get-templates-dir.outputs.templates-dir }}
               TARGET_PLATFORMS: ${{ inputs.target-platforms }}
+              DOWNLOAD_DIR: ${{ steps.prepare-paths.outputs.download-dir }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/download_templates.sh"
               "${{ github.action_path }}/scripts/download_templates.sh"
 
         - name: ⚙️ Install Editor
+          id: install-editor
           shell: bash
           env:
               GODOT_VERSION: ${{ steps.get-godot-info.outputs.version }}
               GODOT_STAGE: ${{ steps.get-godot-info.outputs.stage }}
+              GODOT_PATH: ${{ inputs.godot-path }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/install_editor.sh"
               "${{ github.action_path }}/scripts/install_editor.sh"
