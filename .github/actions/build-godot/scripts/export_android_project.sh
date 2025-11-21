@@ -36,9 +36,58 @@ if [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ]; then
   exit 1
 fi
 
-ANDROID_FORMAT="${ANDROID_FORMAT:-apk}"
+if [ -z "${ANDROID_FORMAT:-}" ]; then
+  ANDROID_FORMAT="apk"
+fi
+
 if [[ ! "${ANDROID_FORMAT}" =~ ^(apk|aab)$ ]]; then
   echo "::error::Invalid Android format: ${ANDROID_FORMAT}. Expected apk or aab"
+  exit 1
+fi
+
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
+
+if [ -z "${GODOT_VERSION:-}" ]; then
+  echo "::error::GODOT_VERSION environment variable is required"
+  exit 1
+fi
+
+if [ -z "${GODOT_STAGE:-}" ]; then
+  echo "::error::GODOT_STAGE environment variable is required"
+  exit 1
+fi
+
+if [ -n "${GODOT_PATH:-}" ]; then
+  echo "::notice::Using GODOT_PATH from environment: ${GODOT_PATH}"
+  case "${RUNNER_OS}" in
+    "Linux")
+      GODOT_EXECUTABLE="${GODOT_PATH}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux.x86_64"
+      ;;
+    "macOS")
+      GODOT_EXECUTABLE="${GODOT_PATH}/Contents/MacOS/Godot"
+      ;;
+  esac
+else
+  echo "::notice::GODOT_PATH not set, using default installation paths"
+  case "${RUNNER_OS}" in
+    "Linux")
+      GODOT_EXECUTABLE="${HOME}/.godot/Godot_v${GODOT_VERSION}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux.x86_64"
+      ;;
+    "macOS")
+      GODOT_EXECUTABLE="${HOME}/.godot/Godot_v${GODOT_VERSION}.app/Contents/MacOS/Godot"
+      ;;
+    *)
+      echo "::error::Unsupported platform: ${RUNNER_OS}"
+      exit 1
+      ;;
+  esac
+fi
+
+if [ ! -f "${GODOT_EXECUTABLE}" ]; then
+  echo "::error::Godot executable not found: ${GODOT_EXECUTABLE}"
   exit 1
 fi
 
@@ -77,7 +126,7 @@ case "${CONFIGURATION}" in
     export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${KEYSTORE_FILE}"
     export GODOT_ANDROID_KEYSTORE_DEBUG_USER="${ANDROID_KEYSTORE_USER}"
     export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="${ANDROID_KEYSTORE_PASSWORD}"
-    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-debug "${PRESET}" "${OUTPUT_FILE}"; then
+    if ! "${GODOT_EXECUTABLE}" --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-debug "${PRESET}" "${OUTPUT_FILE}"; then
       echo "::error::Godot export debug failed"
       exit 1
     fi
@@ -87,7 +136,7 @@ case "${CONFIGURATION}" in
     export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="${KEYSTORE_FILE}"
     export GODOT_ANDROID_KEYSTORE_RELEASE_USER="${ANDROID_KEYSTORE_USER}"
     export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="${ANDROID_KEYSTORE_PASSWORD}"
-    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-release "${PRESET}" "${OUTPUT_FILE}"; then
+    if ! "${GODOT_EXECUTABLE}" --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-release "${PRESET}" "${OUTPUT_FILE}"; then
       echo "::error::Godot export release failed"
       exit 1
     fi

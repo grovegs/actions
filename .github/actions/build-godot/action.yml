@@ -23,6 +23,10 @@ inputs:
     filename:
         description: The name of the output file of the build.
         required: true
+    godot-path:
+        description: Path to Godot installation directory (default $HOME/.godot/Godot_v{VERSION}.app on macOS or $HOME/.godot/Godot_v{VERSION} on Linux)
+        required: false
+        default: ""
     define-symbols:
         description: A semicolon-separated list of optional symbols to define during the build.
         required: false
@@ -120,6 +124,9 @@ runs:
               PRESET: ${{ inputs.preset }}
               CONFIGURATION: ${{ inputs.configuration }}
               FILENAME: ${{ inputs.filename }}
+              GODOT_VERSION: ${{ steps.get-godot-info.outputs.version }}
+              GODOT_STAGE: ${{ steps.get-godot-info.outputs.stage }}
+              GODOT_PATH: ${{ inputs.godot-path }}
               DEFINE_SYMBOLS: ${{ inputs.define-symbols }}
               ANDROID_KEYSTORE: ${{ inputs.android-keystore }}
               ANDROID_KEYSTORE_USER: ${{ inputs.android-keystore-user }}

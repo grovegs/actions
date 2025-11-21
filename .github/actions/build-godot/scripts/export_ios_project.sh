@@ -36,6 +36,34 @@ if [ -z "${IOS_PROVISIONING_PROFILE:-}" ]; then
   exit 1
 fi
 
+if [ -z "${RUNNER_OS:-}" ]; then
+  echo "::error::RUNNER_OS environment variable is required"
+  exit 1
+fi
+
+if [ "${RUNNER_OS}" != "macOS" ]; then
+  echo "::error::iOS builds are only supported on macOS. Current OS: ${RUNNER_OS}"
+  exit 1
+fi
+
+if [ -z "${GODOT_VERSION:-}" ]; then
+  echo "::error::GODOT_VERSION environment variable is required"
+  exit 1
+fi
+
+if [ -n "${GODOT_PATH:-}" ]; then
+  echo "::notice::Using GODOT_PATH from environment: ${GODOT_PATH}"
+  GODOT_EXECUTABLE="${GODOT_PATH}/Contents/MacOS/Godot"
+else
+  echo "::notice::GODOT_PATH not set, using default installation path"
+  GODOT_EXECUTABLE="${HOME}/.godot/Godot_v${GODOT_VERSION}.app/Contents/MacOS/Godot"
+fi
+
+if [ ! -f "${GODOT_EXECUTABLE}" ]; then
+  echo "::error::Godot executable not found: ${GODOT_EXECUTABLE}"
+  exit 1
+fi
+
 BUILDS_DIR="${HOME}/.builds/ios"
 KEYCHAINS_DIR="${RUNNER_TEMP}/Keychains"
 KEYCHAIN_FILE="${KEYCHAINS_DIR}/ios.keychain-db"
@@ -120,7 +148,7 @@ case "${CONFIGURATION}" in
   Debug)
     echo "::notice::Exporting debug build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_DEBUG="${IOS_PROVISIONING_PROFILE_UUID}"
-    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-debug "${PRESET}" "${EXPORT_FILE}"; then
+    if ! "${GODOT_EXECUTABLE}" --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-debug "${PRESET}" "${EXPORT_FILE}"; then
       echo "::error::Godot export debug failed"
       exit 1
     fi
@@ -128,7 +156,7 @@ case "${CONFIGURATION}" in
   Release)
     echo "::notice::Exporting release build for iOS..."
     export GODOT_IOS_PROVISIONING_PROFILE_UUID_RELEASE="${IOS_PROVISIONING_PROFILE_UUID}"
-    if ! godot --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-release "${PRESET}" "${EXPORT_FILE}"; then
+    if ! "${GODOT_EXECUTABLE}" --nologo --path "${PROJECT_DIR}" --rendering-driver vulkan --export-release "${PRESET}" "${EXPORT_FILE}"; then
       echo "::error::Godot export release failed"
       exit 1
     fi
