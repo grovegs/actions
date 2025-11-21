@@ -5,10 +5,6 @@ inputs:
     global-json-file:
         description: Path to the global.json file specifying the .NET SDK version
         required: true
-    cache:
-        description: Cache .NET SDK installation and NuGet packages
-        required: false
-        default: "false"
 
 outputs:
     dotnet-version:
@@ -34,15 +30,6 @@ runs:
               DOTNET_NOLOGO: true
           with:
               dotnet-version: ${{ steps.get-dotnet-version.outputs.dotnet-version }}
-
-        - name: 📦 Cache NuGet Packages
-          if: inputs.cache == 'true'
-          uses: actions/cache@v4
-          with:
-              path: ~/.nuget/packages
-              key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.fsproj', '**/*.vbproj') }}
-              restore-keys: |
-                  ${{ runner.os }}-nuget-
 
         - name: 🔎 Verify Installation
           shell: bash
