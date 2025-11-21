@@ -17,6 +17,69 @@ if [ -z "${RUNNER_OS:-}" ]; then
 fi
 
 UNITY_MODULES="${UNITY_MODULES:-}"
+UNITY_PATH_INPUT="${UNITY_PATH:-}"
+
+get_default_install_paths() {
+  local unity_version="$1"
+
+  case "${RUNNER_OS}" in
+    "macOS")
+      if [ -n "${UNITY_PATH_INPUT}" ]; then
+        echo "${UNITY_PATH_INPUT}/Unity-${unity_version}|${UNITY_PATH_INPUT}/Unity-${unity_version}/Unity.app/Contents/MacOS/Unity"
+      else
+        echo "/Applications/Unity/Unity-${unity_version}|/Applications/Unity/Unity-${unity_version}/Unity.app/Contents/MacOS/Unity"
+      fi
+      ;;
+    "Linux")
+      if [ -n "${UNITY_PATH_INPUT}" ]; then
+        echo "${UNITY_PATH_INPUT}/Unity-${unity_version}|${UNITY_PATH_INPUT}/Unity-${unity_version}/Editor/Unity"
+      else
+        echo "${HOME}/Unity-${unity_version}|${HOME}/Unity-${unity_version}/Editor/Unity"
+      fi
+      ;;
+    *)
+      echo "::error::Unsupported platform: ${RUNNER_OS}"
+      exit 1
+      ;;
+  esac
+}
+
+check_existing_installation() {
+  local unity_version="$1"
+  local install_paths
+
+  install_paths=$(get_default_install_paths "${unity_version}")
+  local unity_path
+  unity_path=$(echo "${install_paths}" | cut -d'|' -f1)
+  local unity_exe_path
+  unity_exe_path=$(echo "${install_paths}" | cut -d'|' -f2)
+
+  if [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
+    echo "::notice::Unity ${unity_version} is already installed"
+    echo "::notice::Unity executable: ${unity_exe_path}"
+
+    set +e
+    local version_output
+    version_output=$("${unity_exe_path}" -version 2>&1 | head -3)
+    local version_check=$?
+    set -e
+
+    if [ "${version_check}" -eq 0 ] && [ -n "${version_output}" ]; then
+      echo "::notice::Existing Unity installation verified:"
+      echo "${version_output}" | while IFS= read -r line; do
+        echo "::notice::  ${line}"
+      done
+
+      echo "${unity_path}"
+      return 0
+    else
+      echo "::warning::Unity executable exists but version check failed, will reinstall"
+      return 1
+    fi
+  fi
+
+  return 1
+}
 
 validate_download_dir() {
   if [ ! -d "${DOWNLOAD_DIR}" ]; then
@@ -92,55 +155,16 @@ extract_linux_archive() {
   fi
 }
 
-find_unity_installation() {
-  local unity_version="$1"
-  local unity_exe_path=""
-
-  echo "::notice::Searching for Unity ${unity_version} installation" >&2
-
-  case "${RUNNER_OS}" in
-    "macOS")
-      local unity_app_path="/Applications/Unity/Unity-${unity_version}/Unity.app"
-      unity_exe_path="${unity_app_path}/Contents/MacOS/Unity"
-
-      if [ -d "${unity_app_path}" ] && [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
-        echo "::notice::Found Unity installation: ${unity_app_path}" >&2
-      else
-        echo "::error::Unity installation not found at expected path: ${unity_app_path}" >&2
-        unity_exe_path=""
-      fi
-      ;;
-
-    "Linux")
-      unity_exe_path="${HOME}/Unity-${unity_version}/Editor/Unity"
-
-      if [ -f "${unity_exe_path}" ] && [ -x "${unity_exe_path}" ]; then
-        echo "::notice::Found Unity installation: ${unity_exe_path}" >&2
-      else
-        echo "::error::Unity installation not found at expected path: ${unity_exe_path}" >&2
-        unity_exe_path=""
-      fi
-      ;;
-
-    *)
-      echo "::error::Unsupported platform: ${RUNNER_OS}" >&2
-      exit 1
-      ;;
-  esac
-
-  echo "${unity_exe_path}"
-}
-
 verify_unity_installation() {
-  local unity_path="$1"
+  local unity_exe_path="$1"
 
-  if [ ! -f "${unity_path}" ]; then
-    echo "::error::Unity executable not found: ${unity_path}"
+  if [ ! -f "${unity_exe_path}" ]; then
+    echo "::error::Unity executable not found: ${unity_exe_path}"
     return 1
   fi
 
-  if [ ! -x "${unity_path}" ]; then
-    echo "::error::Unity executable is not executable: ${unity_path}"
+  if [ ! -x "${unity_exe_path}" ]; then
+    echo "::error::Unity executable is not executable: ${unity_exe_path}"
     return 1
   fi
 
@@ -148,7 +172,7 @@ verify_unity_installation() {
 
   set +e
   local version_output
-  version_output=$("${unity_path}" -version 2>&1 | head -5)
+  version_output=$("${unity_exe_path}" -version 2>&1 | head -5)
   set -e
 
   if [ -n "${version_output}" ]; then
@@ -163,100 +187,28 @@ verify_unity_installation() {
   return 0
 }
 
-create_unity_wrapper() {
+export_unity_environment() {
   local unity_path="$1"
 
-  echo "::notice::Creating Unity wrapper script"
+  echo "::notice::Exporting Unity environment variables"
 
-  if [ -L "/usr/local/bin/unity" ] || [ -f "/usr/local/bin/unity" ]; then
-    echo "::notice::Removing existing unity command: /usr/local/bin/unity"
-    if ! sudo rm -f "/usr/local/bin/unity"; then
-      echo "::warning::Failed to remove existing unity command: /usr/local/bin/unity"
-    fi
-  fi
+  echo "UNITY_PATH=${unity_path}" >> "${GITHUB_ENV}"
+  echo "unity-path=${unity_path}" >> "${GITHUB_OUTPUT}"
 
-  if [ -L "/usr/local/bin/Unity" ] || [ -f "/usr/local/bin/Unity" ]; then
-    echo "::notice::Removing legacy Unity command: /usr/local/bin/Unity"
-    if ! sudo rm -f "/usr/local/bin/Unity"; then
-      echo "::warning::Failed to remove legacy Unity command: /usr/local/bin/Unity"
-    fi
-  fi
-
-  echo "::notice::Creating wrapper script: /usr/local/bin/unity -> ${unity_path}"
-
-  local wrapper_script="#!/usr/bin/env bash
-set -euo pipefail
-
-UNITY_REAL_PATH=\"${unity_path}\"
-
-if [ ! -f \"\${UNITY_REAL_PATH}\" ]; then
-    echo \"Error: Unity executable not found: \${UNITY_REAL_PATH}\" >&2
-    exit 1
-fi"
-
-  if [ "${RUNNER_OS}" = "macOS" ]; then
-    wrapper_script+="
-
-UNITY_APP_DIR=\$(dirname \$(dirname \$(dirname \"\${UNITY_REAL_PATH}\")))
-
-cd \"\${UNITY_APP_DIR}\""
-  fi
-
-  wrapper_script+="
-
-exec \"\${UNITY_REAL_PATH}\" \"\$@\"
-"
-
-  if echo "${wrapper_script}" | sudo tee /usr/local/bin/unity > /dev/null; then
-    if sudo chmod +x /usr/local/bin/unity; then
-      echo "::notice::Successfully created Unity wrapper script"
-    else
-      echo "::error::Failed to make Unity wrapper script executable"
-      exit 1
-    fi
-  else
-    echo "::error::Failed to create Unity wrapper script"
-    exit 1
-  fi
-
-  if command -v unity > /dev/null 2>&1; then
-    echo "::notice::Unity command is now available in PATH"
-
-    echo "::notice::Testing Unity wrapper script"
-    set +e
-    unity -version > /dev/null 2>&1
-    set -e
-    echo "::notice::Unity wrapper script test completed"
-  else
-    echo "::warning::Unity command may not be available in PATH"
-  fi
-}
-
-configure_unity_environment() {
-  local unity_version="$1"
-
-  echo "::notice::Configuring Unity environment for version ${unity_version}"
-
-  UNITY_EXE_PATH=$(find_unity_installation "${unity_version}")
-
-  if [ -z "${UNITY_EXE_PATH}" ]; then
-    echo "::error::Failed to locate Unity ${unity_version} installation"
-    echo "::error::Please ensure Unity is properly installed"
-    exit 1
-  fi
-
-  if ! verify_unity_installation "${UNITY_EXE_PATH}"; then
-    exit 1
-  fi
-
-  create_unity_wrapper "${UNITY_EXE_PATH}"
-
-  echo "::notice::✓ Unity environment configuration completed"
-  echo "::notice::Unity executable: ${UNITY_EXE_PATH}"
+  echo "::notice::Environment variables exported:"
+  echo "::notice::  UNITY_PATH=${unity_path}"
 }
 
 install_macos() {
+  local install_paths
+  install_paths=$(get_default_install_paths "${UNITY_VERSION}")
+  local unity_path
+  unity_path=$(echo "${install_paths}" | cut -d'|' -f1)
+  local unity_exe_path
+  unity_exe_path=$(echo "${install_paths}" | cut -d'|' -f2)
+
   echo "::notice::Installing Unity for macOS"
+  echo "::notice::Target installation: ${unity_path}"
 
   local editor_installer="${DOWNLOAD_DIR}/Unity-${UNITY_VERSION}.pkg"
   run_mac_installer "${editor_installer}"
@@ -293,29 +245,38 @@ install_macos() {
     done
   fi
 
-  configure_unity_environment "${UNITY_VERSION}"
-}
-
-install_linux() {
-  echo "::notice::Installing Unity for Linux"
-
-  local install_location="${HOME}/Unity-${UNITY_VERSION}"
-
-  local editor_archive="${DOWNLOAD_DIR}/Unity.tar.xz"
-  extract_linux_archive "${editor_archive}" "${install_location}"
-
-  local unity_executable="${install_location}/Editor/Unity"
-  if [ ! -f "${unity_executable}" ]; then
-    echo "::error::Unity executable not found after extraction: ${unity_executable}"
+  if ! verify_unity_installation "${unity_exe_path}"; then
     exit 1
   fi
 
-  if ! chmod +x "${unity_executable}"; then
+  export_unity_environment "${unity_path}"
+}
+
+install_linux() {
+  local install_paths
+  install_paths=$(get_default_install_paths "${UNITY_VERSION}")
+  local unity_path
+  unity_path=$(echo "${install_paths}" | cut -d'|' -f1)
+  local unity_exe_path
+  unity_exe_path=$(echo "${install_paths}" | cut -d'|' -f2)
+
+  echo "::notice::Installing Unity for Linux"
+  echo "::notice::Target installation: ${unity_path}"
+
+  local editor_archive="${DOWNLOAD_DIR}/Unity.tar.xz"
+  extract_linux_archive "${editor_archive}" "${unity_path}"
+
+  if [ ! -f "${unity_exe_path}" ]; then
+    echo "::error::Unity executable not found after extraction: ${unity_exe_path}"
+    exit 1
+  fi
+
+  if ! chmod +x "${unity_exe_path}"; then
     echo "::error::Failed to make Unity executable"
     exit 1
   fi
 
-  echo "::notice::Unity installed at: ${unity_executable}"
+  echo "::notice::Unity installed at: ${unity_exe_path}"
 
   if [ -n "${UNITY_MODULES}" ]; then
     echo "::notice::Installing Linux modules: ${UNITY_MODULES}"
@@ -328,7 +289,7 @@ install_linux() {
         continue
       fi
 
-      echo "::notice::Manually installing module: ${MODULE_TRIMMED}"
+      echo "::notice::Installing module: ${MODULE_TRIMMED}"
 
       local archive_name=""
       case "${MODULE_TRIMMED}" in
@@ -341,19 +302,36 @@ install_linux() {
 
       MODULE_ARCHIVE="${DOWNLOAD_DIR}/${archive_name}"
       if [ -f "${MODULE_ARCHIVE}" ]; then
-        extract_linux_archive "${MODULE_ARCHIVE}" "${install_location}"
+        extract_linux_archive "${MODULE_ARCHIVE}" "${unity_path}"
       else
         echo "::warning::Module archive not found: ${archive_name}"
       fi
     done
   fi
 
-  configure_unity_environment "${UNITY_VERSION}"
+  if ! verify_unity_installation "${unity_exe_path}"; then
+    exit 1
+  fi
+
+  export_unity_environment "${unity_path}"
 }
 
 echo "::notice::Starting Unity installation for ${RUNNER_OS}"
 echo "::notice::Version: ${UNITY_VERSION}"
 echo "::notice::Modules: ${UNITY_MODULES}"
+
+if [ -n "${UNITY_PATH_INPUT}" ]; then
+  echo "::notice::Using custom installation directory: ${UNITY_PATH_INPUT}"
+fi
+
+EXISTING_UNITY_PATH=$(check_existing_installation "${UNITY_VERSION}" || echo "")
+
+if [ -n "${EXISTING_UNITY_PATH}" ]; then
+  export_unity_environment "${EXISTING_UNITY_PATH}"
+
+  echo "::notice::✅ Using existing Unity installation"
+  exit 0
+fi
 
 validate_download_dir
 
@@ -370,4 +348,4 @@ case "${RUNNER_OS}" in
     ;;
 esac
 
-echo "::notice::✓ Unity installation completed successfully"
+echo "::notice::✅ Unity installation completed successfully"
