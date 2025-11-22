@@ -88,13 +88,11 @@ jobs:
               with:
                   global-json-file: sandbox/GodotApplication/global.json
                   target-platforms: Android
-                  cache: "true"
 
             - name: 🧪 Test Godot Project
               uses: ./.github/actions/test-godot
               with:
                   project: sandbox/GodotApplication
-                  global-json-file: sandbox/GodotApplication/global.json
 
     test-unity-actions:
         name: Test Unity Actions
@@ -114,7 +112,6 @@ jobs:
               with:
                   project: sandbox/UnityApplication
                   unity-modules: android
-                  cache: "true"
 
     test-android-setup:
         name: Test Android Setup
@@ -155,6 +152,7 @@ jobs:
               uses: ./.github/actions/bump-version
               with:
                   version-type: patch
+                  create-tag: "false"
 
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog
