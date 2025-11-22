@@ -11,8 +11,6 @@ if ! command -v jq > /dev/null 2>&1; then
   exit 1
 fi
 
-branch_name="${BRANCH_NAME:-}"
-
 latest_version=$(git tag --merged HEAD --sort=-version:refname | head -n 1 2> /dev/null || echo "")
 
 if [ -z "${latest_version}" ]; then
@@ -157,7 +155,6 @@ while IFS= read -r commit; do
 done <<< "${commits}"
 
 json_obj=$(jq -n \
-  --arg branch "${branch_name}" \
   --argjson features "$(printf '%s\n' "${features[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
   --argjson fixes "$(printf '%s\n' "${fixes[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
   --argjson chores "$(printf '%s\n' "${chores[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
@@ -168,7 +165,6 @@ json_obj=$(jq -n \
   --argjson docs "$(printf '%s\n' "${docs[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
   --argjson other "$(printf '%s\n' "${other[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
   '{
-    branch: $branch,
     features: $features,
     fixes: $fixes,
     chores: $chores,
