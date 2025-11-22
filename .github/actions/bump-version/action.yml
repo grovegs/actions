@@ -5,6 +5,10 @@ inputs:
     version-type:
         description: Type of version bump such as major, minor, or patch.
         required: true
+    create-tag:
+        description: Whether to create and push a Git tag for the next version.
+        required: false
+        default: "true"
 
 outputs:
     latest-version:
@@ -22,6 +26,7 @@ runs:
           shell: bash
           env:
               VERSION_TYPE: ${{ inputs.version-type }}
+              CREATE_TAG: ${{ inputs.create-tag }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/bump_version.sh"
               "${{ github.action_path }}/scripts/bump_version.sh"
