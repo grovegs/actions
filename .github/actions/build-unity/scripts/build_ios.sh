@@ -70,15 +70,17 @@ if [[ ! "${IOS_TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]]; then
   echo "::warning::iOS Team ID format appears invalid. Expected 10 uppercase alphanumeric characters."
 fi
 
+UNITY_CMD="${UNITY_EXECUTABLE:-unity}"
+
 if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" && pwd)"
 fi
 
-BUILDS_DIR="${HOME}/.builds/ios"
-XCODE_PROJECT_DIR="${BUILDS_DIR}/${FILENAME}"
-ARCHIVE_PATH="${BUILDS_DIR}/${FILENAME}.xcarchive"
-EXPORT_PATH="${BUILDS_DIR}/${FILENAME}.ipa"
-EXPORT_OPTIONS_PLIST="${BUILDS_DIR}/export.plist"
+PLATFORM_BUILDS_DIR="${HOME}/.builds/ios"
+XCODE_PROJECT_DIR="${PLATFORM_BUILDS_DIR}/${FILENAME}"
+ARCHIVE_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.xcarchive"
+EXPORT_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.ipa"
+EXPORT_OPTIONS_PLIST="${PLATFORM_BUILDS_DIR}/export.plist"
 KEYCHAIN_FILE="${RUNNER_TEMP}/ios.keychain-db"
 CERTIFICATE_FILE="${RUNNER_TEMP}/ios.p12"
 PROVISIONING_FILE="${RUNNER_TEMP}/profile.mobileprovision"
@@ -91,7 +93,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "::notice::Creating build directories..."
-mkdir -p "${BUILDS_DIR}"
+mkdir -p "${PLATFORM_BUILDS_DIR}"
 mkdir -p "${XCODE_PROJECT_DIR}"
 
 echo "::notice::Decoding certificate and provisioning profile..."
@@ -131,6 +133,7 @@ fi
   echo "::notice::  Team ID: ${IOS_TEAM_ID}"
   echo "::notice::  Export Method: ${IOS_EXPORT_METHOD}"
   echo "::notice::  Provisioning UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
+  echo "::notice::  Unity: ${UNITY_CMD}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -152,6 +155,7 @@ else
   BUILD_METHOD_ARGS=("-executeMethod" "BuildiOS.Build")
 fi
 
+declare -a BUILD_ARGS
 BUILD_ARGS=(
   -batchmode
   -nographics
@@ -162,7 +166,10 @@ BUILD_ARGS=(
   -projectPath "${PROJECT_DIR}"
   -buildTarget iOS
   -logFile -
-  "${BUILD_METHOD_ARGS[@]}"
+)
+
+BUILD_ARGS+=("${BUILD_METHOD_ARGS[@]}")
+BUILD_ARGS+=(
   -outputPath "${XCODE_PROJECT_DIR}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -172,7 +179,7 @@ BUILD_ARGS=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! unity "${BUILD_ARGS[@]}" 2>&1; then
+if ! "${UNITY_CMD}" "${BUILD_ARGS[@]}" 2>&1; then
   echo "::error::Unity build failed for iOS"
   exit 1
 fi
@@ -207,8 +214,8 @@ security list-keychains -d user -s "${KEYCHAIN_FILE}"
 security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 
-mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-cp "${PROVISIONING_FILE}" "$HOME/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
+mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
+cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
 
 echo "::notice::Building and archiving iOS project..."
 
@@ -220,7 +227,11 @@ if ! xcodebuild -workspace "${XCWORKSPACE_FILE}" \
   archive \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
-  PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"; then
+  PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}" \
+  STRIP_SWIFT_SYMBOLS=YES \
+  COPY_PHASE_STRIP=YES \
+  STRIP_INSTALLED_PRODUCT=YES \
+  DEAD_CODE_STRIPPING=YES; then
   echo "::error::Xcode archive failed"
   exit 1
 fi
@@ -263,14 +274,14 @@ cat > "${EXPORT_OPTIONS_PLIST}" << EOF
         <key>${BUNDLE_ID}</key>
         <string>${IOS_PROVISIONING_PROFILE_UUID}</string>
     </dict>
-    <key>compileBitcode</key>
-    <false/>
-    <key>uploadBitcode</key>
-    <false/>
     <key>uploadSymbols</key>
     <true/>
     <key>signingStyle</key>
     <string>manual</string>
+    <key>thinning</key>
+    <string><thin-for-all-variants></string>
+    <key>stripSwiftSymbols</key>
+    <true/>
 </dict>
 </plist>
 EOF
@@ -278,13 +289,13 @@ EOF
 echo "::notice::Exporting IPA from archive..."
 if ! xcodebuild -exportArchive \
   -archivePath "${ARCHIVE_PATH}" \
-  -exportPath "${BUILDS_DIR}" \
+  -exportPath "${PLATFORM_BUILDS_DIR}" \
   -exportOptionsPlist "${EXPORT_OPTIONS_PLIST}"; then
   echo "::error::IPA export failed"
   exit 1
 fi
 
-ACTUAL_IPA=$(find "${BUILDS_DIR}" -name "*.ipa" -type f | head -1)
+ACTUAL_IPA=$(find "${PLATFORM_BUILDS_DIR}" -name "*.ipa" -type f | head -1)
 if [ -n "${ACTUAL_IPA}" ] && [ "${ACTUAL_IPA}" != "${EXPORT_PATH}" ]; then
   mv "${ACTUAL_IPA}" "${EXPORT_PATH}"
 fi

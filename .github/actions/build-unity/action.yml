@@ -30,6 +30,10 @@ inputs:
     unity-license-key:
         description: The Unity license serial key.
         required: true
+    unity-path:
+        description: Path to Unity installation directory (default /Applications/Unity/Unity-{VERSION} on macOS or $HOME/Unity-{VERSION} on Linux)
+        required: false
+        default: ""
     android-keystore:
         description: Base64-encoded content of the Android keystore used for signing APK or AAB files.
         required: false
@@ -62,9 +66,9 @@ inputs:
         description: Custom build method to use such as MyNamespace.MyClass.MyBuildMethod.
         required: false
     cache:
-        description: Cache Unity Library, packages, and build tools.
+        description: Cache Unity Library and packages. Only enable if safe for your workflow.
         required: false
-        default: "true"
+        default: "false"
 
 outputs:
     file:
@@ -80,11 +84,46 @@ runs:
           run: |
               if [ -f "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" ]; then
                 version=$(grep "m_EditorVersion:" "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2)
-                echo "version=$version" >> "$GITHUB_OUTPUT"
-                echo "::notice::Detected Unity version: $version"
+                echo "version=${version}" >> "${GITHUB_OUTPUT}"
+                echo "::notice::Detected Unity version: ${version}"
               else
-                echo "version=unknown" >> "$GITHUB_OUTPUT"
+                echo "version=unknown" >> "${GITHUB_OUTPUT}"
                 echo "::warning::Could not detect Unity version"
+              fi
+
+        - name: 🔍 Locate Unity Installation
+          id: check-unity
+          shell: bash
+          run: |
+              UNITY_VERSION="${{ steps.unity-version.outputs.version }}"
+              UNITY_PATH_INPUT="${{ inputs.unity-path }}"
+
+              if [ -n "${UNITY_PATH_INPUT}" ]; then
+                UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
+                UNITY_DIR="${UNITY_PATH_INPUT}/Unity-${UNITY_VERSION}"
+              else
+                if [ "$(uname)" = "Darwin" ]; then
+                  UNITY_DIR="/Applications/Unity/Unity-${UNITY_VERSION}"
+                else
+                  UNITY_DIR="${HOME}/Unity-${UNITY_VERSION}"
+                fi
+                echo "::notice::Using default Unity path for platform: ${UNITY_DIR}"
+              fi
+
+              if [ "$(uname)" = "Darwin" ]; then
+                UNITY_EXECUTABLE="${UNITY_DIR}/Unity.app/Contents/MacOS/Unity"
+              else
+                UNITY_EXECUTABLE="${UNITY_DIR}/Editor/Unity"
+              fi
+
+              if [ -f "${UNITY_EXECUTABLE}" ]; then
+                echo "unity-executable=${UNITY_EXECUTABLE}" >> "${GITHUB_OUTPUT}"
+                echo "::notice::Using Unity from: ${UNITY_EXECUTABLE}"
+                "${UNITY_EXECUTABLE}" -version 2>/dev/null || echo "::debug::Could not get Unity version"
+              else
+                echo "::error::Unity not found at: ${UNITY_EXECUTABLE}"
+                echo "::error::Please install Unity at the default location or provide unity-path input"
+                exit 1
               fi
 
         - name: 🔑 Create Cache Key
@@ -94,13 +133,16 @@ runs:
           run: |
               echo "::notice::Generating cache key for ${{ inputs.project }}..."
 
-              project_files=$(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
+              declare -a project_files
+              while IFS= read -r file; do
+                project_files+=("${file}")
+              done < <(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
 
-              if [ -n "$project_files" ]; then
+              if [ "${#project_files[@]}" -gt 0 ]; then
                 if command -v sha256sum >/dev/null 2>&1; then
-                  project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
+                  project_hash=$(cat "${project_files[@]}" 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
                 else
-                  project_hash=$(echo "$project_files" | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
+                  project_hash=$(cat "${project_files[@]}" 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
                 fi
               else
                 if command -v sha256sum >/dev/null 2>&1; then
@@ -111,8 +153,8 @@ runs:
               fi
 
               cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
-              echo "key=$cache_key" >> "$GITHUB_OUTPUT"
-              echo "::notice::Cache key: $cache_key"
+              echo "key=${cache_key}" >> "${GITHUB_OUTPUT}"
+              echo "::notice::Cache key: ${cache_key}"
 
         - name: 📚 Cache Unity Library
           if: inputs.cache == 'true'
@@ -126,39 +168,6 @@ runs:
               restore-keys: |
                   unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-
                   unity-${{ steps.unity-version.outputs.version }}-
-                  unity-
-
-        - name: 📦 Cache Unity Packages
-          if: inputs.cache == 'true'
-          uses: actions/cache@v4
-          with:
-              path: |
-                  ~/Library/Unity/Asset Store-5.x
-                  ~/.config/unity3d
-              key: unity-packages-${{ runner.os }}-${{ steps.unity-version.outputs.version }}
-              restore-keys: |
-                  unity-packages-${{ runner.os }}-
-
-        - name: 🤖 Cache Gradle
-          if: inputs.platform == 'Android' && inputs.cache == 'true'
-          uses: actions/cache@v4
-          with:
-              path: |
-                  ~/.gradle/caches
-                  ~/.gradle/wrapper
-              key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-              restore-keys: |
-                  gradle-${{ runner.os }}-
-
-        - name: 🍎 Cache Derived Data
-          if: inputs.platform == 'iOS' && inputs.cache == 'true'
-          uses: actions/cache@v4
-          with:
-              path: |
-                  ~/Library/Developer/Xcode/DerivedData
-              key: xcode-derived-${{ runner.os }}-${{ hashFiles('**/project.pbxproj') }}
-              restore-keys: |
-                  xcode-derived-${{ runner.os }}-
 
         - name: 🧹 Clean Corrupted Cache
           if: inputs.cache == 'true' && steps.cache-unity-library.outputs.cache-hit == 'true'
@@ -189,6 +198,7 @@ runs:
               CONFIGURATION: ${{ inputs.configuration }}
               FILENAME: ${{ inputs.filename }}
               PROFILE_NAME: ${{ inputs.profile-name }}
+              UNITY_EXECUTABLE: ${{ steps.check-unity.outputs.unity-executable }}
               UNITY_EMAIL: ${{ inputs.unity-email }}
               UNITY_PASSWORD: ${{ inputs.unity-password }}
               UNITY_LICENSE_KEY: ${{ inputs.unity-license-key }}
@@ -212,6 +222,7 @@ runs:
           shell: bash
           run: |
               echo "::notice::=== Build Statistics ==="
+              echo "::notice::Unity path: ${{ steps.check-unity.outputs.unity-executable }}"
               echo "::notice::Caching enabled: ${{ inputs.cache }}"
 
               if [ "${{ inputs.cache }}" == "true" ]; then
@@ -224,5 +235,5 @@ runs:
 
               if [ -d "${{ inputs.project }}/Library" ]; then
                 lib_size=$(du -sh "${{ inputs.project }}/Library" 2>/dev/null | cut -f1 || echo "unknown")
-                echo "::notice::Library folder size: $lib_size"
+                echo "::notice::Library folder size: ${lib_size}"
               fi

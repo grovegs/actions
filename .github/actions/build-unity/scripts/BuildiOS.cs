@@ -14,9 +14,9 @@ public static class BuildiOS
         try
         {
             Debug.Log("BuildiOS.Build() started");
-            
+
             var args = Environment.GetCommandLineArgs();
-            
+
             string outputPath = GetArg(args, "-outputPath");
             string buildConfig = GetArg(args, "-buildConfig");
             string versionName = GetArg(args, "-versionName");
@@ -75,7 +75,7 @@ public static class BuildiOS
             }
 
             BuildOptions buildOptions = BuildOptions.None;
-            
+
             if (buildConfig == "Debug")
             {
                 buildOptions |= BuildOptions.Development | BuildOptions.AllowDebugging;
@@ -107,21 +107,21 @@ public static class BuildiOS
 
             Debug.Log("Starting Unity build process with active profile");
             var result = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.iOS, buildOptions);
-            
+
             if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
             {
                 Debug.LogError($"Build failed with result: {result.summary.result}");
-                
+
                 if (result.summary.totalErrors > 0)
                 {
                     Debug.LogError($"Total errors: {result.summary.totalErrors}");
                 }
-                
+
                 if (result.summary.totalWarnings > 0)
                 {
                     Debug.LogWarning($"Total warnings: {result.summary.totalWarnings}");
                 }
-                
+
                 EditorApplication.Exit(1);
                 return;
             }
@@ -141,7 +141,7 @@ public static class BuildiOS
     static bool ValidateAppIcons()
     {
         Debug.Log("🔍 Validating iOS app icon configuration...");
-        
+
         var appIcons = PlayerSettings.GetIcons(NamedBuildTarget.iOS, IconKind.Application);
         if (appIcons != null && appIcons.Length > 0)
         {
@@ -174,7 +174,7 @@ public static class BuildiOS
                 break;
             }
         }
-        
+
         if (!hasMarketingIcon)
         {
             Debug.LogError("❌ CRITICAL: Missing required 1024x1024 marketing icon!");
@@ -197,13 +197,13 @@ public static class BuildiOS
         int[] requiredSizes = new int[] { 20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180 };
         var iconSizes = allIcons.Where(i => i != null).Select(i => i.width).Distinct().ToArray();
         var missingSizes = requiredSizes.Where(size => !iconSizes.Contains(size)).ToArray();
-        
+
         if (missingSizes.Length > 0)
         {
             Debug.LogWarning($"⚠️  Missing recommended icon sizes: {string.Join(", ", missingSizes)}");
             Debug.LogWarning("While not critical for TestFlight, these may be needed for App Store submission");
         }
-        
+
         Debug.Log("✅ App icon validation passed");
         return true;
     }
@@ -213,12 +213,12 @@ public static class BuildiOS
         try
         {
             string[] guids = AssetDatabase.FindAssets($"{profileName} t:BuildProfile");
-            
+
             if (guids.Length > 0)
             {
                 string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
                 BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
-                
+
                 if (profile != null)
                 {
                     BuildProfile.SetActiveBuildProfile(profile);
@@ -226,7 +226,7 @@ public static class BuildiOS
                     return true;
                 }
             }
-            
+
             Debug.LogWarning($"Build profile '{profileName}' not found. Available profiles:");
             string[] allGuids = AssetDatabase.FindAssets("t:BuildProfile");
             foreach (string guid in allGuids)
