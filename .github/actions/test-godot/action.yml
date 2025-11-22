@@ -5,9 +5,10 @@ inputs:
     project:
         description: Path to the Godot project folder containing the project.godot file
         required: true
-    global-json-file:
-        description: Path to global.json which specifies the Godot version for the build
-        required: true
+    godot-path:
+        description: Path to Godot executable (default $HOME/.godot/Godot_v{VERSION}.app/Contents/MacOS/Godot on macOS or $HOME/.godot/Godot_v{VERSION} on Linux)
+        required: false
+        default: ""
 
 runs:
     using: composite
@@ -16,6 +17,7 @@ runs:
           shell: bash
           env:
               PROJECT_DIR: ${{ inputs.project }}
+              GODOT_PATH: ${{ inputs.godot-path }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
               "${{ github.action_path }}/scripts/test_project.sh"

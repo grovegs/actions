@@ -11,11 +11,6 @@ if ! command -v dotnet > /dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v godot > /dev/null 2>&1; then
-  echo "::error::godot is not installed or not in PATH"
-  exit 1
-fi
-
 if [ ! -d "${PROJECT_DIR}" ]; then
   echo "::error::Project directory does not exist: ${PROJECT_DIR}"
   exit 1
@@ -40,6 +35,46 @@ if [ ! -f "${PROJECT_GODOT_FILE}" ]; then
   echo "::error::Godot project file not found: ${PROJECT_GODOT_FILE}"
   exit 1
 fi
+
+GODOT_VERSION=""
+if [ -f "${PROJECT_GODOT_FILE}" ]; then
+  GODOT_VERSION=$(grep -E "^config/features=" "${PROJECT_GODOT_FILE}" | grep -oE '"[0-9]+\.[0-9]+"' | head -1 | tr -d '"' || echo "")
+fi
+
+if [ -z "${GODOT_VERSION}" ]; then
+  echo "::warning::Could not detect Godot version from project.godot"
+  GODOT_VERSION="unknown"
+else
+  echo "::notice::Detected Godot version: ${GODOT_VERSION}"
+fi
+
+GODOT_PATH_INPUT="${GODOT_PATH:-}"
+
+if [ -n "${GODOT_PATH_INPUT}" ]; then
+  GODOT_PATH_INPUT="${GODOT_PATH_INPUT/#\~/$HOME}"
+  GODOT_DIR="${GODOT_PATH_INPUT}/Godot_v${GODOT_VERSION}"
+else
+  if [ "$(uname)" = "Darwin" ]; then
+    GODOT_DIR="${HOME}/.godot/Godot_v${GODOT_VERSION}"
+  else
+    GODOT_DIR="${HOME}/.godot/Godot_v${GODOT_VERSION}"
+  fi
+  echo "::notice::Using default Godot path for platform: ${GODOT_DIR}"
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+  GODOT_EXECUTABLE="${GODOT_DIR}.app/Contents/MacOS/Godot"
+else
+  GODOT_EXECUTABLE="${GODOT_DIR}"
+fi
+
+if [ ! -f "${GODOT_EXECUTABLE}" ] && [ ! -x "${GODOT_EXECUTABLE}" ]; then
+  echo "::error::Godot not found at: ${GODOT_EXECUTABLE}"
+  echo "::error::Please install Godot at the default location or provide godot-path input"
+  exit 1
+fi
+
+echo "::notice::Using Godot from: ${GODOT_EXECUTABLE}"
 
 echo "::notice::Testing Godot project: ${PROJECT_DIR}"
 
@@ -68,13 +103,13 @@ if [ "${DOTNET_WARNING_COUNT}" -gt 0 ]; then
 fi
 
 if [ "${DOTNET_EXIT_CODE}" -eq 0 ]; then
-  echo "::notice::✓ C# build completed successfully"
+  echo "::notice::✅ C# build completed successfully"
 fi
 
 echo "::notice::Importing Godot project assets"
 
 set +e
-GODOT_OUTPUT=$(godot --path "${PROJECT_DIR}" --headless --quiet --import 2>&1)
+GODOT_OUTPUT=$("${GODOT_EXECUTABLE}" --path "${PROJECT_DIR}" --headless --quiet --import 2>&1)
 GODOT_EXIT_CODE=$?
 set -e
 
@@ -96,7 +131,7 @@ if [ "${GODOT_WARNING_COUNT}" -gt 0 ]; then
 fi
 
 if [ "${GODOT_EXIT_CODE}" -eq 0 ]; then
-  echo "::notice::✓ Godot import completed successfully"
+  echo "::notice::✅ Godot import completed successfully"
 fi
 
 TOTAL_ERRORS=$((DOTNET_ERROR_COUNT + GODOT_ERROR_COUNT))
@@ -117,4 +152,4 @@ if [ "${TOTAL_ERRORS}" -gt 0 ]; then
   exit 1
 fi
 
-echo "::notice::✓ All tests passed"
+echo "::notice::✅ All tests passed"
