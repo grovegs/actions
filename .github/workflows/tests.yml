@@ -88,13 +88,11 @@ jobs:
               with:
                   global-json-file: sandbox/GodotApplication/global.json
                   target-platforms: Android
-                  cache: "true"
 
             - name: 🧪 Test Godot Project
               uses: ./.github/actions/test-godot
               with:
                   project: sandbox/GodotApplication
-                  global-json-file: sandbox/GodotApplication/global.json
 
     test-unity-actions:
         name: Test Unity Actions
@@ -114,7 +112,6 @@ jobs:
               with:
                   project: sandbox/UnityApplication
                   unity-modules: android
-                  cache: "true"
 
     test-android-setup:
         name: Test Android Setup
@@ -141,6 +138,83 @@ jobs:
               with:
                   xcode-version: "16.2"
 
+    test-firebase-setup:
+        name: Test Firebase Setup
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v5
+
+            - name: 🔥 Setup Firebase (Latest)
+              id: setup-latest
+              uses: ./.github/actions/setup-firebase
+              with:
+                  skip-login: "true"
+
+            - name: ✅ Verify Firebase Installation
+              shell: bash
+              run: |
+                  FIREBASE_VERSION="${{ steps.setup-latest.outputs.firebase-version }}"
+                  FIREBASE_PATH="${{ steps.setup-latest.outputs.firebase-path }}"
+
+                  if [ -z "${FIREBASE_VERSION}" ]; then
+                    echo "::error::firebase-version output is empty"
+                    exit 1
+                  fi
+
+                  if [ -z "${FIREBASE_PATH}" ]; then
+                    echo "::error::firebase-path output is empty"
+                    exit 1
+                  fi
+
+                  if [ ! -f "${FIREBASE_PATH}" ]; then
+                    echo "::error::Firebase CLI not found at: ${FIREBASE_PATH}"
+                    exit 1
+                  fi
+
+                  echo "✅ Firebase setup verified"
+                  echo "  Version: ${FIREBASE_VERSION}"
+                  echo "  Path: ${FIREBASE_PATH}"
+
+            - name: 🔥 Setup Firebase Again (Should Skip)
+              id: setup-again
+              uses: ./.github/actions/setup-firebase
+              with:
+                  skip-login: "true"
+
+            - name: ✅ Verify Skip Behavior
+              shell: bash
+              run: |
+                  FIRST_VERSION="${{ steps.setup-latest.outputs.firebase-version }}"
+                  SECOND_VERSION="${{ steps.setup-again.outputs.firebase-version }}"
+
+                  if [ "${FIRST_VERSION}" != "${SECOND_VERSION}" ]; then
+                    echo "::error::Version mismatch after second install"
+                    exit 1
+                  fi
+
+                  echo "✅ Firebase CLI correctly skipped reinstallation"
+                  echo "  Version: ${SECOND_VERSION}"
+
+            - name: 🔥 Test Specific Version
+              uses: ./.github/actions/setup-firebase
+              with:
+                  version: "12.9.1"
+                  skip-login: "true"
+
+            - name: ✅ Verify Specific Version
+              shell: bash
+              run: |
+                  INSTALLED_VERSION=$(firebase --version | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+
+                  if [ "${INSTALLED_VERSION}" != "12.9.1" ]; then
+                    echo "::error::Expected version 12.9.1, got ${INSTALLED_VERSION}"
+                    exit 1
+                  fi
+
+                  echo "✅ Specific version installation verified"
+                  echo "  Version: ${INSTALLED_VERSION}"
+
     test-utility-actions:
         name: Test Utility Actions
         runs-on: ubuntu-latest
@@ -155,6 +229,7 @@ jobs:
               uses: ./.github/actions/bump-version
               with:
                   version-type: patch
+                  create-tag: "false"
 
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog

@@ -1,0 +1,33 @@
+name: Setup Firebase
+description: Install and configure Firebase CLI using npm with automatic version detection and caching support.
+
+inputs:
+    version:
+        description: Firebase CLI version to install such as 13.0.0. If not specified, installs the latest version.
+        required: false
+        default: ""
+    skip-login:
+        description: Skip Firebase login verification check
+        required: false
+        default: "false"
+
+outputs:
+    firebase-version:
+        description: The installed Firebase CLI version
+        value: ${{ steps.install.outputs.firebase-version }}
+    firebase-path:
+        description: Path to the Firebase CLI executable
+        value: ${{ steps.install.outputs.firebase-path }}
+
+runs:
+    using: composite
+    steps:
+        - name: 🔧 Install Firebase CLI
+          id: install
+          shell: bash
+          env:
+              FIREBASE_VERSION: ${{ inputs.version }}
+              SKIP_LOGIN: ${{ inputs.skip-login }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/install_firebase.sh"
+              "${{ github.action_path }}/scripts/install_firebase.sh"

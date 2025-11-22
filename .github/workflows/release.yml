@@ -30,6 +30,12 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: 🔖 Configure Git
+              shell: bash
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
             - name: 🆙 Bump Version
               id: bump-version
               uses: ./.github/actions/bump-version
@@ -41,7 +47,6 @@ jobs:
               uses: ./.github/actions/generate-changelog
               with:
                   next-version: ${{ steps.bump-version.outputs.next-version }}
-                  branch-name: ${{ github.ref_name != github.event.repository.default_branch && github.ref_name || '' }}
 
     release:
         name: Release Platforms
