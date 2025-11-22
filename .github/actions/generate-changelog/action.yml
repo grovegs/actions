@@ -1,11 +1,6 @@
 name: Generate Changelog
 description: Generate structured changelog from git commits and format in multiple output formats.
 
-inputs:
-    next-version:
-        description: The next version tag to compare such as 1.1.0
-        required: true
-
 outputs:
     changelog-raw:
         description: Raw structured changelog with categories and commits

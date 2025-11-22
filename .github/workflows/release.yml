@@ -30,6 +30,10 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: 📝 Generate Changelog
+              id: generate-changelog
+              uses: ./.github/actions/generate-changelog
+
             - name: 🔖 Configure Git
               shell: bash
               run: |
@@ -41,12 +45,6 @@ jobs:
               uses: ./.github/actions/bump-version
               with:
                   version-type: ${{ inputs.version-type }}
-
-            - name: 📝 Generate Changelog
-              id: generate-changelog
-              uses: ./.github/actions/generate-changelog
-              with:
-                  next-version: ${{ steps.bump-version.outputs.next-version }}
 
     release:
         name: Release Platforms
