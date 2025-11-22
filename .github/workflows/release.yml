@@ -30,6 +30,12 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: 🔖 Configure Git
+              shell: bash
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
             - name: 🆙 Bump Version
               id: bump-version
               uses: ./.github/actions/bump-version
