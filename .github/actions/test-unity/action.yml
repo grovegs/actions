@@ -5,6 +5,10 @@ inputs:
     project:
         description: Path to the Unity project folder
         required: true
+    unity-path:
+        description: Path to Unity installation directory (default /Applications/Unity/Unity-{VERSION} on macOS or $HOME/Unity-{VERSION} on Linux)
+        required: false
+        default: ""
 
 runs:
     using: composite
@@ -13,6 +17,7 @@ runs:
           shell: bash
           env:
               PROJECT_DIR: ${{ inputs.project }}
+              UNITY_PATH: ${{ inputs.unity-path }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
               "${{ github.action_path }}/scripts/test_project.sh"

@@ -6,11 +6,6 @@ if [ -z "${PROJECT_DIR:-}" ]; then
   exit 1
 fi
 
-if ! command -v unity > /dev/null 2>&1; then
-  echo "::error::unity is not installed or not in PATH"
-  exit 1
-fi
-
 if [ ! -d "${PROJECT_DIR}" ]; then
   echo "::error::Project directory does not exist: ${PROJECT_DIR}"
   exit 1
@@ -23,6 +18,46 @@ if [ ! -f "${PROJECT_SETTINGS}" ]; then
   exit 1
 fi
 
+UNITY_VERSION=""
+if [ -f "${PROJECT_DIR}/ProjectSettings/ProjectVersion.txt" ]; then
+  UNITY_VERSION=$(grep "m_EditorVersion:" "${PROJECT_DIR}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2)
+fi
+
+if [ -z "${UNITY_VERSION}" ]; then
+  echo "::warning::Could not detect Unity version from ProjectVersion.txt"
+  UNITY_VERSION="unknown"
+else
+  echo "::notice::Detected Unity version: ${UNITY_VERSION}"
+fi
+
+UNITY_PATH_INPUT="${UNITY_PATH:-}"
+
+if [ -n "${UNITY_PATH_INPUT}" ]; then
+  UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
+  UNITY_DIR="${UNITY_PATH_INPUT}/Unity-${UNITY_VERSION}"
+else
+  if [ "$(uname)" = "Darwin" ]; then
+    UNITY_DIR="/Applications/Unity/Unity-${UNITY_VERSION}"
+  else
+    UNITY_DIR="${HOME}/Unity-${UNITY_VERSION}"
+  fi
+  echo "::notice::Using default Unity path for platform: ${UNITY_DIR}"
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+  UNITY_EXECUTABLE="${UNITY_DIR}/Unity.app/Contents/MacOS/Unity"
+else
+  UNITY_EXECUTABLE="${UNITY_DIR}/Editor/Unity"
+fi
+
+if [ ! -f "${UNITY_EXECUTABLE}" ]; then
+  echo "::error::Unity not found at: ${UNITY_EXECUTABLE}"
+  echo "::error::Please install Unity at the default location or provide unity-path input"
+  exit 1
+fi
+
+echo "::notice::Using Unity from: ${UNITY_EXECUTABLE}"
+
 echo "::notice::Testing Unity project: ${PROJECT_DIR}"
 
 run_unity_tests() {
@@ -31,7 +66,7 @@ run_unity_tests() {
   echo "::notice::Running ${platform} tests"
 
   set +e
-  UNITY_OUTPUT=$(unity -batchmode -nographics \
+  UNITY_OUTPUT=$("${UNITY_EXECUTABLE}" -batchmode -nographics \
     -projectPath "${PROJECT_DIR}" \
     -runTests \
     -testPlatform "${platform}" 2>&1)
