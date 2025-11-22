@@ -13,14 +13,14 @@ inputs:
 runs:
     using: composite
     steps:
-        - name: 🔧 Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-              node-version: "20"
-
         - name: 📦 Install Prettier and Plugins
           shell: bash
           run: |
+              if ! command -v npm >/dev/null 2>&1; then
+                echo "::error::npm is not installed"
+                exit 1
+              fi
+
               npm init -y
               npm install prettier@latest prettier-plugin-sh@latest
               echo "Installed packages:"

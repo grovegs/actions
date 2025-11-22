@@ -11,6 +11,11 @@ if [ -z "${GODOT_STAGE:-}" ]; then
   exit 1
 fi
 
+if [ -z "${DOWNLOAD_DIR:-}" ]; then
+  echo "::error::DOWNLOAD_DIR environment variable is required"
+  exit 1
+fi
+
 if [ -z "${RUNNER_OS:-}" ]; then
   echo "::error::RUNNER_OS environment variable is required"
   exit 1
@@ -26,7 +31,38 @@ if ! command -v unzip > /dev/null 2>&1; then
   exit 1
 fi
 
-EDITOR_DIR="${HOME}/.godot"
+GODOT_PATH_INPUT="${GODOT_PATH:-}"
+
+if [ -n "${GODOT_PATH_INPUT}" ]; then
+  EDITOR_DIR="${GODOT_PATH_INPUT}"
+else
+  EDITOR_DIR="${HOME}/.godot"
+fi
+
+case "${RUNNER_OS}" in
+  "Linux")
+    GODOT_EXECUTABLE="${EDITOR_DIR}/Godot_v${GODOT_VERSION}/Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_linux.x86_64"
+    ;;
+  "macOS")
+    GODOT_EXECUTABLE="${EDITOR_DIR}/Godot_v${GODOT_VERSION}.app/Contents/MacOS/Godot"
+    ;;
+  *)
+    echo "::error::Unsupported platform: ${RUNNER_OS}"
+    exit 1
+    ;;
+esac
+
+if [ -f "${GODOT_EXECUTABLE}" ] && [ -x "${GODOT_EXECUTABLE}" ]; then
+  echo "::notice::Godot ${GODOT_VERSION}-${GODOT_STAGE} is already installed at ${EDITOR_DIR}"
+  echo "::notice::Skipping download"
+  exit 0
+fi
+
+echo "::notice::Creating download directory at ${DOWNLOAD_DIR}"
+if ! mkdir -p "${DOWNLOAD_DIR}"; then
+  echo "::error::Failed to create directory at ${DOWNLOAD_DIR}"
+  exit 1
+fi
 
 echo "::notice::Creating Godot directory at ${EDITOR_DIR}"
 if ! mkdir -p "${EDITOR_DIR}"; then
@@ -55,12 +91,26 @@ fi
 
 FILE_NAME="Godot_v${GODOT_VERSION}-${GODOT_STAGE}_mono_${PLATFORM}"
 URL="https://github.com/godotengine/${SOURCE_NAME}/releases/download/${GODOT_VERSION}-${GODOT_STAGE}/${FILE_NAME}.zip"
-DOWNLOADED_FILE="${EDITOR_DIR}/${FILE_NAME}.zip"
+DOWNLOADED_FILE="${DOWNLOAD_DIR}/${FILE_NAME}.zip"
 
-echo "::notice::Downloading Godot from ${URL}"
-if ! curl -L -o "${DOWNLOADED_FILE}" "${URL}"; then
-  echo "::error::Download failed for ${URL}"
-  exit 1
+if [ -f "${DOWNLOADED_FILE}" ]; then
+  local file_size
+  file_size=$(stat -f%z "${DOWNLOADED_FILE}" 2> /dev/null || stat -c%s "${DOWNLOADED_FILE}" 2> /dev/null || echo "0")
+
+  if [ "${file_size}" -lt 1048576 ]; then
+    echo "::warning::Existing file appears corrupted (${file_size} bytes), re-downloading"
+    rm -f "${DOWNLOADED_FILE}"
+  else
+    echo "::notice::Using existing download (${file_size} bytes)"
+  fi
+fi
+
+if [ ! -f "${DOWNLOADED_FILE}" ]; then
+  echo "::notice::Downloading Godot from ${URL}"
+  if ! curl -L -o "${DOWNLOADED_FILE}" "${URL}"; then
+    echo "::error::Download failed for ${URL}"
+    exit 1
+  fi
 fi
 
 if [ ! -f "${DOWNLOADED_FILE}" ]; then
@@ -73,8 +123,6 @@ if ! unzip -o "${DOWNLOADED_FILE}" -d "${EDITOR_DIR}"; then
   echo "::error::Extraction failed for ${DOWNLOADED_FILE}"
   exit 1
 fi
-
-rm "${DOWNLOADED_FILE}"
 
 echo "::notice::Moving Godot to final location"
 case "${RUNNER_OS}" in
@@ -90,4 +138,4 @@ case "${RUNNER_OS}" in
     ;;
 esac
 
-echo "::notice::✓ Godot editor downloaded successfully"
+echo "::notice::✅ Godot editor downloaded successfully"

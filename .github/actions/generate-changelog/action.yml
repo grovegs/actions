@@ -5,10 +5,6 @@ inputs:
     next-version:
         description: The next version tag to compare such as 1.1.0
         required: true
-    branch-name:
-        description: The branch name to include in changelog (optional, omit for main/production branches)
-        required: false
-        default: ""
 
 outputs:
     changelog-raw:
@@ -27,8 +23,6 @@ runs:
         - name: 📝 Generate Raw Structured Changelog
           id: generate-raw
           shell: bash
-          env:
-              BRANCH_NAME: ${{ inputs.branch-name }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
               "${{ github.action_path }}/scripts/generate_changelog.sh"

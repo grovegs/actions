@@ -12,9 +12,9 @@ public static class BuildAndroid
         try
         {
             Debug.Log("BuildAndroid.Build() started");
-            
+
             var args = Environment.GetCommandLineArgs();
-            
+
             string outputPath = GetArg(args, "-outputPath");
             string keystorePath = GetArg(args, "-keystorePath");
             string keystorePass = GetArg(args, "-keystorePass");
@@ -53,7 +53,7 @@ public static class BuildAndroid
                 PlayerSettings.bundleVersion = versionName;
                 var versionParts = versionName.Split('.');
 
-                if (versionParts.Length >= 3 && 
+                if (versionParts.Length >= 3 &&
                     int.TryParse(versionParts[0], out int major) &&
                     int.TryParse(versionParts[1], out int minor) &&
                     int.TryParse(versionParts[2], out int patch))
@@ -116,21 +116,21 @@ public static class BuildAndroid
 
             Debug.Log("Starting Unity build process with active profile");
             var result = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.Android, buildOptions);
-            
+
             if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
             {
                 Debug.LogError($"Build failed with result: {result.summary.result}");
-                
+
                 if (result.summary.totalErrors > 0)
                 {
                     Debug.LogError($"Total errors: {result.summary.totalErrors}");
                 }
-                
+
                 if (result.summary.totalWarnings > 0)
                 {
                     Debug.LogWarning($"Total warnings: {result.summary.totalWarnings}");
                 }
-                
+
                 EditorApplication.Exit(1);
                 return;
             }
@@ -152,12 +152,12 @@ public static class BuildAndroid
         try
         {
             string[] guids = AssetDatabase.FindAssets($"{profileName} t:BuildProfile");
-            
+
             if (guids.Length > 0)
             {
                 string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
                 BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(assetPath);
-                
+
                 if (profile != null)
                 {
                     BuildProfile.SetActiveBuildProfile(profile);
@@ -165,7 +165,7 @@ public static class BuildAndroid
                     return true;
                 }
             }
-            
+
             Debug.LogWarning($"Build profile '{profileName}' not found. Available profiles:");
             string[] allGuids = AssetDatabase.FindAssets("t:BuildProfile");
             foreach (string guid in allGuids)

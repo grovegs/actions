@@ -51,6 +51,8 @@ if [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ]; then
   exit 1
 fi
 
+UNITY_CMD="${UNITY_EXECUTABLE:-unity}"
+
 if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" 2>/dev/null && pwd)" || {
     echo "::error::Project directory not found or inaccessible: ${PROJECT_DIR}"
@@ -84,9 +86,9 @@ if [[ ! "${ANDROID_FORMAT}" =~ ^(apk|aab)$ ]]; then
   exit 1
 fi
 
-BUILDS_DIR="${HOME}/.builds/android"
+PLATFORM_BUILDS_DIR="${HOME}/.builds/android"
 KEYSTORE_FILE="${RUNNER_TEMP}/android.keystore"
-OUTPUT_FILE="${BUILDS_DIR}/${FILENAME}.${ANDROID_FORMAT}"
+OUTPUT_FILE="${PLATFORM_BUILDS_DIR}/${FILENAME}.${ANDROID_FORMAT}"
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
@@ -95,8 +97,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "::notice::Creating build directory..."
-mkdir -p "${BUILDS_DIR}" || {
-  echo "::error::Failed to create directory: ${BUILDS_DIR}"
+mkdir -p "${PLATFORM_BUILDS_DIR}" || {
+  echo "::error::Failed to create directory: ${PLATFORM_BUILDS_DIR}"
   exit 1
 }
 
@@ -125,6 +127,7 @@ fi
   echo "::notice::  Format: ${ANDROID_FORMAT}"
   echo "::notice::  Output: ${OUTPUT_FILE}"
   echo "::notice::  Profile: ${PROFILE_NAME:-default}"
+  echo "::notice::  Unity: ${UNITY_CMD}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -154,6 +157,7 @@ mkdir -p "$(dirname "${OUTPUT_FILE}")" || {
   exit 1
 }
 
+declare -a BUILD_ARGS
 BUILD_ARGS=(
   -batchmode
   -nographics
@@ -164,7 +168,10 @@ BUILD_ARGS=(
   -projectPath "${PROJECT_DIR}"
   -logFile -
   -buildTarget Android
-  "${BUILD_METHOD_ARGS[@]}"
+)
+
+BUILD_ARGS+=("${BUILD_METHOD_ARGS[@]}")
+BUILD_ARGS+=(
   -outputPath "${OUTPUT_FILE}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -181,7 +188,7 @@ printf '%s ' "${BUILD_ARGS[@]}"
 echo ""
 
 echo "::notice::Starting Unity build..."
-if ! unity "${BUILD_ARGS[@]}" 2>&1; then
+if ! "${UNITY_CMD}" "${BUILD_ARGS[@]}" 2>&1; then
   echo "::error::Unity build failed for Android"
   echo "::error::Check the Unity log output above for specific error details"
 
@@ -189,10 +196,10 @@ if ! unity "${BUILD_ARGS[@]}" 2>&1; then
   ls -la "${PROJECT_DIR}" || echo "::debug::Cannot list project directory"
 
   echo "::debug::Build directory contents:"
-  ls -la "${BUILDS_DIR}" || echo "::debug::Cannot list build directory"
+  ls -la "${PLATFORM_BUILDS_DIR}" || echo "::debug::Cannot list build directory"
 
   echo "::debug::Unity version:"
-  unity -version 2>/dev/null || echo "::debug::Cannot get Unity version"
+  "${UNITY_CMD}" -version 2>/dev/null || echo "::debug::Cannot get Unity version"
 
   exit 1
 fi
@@ -200,7 +207,7 @@ fi
 if [ ! -f "${OUTPUT_FILE}" ]; then
   echo "::error::Build output not found: ${OUTPUT_FILE}"
   echo "::debug::Contents of build directory:"
-  ls -la "${BUILDS_DIR}" || echo "::debug::Cannot list build directory"
+  ls -la "${PLATFORM_BUILDS_DIR}" || echo "::debug::Cannot list build directory"
   exit 1
 fi
 

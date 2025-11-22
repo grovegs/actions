@@ -68,3 +68,28 @@ echo "::notice::Next version: ${NEXT_VERSION}"
   echo "latest-version=${LATEST_VERSION}"
   echo "next-version=${NEXT_VERSION}"
 } >> "${GITHUB_OUTPUT}"
+
+if [ "${CREATE_TAG:-false}" = "true" ]; then
+  TAG_NAME="v${NEXT_VERSION}"
+
+  echo "::notice::Creating Git tag: ${TAG_NAME}"
+
+  if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+    echo "::error::Tag ${TAG_NAME} already exists"
+    exit 1
+  fi
+
+  if ! git tag -a "${TAG_NAME}" -m "Release ${NEXT_VERSION}"; then
+    echo "::error::Failed to create tag ${TAG_NAME}"
+    exit 1
+  fi
+
+  echo "::notice::Pushing tag ${TAG_NAME} to remote"
+
+  if ! git push origin "${TAG_NAME}"; then
+    echo "::error::Failed to push tag ${TAG_NAME}"
+    exit 1
+  fi
+
+  echo "::notice::✅ Tag ${TAG_NAME} created and pushed successfully"
+fi
