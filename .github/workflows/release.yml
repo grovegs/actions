@@ -79,7 +79,7 @@ jobs:
               uses: ./.github/actions/notify-discord
               with:
                   webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-                  title: ❌ ${{ github.event.repository.name }} (${{ github.ref_name }})
+                  title: ❌ ${{ github.event.repository.name }} v${{ needs.prepare.outputs.version }} (${{ github.ref_name }})
                   description: |
                       Release publication failed.
 
