@@ -19,15 +19,15 @@ else
   commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
 fi
 
-declare -a features
-declare -a fixes
-declare -a chores
-declare -a refactors
-declare -a tests
-declare -a ci
-declare -a reverts
-declare -a docs
-declare -a other
+declare -a features=()
+declare -a fixes=()
+declare -a chores=()
+declare -a refactors=()
+declare -a tests=()
+declare -a ci=()
+declare -a reverts=()
+declare -a docs=()
+declare -a other=()
 
 clean_commit() {
   local commit="$1"
@@ -154,16 +154,25 @@ while IFS= read -r commit; do
   fi
 done <<< "${commits}"
 
+array_to_json() {
+  local -n arr=$1
+  if [ ${#arr[@]} -eq 0 ]; then
+    echo '[]'
+  else
+    printf '%s\n' "${arr[@]}" | jq -R . | jq -s .
+  fi
+}
+
 json_obj=$(jq -n \
-  --argjson features "$([ "${#features[@]}" -gt 0 ] && printf '%s\n' "${features[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson fixes "$([ "${#fixes[@]}" -gt 0 ] && printf '%s\n' "${fixes[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson chores "$([ "${#chores[@]}" -gt 0 ] && printf '%s\n' "${chores[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson refactors "$([ "${#refactors[@]}" -gt 0 ] && printf '%s\n' "${refactors[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson tests "$([ "${#tests[@]}" -gt 0 ] && printf '%s\n' "${tests[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson ci "$([ "${#ci[@]}" -gt 0 ] && printf '%s\n' "${ci[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson reverts "$([ "${#reverts[@]}" -gt 0 ] && printf '%s\n' "${reverts[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson docs "$([ "${#docs[@]}" -gt 0 ] && printf '%s\n' "${docs[@]}" | jq -R . | jq -s . || echo '[]')" \
-  --argjson other "$([ "${#other[@]}" -gt 0 ] && printf '%s\n' "${other[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson features "$(array_to_json features)" \
+  --argjson fixes "$(array_to_json fixes)" \
+  --argjson chores "$(array_to_json chores)" \
+  --argjson refactors "$(array_to_json refactors)" \
+  --argjson tests "$(array_to_json tests)" \
+  --argjson ci "$(array_to_json ci)" \
+  --argjson reverts "$(array_to_json reverts)" \
+  --argjson docs "$(array_to_json docs)" \
+  --argjson other "$(array_to_json other)" \
   '{
     features: $features,
     fixes: $fixes,
