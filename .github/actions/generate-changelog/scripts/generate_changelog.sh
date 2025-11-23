@@ -155,15 +155,15 @@ while IFS= read -r commit; do
 done <<< "${commits}"
 
 json_obj=$(jq -n \
-  --argjson features "$(printf '%s\n' "${features[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson fixes "$(printf '%s\n' "${fixes[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson chores "$(printf '%s\n' "${chores[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson refactors "$(printf '%s\n' "${refactors[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson tests "$(printf '%s\n' "${tests[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson ci "$(printf '%s\n' "${ci[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson reverts "$(printf '%s\n' "${reverts[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson docs "$(printf '%s\n' "${docs[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
-  --argjson other "$(printf '%s\n' "${other[@]}" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')" \
+  --argjson features "$([ "${#features[@]}" -gt 0 ] && printf '%s\n' "${features[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson fixes "$([ "${#fixes[@]}" -gt 0 ] && printf '%s\n' "${fixes[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson chores "$([ "${#chores[@]}" -gt 0 ] && printf '%s\n' "${chores[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson refactors "$([ "${#refactors[@]}" -gt 0 ] && printf '%s\n' "${refactors[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson tests "$([ "${#tests[@]}" -gt 0 ] && printf '%s\n' "${tests[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson ci "$([ "${#ci[@]}" -gt 0 ] && printf '%s\n' "${ci[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson reverts "$([ "${#reverts[@]}" -gt 0 ] && printf '%s\n' "${reverts[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson docs "$([ "${#docs[@]}" -gt 0 ] && printf '%s\n' "${docs[@]}" | jq -R . | jq -s . || echo '[]')" \
+  --argjson other "$([ "${#other[@]}" -gt 0 ] && printf '%s\n' "${other[@]}" | jq -R . | jq -s . || echo '[]')" \
   '{
     features: $features,
     fixes: $fixes,
