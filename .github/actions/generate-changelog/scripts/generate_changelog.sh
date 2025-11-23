@@ -155,11 +155,13 @@ while IFS= read -r commit; do
 done <<< "${commits}"
 
 array_to_json() {
-  local -n arr=$1
-  if [ ${#arr[@]} -eq 0 ]; then
+  local array_name=$1
+  eval "local array_size=\${#${array_name}[@]}"
+
+  if [ "$array_size" -eq 0 ]; then
     echo '[]'
   else
-    printf '%s\n' "${arr[@]}" | jq -R . | jq -s .
+    eval "printf '%s\n' \"\${${array_name}[@]}\"" | jq -R . | jq -s .
   fi
 }
 
