@@ -86,7 +86,7 @@ if [[ ! "${ANDROID_FORMAT}" =~ ^(apk|aab)$ ]]; then
   exit 1
 fi
 
-PLATFORM_BUILDS_DIR="${HOME}/.builds/android"
+PLATFORM_BUILDS_DIR="${RUNNER_TEMP}/builds/android"
 KEYSTORE_FILE="${RUNNER_TEMP}/android.keystore"
 OUTPUT_FILE="${PLATFORM_BUILDS_DIR}/${FILENAME}.${ANDROID_FORMAT}"
 

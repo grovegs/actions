@@ -76,7 +76,7 @@ if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" && pwd)"
 fi
 
-PLATFORM_BUILDS_DIR="${HOME}/.builds/ios"
+PLATFORM_BUILDS_DIR="${RUNNER_TEMP}/builds/ios"
 XCODE_PROJECT_DIR="${PLATFORM_BUILDS_DIR}/${FILENAME}"
 ARCHIVE_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.xcarchive"
 EXPORT_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.ipa"
@@ -186,23 +186,67 @@ fi
 
 echo "::notice::Unity build completed successfully"
 
-echo "::notice::Looking for Xcode workspace..."
-XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
+echo "::notice::Looking for Xcode project..."
 
-if [ -z "${XCWORKSPACE_FILE}" ]; then
-  echo "::error::No Xcode workspace found in ${XCODE_PROJECT_DIR}"
+XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
+XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+
+if [ -n "${XCWORKSPACE_FILE}" ]; then
+  WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
+  SCHEME_NAME="${WORKSPACE_NAME%.*}"
+  echo "::notice::Found Xcode workspace: ${WORKSPACE_NAME}"
+  echo "::notice::Using scheme: ${SCHEME_NAME}"
+
+  xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2>/dev/null || echo "::debug::Could not list schemes"
+
+  BUILD_WORKSPACE="${XCWORKSPACE_FILE}"
+  BUILD_TYPE="workspace"
+
+elif [ -n "${XCODEPROJ_FILE}" ]; then
+  echo "::notice::Found Xcode project (no workspace): ${XCODEPROJ_FILE}"
+
+  if [ -f "${XCODE_PROJECT_DIR}/Podfile" ]; then
+    echo "::notice::Podfile found, installing CocoaPods dependencies..."
+
+    if ! command -v pod &> /dev/null; then
+      echo "::notice::CocoaPods not found, installing..."
+      sudo gem install cocoapods
+    fi
+
+    cd "${XCODE_PROJECT_DIR}"
+    pod install || {
+      echo "::error::Failed to install CocoaPods dependencies"
+      exit 1
+    }
+    cd -
+
+    XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
+
+    if [ -n "${XCWORKSPACE_FILE}" ]; then
+      WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
+      SCHEME_NAME="${WORKSPACE_NAME%.*}"
+      echo "::notice::Created workspace after pod install: ${WORKSPACE_NAME}"
+      BUILD_WORKSPACE="${XCWORKSPACE_FILE}"
+      BUILD_TYPE="workspace"
+    else
+      echo "::error::pod install did not create workspace"
+      exit 1
+    fi
+  else
+    PROJECT_NAME=$(basename "${XCODEPROJ_FILE}")
+    SCHEME_NAME="${PROJECT_NAME%.*}"
+    echo "::notice::Using project: ${PROJECT_NAME}"
+    echo "::notice::Using scheme: ${SCHEME_NAME}"
+
+    BUILD_WORKSPACE="${XCODEPROJ_FILE}"
+    BUILD_TYPE="project"
+  fi
+else
+  echo "::error::No Xcode workspace or project found in ${XCODE_PROJECT_DIR}"
   echo "::debug::Contents of ${XCODE_PROJECT_DIR}:"
   ls -la "${XCODE_PROJECT_DIR}"
-  echo "::debug::Unity should generate a .xcworkspace file for iOS builds"
   exit 1
 fi
-
-WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
-SCHEME_NAME="${WORKSPACE_NAME%.*}"
-echo "::notice::Found Xcode workspace: ${WORKSPACE_NAME}"
-echo "::notice::Using scheme: ${SCHEME_NAME}"
-
-xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2>/dev/null || echo "::debug::Could not list schemes"
 
 echo "::notice::Setting up iOS signing..."
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -219,19 +263,43 @@ cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${
 
 echo "::notice::Building and archiving iOS project..."
 
-if ! xcodebuild -workspace "${XCWORKSPACE_FILE}" \
-  -scheme "${SCHEME_NAME}" \
-  -configuration "${CONFIGURATION}" \
-  -destination "generic/platform=iOS" \
-  -archivePath "${ARCHIVE_PATH}" \
-  archive \
-  CODE_SIGN_STYLE=Manual \
-  DEVELOPMENT_TEAM="${IOS_TEAM_ID}" \
-  PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}" \
-  STRIP_SWIFT_SYMBOLS=YES \
-  COPY_PHASE_STRIP=YES \
-  STRIP_INSTALLED_PRODUCT=YES \
-  DEAD_CODE_STRIPPING=YES; then
+if [ "${BUILD_TYPE}" = "workspace" ]; then
+  BUILD_CMD=(
+    xcodebuild
+    -workspace "${BUILD_WORKSPACE}"
+    -scheme "${SCHEME_NAME}"
+    -configuration "${CONFIGURATION}"
+    -destination "generic/platform=iOS"
+    -archivePath "${ARCHIVE_PATH}"
+    archive
+    CODE_SIGN_STYLE=Manual
+    DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
+    PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
+    STRIP_SWIFT_SYMBOLS=YES
+    COPY_PHASE_STRIP=YES
+    STRIP_INSTALLED_PRODUCT=YES
+    DEAD_CODE_STRIPPING=YES
+  )
+else
+  BUILD_CMD=(
+    xcodebuild
+    -project "${BUILD_WORKSPACE}"
+    -scheme "${SCHEME_NAME}"
+    -configuration "${CONFIGURATION}"
+    -destination "generic/platform=iOS"
+    -archivePath "${ARCHIVE_PATH}"
+    archive
+    CODE_SIGN_STYLE=Manual
+    DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
+    PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
+    STRIP_SWIFT_SYMBOLS=YES
+    COPY_PHASE_STRIP=YES
+    STRIP_INSTALLED_PRODUCT=YES
+    DEAD_CODE_STRIPPING=YES
+  )
+fi
+
+if ! "${BUILD_CMD[@]}"; then
   echo "::error::Xcode archive failed"
   exit 1
 fi
