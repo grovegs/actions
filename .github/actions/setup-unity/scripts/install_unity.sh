@@ -25,16 +25,16 @@ get_default_install_paths() {
   case "${RUNNER_OS}" in
     "macOS")
       if [ -n "${UNITY_PATH_INPUT}" ]; then
-        echo "${UNITY_PATH_INPUT}/Unity-${unity_version}|${UNITY_PATH_INPUT}/Unity-${unity_version}/Unity.app/Contents/MacOS/Unity"
+        echo "${UNITY_PATH_INPUT}/${unity_version}|${UNITY_PATH_INPUT}/${unity_version}/Unity.app/Contents/MacOS/Unity"
       else
-        echo "/Applications/Unity/Unity-${unity_version}|/Applications/Unity/Unity-${unity_version}/Unity.app/Contents/MacOS/Unity"
+        echo "/Applications/Unity/Editor/${unity_version}|/Applications/Unity/Editor/${unity_version}/Unity.app/Contents/MacOS/Unity"
       fi
       ;;
     "Linux")
       if [ -n "${UNITY_PATH_INPUT}" ]; then
-        echo "${UNITY_PATH_INPUT}/Unity-${unity_version}|${UNITY_PATH_INPUT}/Unity-${unity_version}/Editor/Unity"
+        echo "${UNITY_PATH_INPUT}/${unity_version}|${UNITY_PATH_INPUT}/${unity_version}/Editor/Unity"
       else
-        echo "${HOME}/Unity-${unity_version}|${HOME}/Unity-${unity_version}/Editor/Unity"
+        echo "${HOME}/Unity/Editor/${unity_version}|${HOME}/Unity/Editor/${unity_version}/Editor/Unity"
       fi
       ;;
     *)

@@ -64,13 +64,13 @@ find_unity_android_player_path() {
 
     case "${RUNNER_OS}" in
       "macOS")
-        local unity_path="/Applications/Unity/Unity-${unity_version}"
+        local unity_path="/Applications/Unity/Editor/${unity_version}"
         if [ -d "${unity_path}" ]; then
           android_player_path="${unity_path}/PlaybackEngines/AndroidPlayer"
         fi
         ;;
       "Linux")
-        local unity_dir="${HOME}/Unity-${unity_version}"
+        local unity_dir="${HOME}/Unity/Editor/${unity_version}"
         if [ -d "${unity_dir}" ]; then
           android_player_path="${unity_dir}/Editor/Data/PlaybackEngines/AndroidPlayer"
         fi
