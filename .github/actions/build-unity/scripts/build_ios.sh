@@ -191,6 +191,48 @@ echo "::notice::Looking for Xcode project..."
 XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
 XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
 
+if [ -f "${XCODE_PROJECT_DIR}/Podfile" ]; then
+  echo "::notice::Detecting iOS deployment target from Xcode project..."
+
+  DETECTED_DEPLOYMENT_TARGET=""
+  if [ -n "${XCODEPROJ_FILE}" ]; then
+    DETECTED_DEPLOYMENT_TARGET=$(grep -o 'IPHONEOS_DEPLOYMENT_TARGET = [^;]*' "${XCODEPROJ_FILE}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
+  fi
+
+  if [ -n "${DETECTED_DEPLOYMENT_TARGET}" ]; then
+    echo "::notice::Found deployment target: ${DETECTED_DEPLOYMENT_TARGET}"
+
+    if ! grep -q "post_install do |installer|" "${XCODE_PROJECT_DIR}/Podfile"; then
+      cat >> "${XCODE_PROJECT_DIR}/Podfile" << PODFILE_END
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      deployment_target = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+      if deployment_target.nil? || deployment_target.to_f < ${DETECTED_DEPLOYMENT_TARGET}.to_f
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '${DETECTED_DEPLOYMENT_TARGET}'
+      end
+
+      if config.name == 'Debug'
+        config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
+      end
+
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+    end
+  end
+
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '${DETECTED_DEPLOYMENT_TARGET}'
+  end
+end
+PODFILE_END
+      echo "::notice::Configured Podfile with deployment target ${DETECTED_DEPLOYMENT_TARGET}"
+    fi
+  else
+    echo "::notice::Could not detect deployment target from Xcode project"
+  fi
+fi
+
 if [ -n "${XCWORKSPACE_FILE}" ]; then
   WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
   SCHEME_NAME="${WORKSPACE_NAME%.*}"
@@ -255,8 +297,24 @@ security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"
 security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security list-keychains -d user -s "${KEYCHAIN_FILE}"
-security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign
-security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+
+security import "${CERTIFICATE_FILE}" \
+  -k "${KEYCHAIN_FILE}" \
+  -P "${IOS_CERTIFICATE_PASSWORD}" \
+  -T /usr/bin/codesign \
+  -T /usr/bin/security \
+  -T /usr/bin/productbuild
+
+security set-key-partition-list \
+  -S apple-tool:,apple:,codesign: \
+  -s \
+  -k "${KEYCHAIN_PASSWORD}" \
+  "${KEYCHAIN_FILE}"
+
+if ! security find-identity -v -p codesigning "${KEYCHAIN_FILE}" >/dev/null 2>&1; then
+  echo "::error::Certificate not found in keychain after import"
+  exit 1
+fi
 
 mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
 cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
@@ -347,7 +405,7 @@ cat > "${EXPORT_OPTIONS_PLIST}" << EOF
     <key>signingStyle</key>
     <string>manual</string>
     <key>thinning</key>
-    <string><thin-for-all-variants></string>
+    <string>&lt;thin-for-all-variants&gt;</string>
     <key>stripSwiftSymbols</key>
     <true/>
 </dict>
