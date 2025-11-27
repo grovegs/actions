@@ -22,7 +22,7 @@ inputs:
 outputs:
     unity-path:
         description: Root directory of Unity installation
-        value: ${{ steps.install-unity.outputs.unity-path }}
+        value: ${{ steps.install-unity.outputs.unity-path || steps.check-installation.outputs.unity-path }}
     unity-version:
         description: Installed Unity version
         value: ${{ steps.get-unity-info.outputs.version }}
@@ -49,7 +49,19 @@ runs:
               chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
               "${{ github.action_path }}/scripts/get_unity_info.sh"
 
+        - name: 🔍 Check Existing Installation
+          id: check-installation
+          shell: bash
+          env:
+              UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
+              UNITY_PATH: ${{ inputs.unity-path }}
+              UNITY_MODULES: ${{ inputs.unity-modules }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/check_installation.sh"
+              "${{ github.action_path }}/scripts/check_installation.sh"
+
         - name: 🔧 Prepare Download Directory
+          if: steps.check-installation.outputs.installed != 'true'
           id: prepare-paths
           shell: bash
           env:
@@ -60,6 +72,7 @@ runs:
               echo "::notice::Download directory: ${DOWNLOAD_DIR}"
 
         - name: ⬇️ Download Unity
+          if: steps.check-installation.outputs.installed != 'true'
           shell: bash
           env:
               UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
@@ -71,6 +84,7 @@ runs:
               "${{ github.action_path }}/scripts/download_unity.sh"
 
         - name: ⚙️ Install Unity
+          if: steps.check-installation.outputs.installed != 'true'
           id: install-unity
           shell: bash
           env:
@@ -81,6 +95,15 @@ runs:
           run: |
               chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
               "${{ github.action_path }}/scripts/install_unity.sh"
+
+        - name: 📝 Set Unity Path Output
+          shell: bash
+          run: |
+              if [ "${{ steps.check-installation.outputs.installed }}" = "true" ]; then
+                echo "unity-path=${{ steps.check-installation.outputs.unity-path }}" >> "${GITHUB_OUTPUT}"
+                echo "UNITY_PATH=${{ steps.check-installation.outputs.unity-path }}" >> "${GITHUB_ENV}"
+                echo "::notice::Using existing Unity installation at ${{ steps.check-installation.outputs.unity-path }}"
+              fi
 
         - name: 📱 Configure Android Tools
           if: contains(inputs.unity-modules, 'android')
