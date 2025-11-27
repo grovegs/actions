@@ -40,12 +40,21 @@ download_file() {
   local filename
   filename=$(basename "${file_path}")
 
-  echo "::notice::Downloading ${filename}"
-
   if [ -f "${file_path}" ]; then
-    echo "::notice::File already exists, skipping: ${file_path}"
-    return 0
+    local file_size
+    file_size=$(stat -f%z "${file_path}" 2> /dev/null || stat -c%s "${file_path}" 2> /dev/null || echo "0")
+
+    if [ "${file_size}" -ge 1048576 ]; then
+      local size_mb=$((file_size / 1048576))
+      echo "::notice::✅ File already exists, skipping download: ${filename} (${size_mb} MB)"
+      return 0
+    else
+      echo "::warning::Existing file appears corrupted (${file_size} bytes), re-downloading: ${filename}"
+      rm -f "${file_path}"
+    fi
   fi
+
+  echo "::notice::Downloading ${filename}"
 
   local temp_file
   temp_file="${file_path}.tmp"
