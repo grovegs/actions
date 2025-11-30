@@ -188,19 +188,15 @@ echo "::notice::Unity build completed successfully"
 
 echo "::notice::Looking for Xcode project..."
 
-XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
 XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
 
-if [ -f "${XCODE_PROJECT_DIR}/Podfile" ]; then
-  echo "::notice::Detecting iOS deployment target from Xcode project..."
+if [ -f "${XCODE_PROJECT_DIR}/Podfile" ] && [ -n "${XCODEPROJ_FILE}" ]; then
+  echo "::notice::Configuring Podfile for deployment target..."
 
-  DETECTED_DEPLOYMENT_TARGET=""
-  if [ -n "${XCODEPROJ_FILE}" ]; then
-    DETECTED_DEPLOYMENT_TARGET=$(grep -o 'IPHONEOS_DEPLOYMENT_TARGET = [^;]*' "${XCODEPROJ_FILE}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
-  fi
+  DETECTED_DEPLOYMENT_TARGET=$(grep -o 'IPHONEOS_DEPLOYMENT_TARGET = [^;]*' "${XCODEPROJ_FILE}/project.pbxproj" | head -1 | cut -d' ' -f3 | tr -d '"')
 
   if [ -n "${DETECTED_DEPLOYMENT_TARGET}" ]; then
-    echo "::notice::Found deployment target: ${DETECTED_DEPLOYMENT_TARGET}"
+    echo "::notice::Detected deployment target: ${DETECTED_DEPLOYMENT_TARGET}"
 
     if ! grep -q "post_install do |installer|" "${XCODE_PROJECT_DIR}/Podfile"; then
       cat >> "${XCODE_PROJECT_DIR}/Podfile" << PODFILE_END
@@ -222,12 +218,31 @@ post_install do |installer|
   end
 end
 PODFILE_END
-      echo "::notice::Configured Podfile with deployment target ${DETECTED_DEPLOYMENT_TARGET}"
+      echo "::notice::Added post_install hook to Podfile"
+    else
+      echo "::notice::Podfile already has post_install hook"
     fi
+
+    echo "::notice::Running pod install to apply changes..."
+    cd "${XCODE_PROJECT_DIR}"
+    if ! command -v pod &> /dev/null; then
+      echo "::notice::Installing CocoaPods..."
+      sudo gem install cocoapods
+    fi
+    pod install || {
+      echo "::error::pod install failed"
+      exit 1
+    }
+    cd -
+    echo "::notice::CocoaPods configuration complete"
   else
-    echo "::notice::Could not detect deployment target from Xcode project"
+    echo "::warning::Could not detect deployment target from Xcode project"
   fi
+else
+  echo "::notice::No Podfile found or Xcode project not found"
 fi
+
+XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
 
 if [ -n "${XCWORKSPACE_FILE}" ]; then
   WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
@@ -241,44 +256,14 @@ if [ -n "${XCWORKSPACE_FILE}" ]; then
   BUILD_TYPE="workspace"
 
 elif [ -n "${XCODEPROJ_FILE}" ]; then
-  echo "::notice::Found Xcode project (no workspace): ${XCODEPROJ_FILE}"
+  echo "::notice::Found Xcode project without workspace: ${XCODEPROJ_FILE}"
 
-  if [ -f "${XCODE_PROJECT_DIR}/Podfile" ]; then
-    echo "::notice::Podfile found, installing CocoaPods dependencies..."
+  PROJECT_NAME=$(basename "${XCODEPROJ_FILE}")
+  SCHEME_NAME="${PROJECT_NAME%.*}"
+  echo "::notice::Using project: ${PROJECT_NAME}, scheme: ${SCHEME_NAME}"
 
-    if ! command -v pod &> /dev/null; then
-      echo "::notice::CocoaPods not found, installing..."
-      sudo gem install cocoapods
-    fi
-
-    cd "${XCODE_PROJECT_DIR}"
-    pod install || {
-      echo "::error::Failed to install CocoaPods dependencies"
-      exit 1
-    }
-    cd -
-
-    XCWORKSPACE_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
-
-    if [ -n "${XCWORKSPACE_FILE}" ]; then
-      WORKSPACE_NAME=$(basename "${XCWORKSPACE_FILE}")
-      SCHEME_NAME="${WORKSPACE_NAME%.*}"
-      echo "::notice::Created workspace after pod install: ${WORKSPACE_NAME}"
-      BUILD_WORKSPACE="${XCWORKSPACE_FILE}"
-      BUILD_TYPE="workspace"
-    else
-      echo "::error::pod install did not create workspace"
-      exit 1
-    fi
-  else
-    PROJECT_NAME=$(basename "${XCODEPROJ_FILE}")
-    SCHEME_NAME="${PROJECT_NAME%.*}"
-    echo "::notice::Using project: ${PROJECT_NAME}"
-    echo "::notice::Using scheme: ${SCHEME_NAME}"
-
-    BUILD_WORKSPACE="${XCODEPROJ_FILE}"
-    BUILD_TYPE="project"
-  fi
+  BUILD_WORKSPACE="${XCODEPROJ_FILE}"
+  BUILD_TYPE="project"
 else
   echo "::error::No Xcode workspace or project found in ${XCODE_PROJECT_DIR}"
   echo "::debug::Contents of ${XCODE_PROJECT_DIR}:"
@@ -290,16 +275,16 @@ echo "::notice::Setting up iOS signing..."
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
-security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"
+security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
 security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
-security list-keychains -d user -s "${KEYCHAIN_FILE}"
 
 security import "${CERTIFICATE_FILE}" \
   -k "${KEYCHAIN_FILE}" \
   -P "${IOS_CERTIFICATE_PASSWORD}" \
   -T /usr/bin/codesign \
   -T /usr/bin/security \
-  -T /usr/bin/productbuild
+  -T /usr/bin/productbuild \
+  -A
 
 security set-key-partition-list \
   -S apple-tool:,apple:,codesign: \
@@ -307,10 +292,16 @@ security set-key-partition-list \
   -k "${KEYCHAIN_PASSWORD}" \
   "${KEYCHAIN_FILE}"
 
+security list-keychains -d user -s "${KEYCHAIN_FILE}" $(security list-keychains -d user | sed s/\"//g)
+security default-keychain -s "${KEYCHAIN_FILE}"
+
 if ! security find-identity -v -p codesigning "${KEYCHAIN_FILE}" >/dev/null 2>&1; then
   echo "::error::Certificate not found in keychain after import"
   exit 1
 fi
+
+echo "::notice::Certificate imported successfully"
+security find-identity -v -p codesigning "${KEYCHAIN_FILE}"
 
 mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
 cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
