@@ -81,20 +81,29 @@ XCODE_PROJECT_DIR="${PLATFORM_BUILDS_DIR}/${FILENAME}"
 ARCHIVE_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.xcarchive"
 EXPORT_PATH="${PLATFORM_BUILDS_DIR}/${FILENAME}.ipa"
 EXPORT_OPTIONS_PLIST="${PLATFORM_BUILDS_DIR}/export.plist"
-KEYCHAIN_FILE="${RUNNER_TEMP}/ios.keychain-db"
-CERTIFICATE_FILE="${RUNNER_TEMP}/ios.p12"
-PROVISIONING_FILE="${RUNNER_TEMP}/profile.mobileprovision"
+SECRETS_DIR="${RUNNER_TEMP}/secrets"
+KEYCHAIN_FILE="${SECRETS_DIR}/ios.keychain-db"
+CERTIFICATE_FILE="${SECRETS_DIR}/ios.p12"
+PROVISIONING_FILE="${SECRETS_DIR}/profile.mobileprovision"
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
   security delete-keychain "${KEYCHAIN_FILE}" 2>/dev/null || true
-  rm -f "${CERTIFICATE_FILE}" "${PROVISIONING_FILE}" "${EXPORT_OPTIONS_PLIST}" || true
+
+  if [ -n "${ORIGINAL_KEYCHAIN}" ] && [ -f "${ORIGINAL_KEYCHAIN}" ]; then
+    security default-keychain -s "${ORIGINAL_KEYCHAIN}"
+    echo "::notice::Restored original keychain: ${ORIGINAL_KEYCHAIN}"
+  fi
+
+  rm -rf "${SECRETS_DIR}" || true
+  rm -f "${EXPORT_OPTIONS_PLIST}" || true
 }
 trap cleanup EXIT
 
-echo "::notice::Creating build directories..."
+echo "::notice::Creating directories..."
 mkdir -p "${PLATFORM_BUILDS_DIR}"
 mkdir -p "${XCODE_PROJECT_DIR}"
+mkdir -p "${SECRETS_DIR}"
 
 echo "::notice::Decoding certificate and provisioning profile..."
 echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}" || {
@@ -225,10 +234,18 @@ PODFILE_END
 
     echo "::notice::Running pod install to apply changes..."
     cd "${XCODE_PROJECT_DIR}"
+
     if ! command -v pod &> /dev/null; then
       echo "::notice::Installing CocoaPods..."
-      sudo gem install cocoapods
+      gem install cocoapods --no-document || {
+        echo "::error::Failed to install CocoaPods"
+        exit 1
+      }
     fi
+
+    POD_VERSION=$(pod --version 2>/dev/null)
+    echo "::notice::Using CocoaPods ${POD_VERSION}"
+
     pod install || {
       echo "::error::pod install failed"
       exit 1
@@ -273,6 +290,7 @@ fi
 
 echo "::notice::Setting up iOS signing..."
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+ORIGINAL_KEYCHAIN=$(security default-keychain | xargs)
 
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
@@ -320,7 +338,7 @@ if [ "${BUILD_TYPE}" = "workspace" ]; then
     CODE_SIGN_STYLE=Manual
     DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
     PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
-    GCC_PREPROCESSOR_DEFINITIONS='$(inherited) UNITY_USES_METAL_DISPLAY_LINK=0'
+    GCC_PREPROCESSOR_DEFINITIONS="$(inherited) UNITY_USES_METAL_DISPLAY_LINK=0"
     STRIP_SWIFT_SYMBOLS=YES
     COPY_PHASE_STRIP=YES
     STRIP_INSTALLED_PRODUCT=YES
@@ -338,7 +356,7 @@ else
     CODE_SIGN_STYLE=Manual
     DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
     PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
-    GCC_PREPROCESSOR_DEFINITIONS='$(inherited) UNITY_USES_METAL_DISPLAY_LINK=0'
+    GCC_PREPROCESSOR_DEFINITIONS="$(inherited) UNITY_USES_METAL_DISPLAY_LINK=0"
     STRIP_SWIFT_SYMBOLS=YES
     COPY_PHASE_STRIP=YES
     STRIP_INSTALLED_PRODUCT=YES
