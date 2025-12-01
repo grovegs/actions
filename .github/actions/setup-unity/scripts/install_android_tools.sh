@@ -17,26 +17,29 @@ ANDROID_HOME_VAR="${ANDROID_HOME:-}"
 NDK_HOME_VAR="${NDK_HOME:-}"
 
 find_unity_android_player_path() {
-  local android_player_path=""
+  echo "::notice::Locating Unity Android Player path" >&2
 
-  echo "::notice::Locating Unity Android Player path"
-
-  if [ -n "${UNITY_PATH_VAR}" ] && [ -d "${UNITY_PATH_VAR}" ]; then
-    echo "::notice::Using UNITY_PATH from environment: ${UNITY_PATH_VAR}"
-    android_player_path="${UNITY_PATH_VAR}/PlaybackEngines/AndroidPlayer"
-  else
-    echo "::error::UNITY_PATH environment variable is not set"
-    exit 1
+  if [ -z "${UNITY_PATH_VAR}" ]; then
+    echo "::error::UNITY_PATH environment variable is not set" >&2
+    return 1
   fi
 
-  if [ -n "${android_player_path}" ] && [ -d "${android_player_path}" ]; then
-    echo "::notice::Found Unity Android Player path: ${android_player_path}"
-    echo "${android_player_path}"
-  else
-    echo "::error::Unity Android Player not found at: ${android_player_path}"
-    echo "::error::Make sure Unity Android module is installed"
-    exit 1
+  if [ ! -d "${UNITY_PATH_VAR}" ]; then
+    echo "::error::UNITY_PATH directory does not exist: ${UNITY_PATH_VAR}" >&2
+    return 1
   fi
+
+  local android_player_path="${UNITY_PATH_VAR}/PlaybackEngines/AndroidPlayer"
+
+  if [ ! -d "${android_player_path}" ]; then
+    echo "::error::Unity Android Player not found at: ${android_player_path}" >&2
+    echo "::error::Make sure Unity Android module is installed" >&2
+    return 1
+  fi
+
+  echo "::notice::Found Unity Android Player path: ${android_player_path}" >&2
+  echo "${android_player_path}"
+  return 0
 }
 
 configure_android_tools() {
@@ -52,43 +55,47 @@ configure_android_tools() {
   local sdk_path=""
   local ndk_path=""
 
-  if [ -d "${unity_jdk}" ]; then
+  if [ -d "${unity_jdk}" ] && [ -f "${unity_jdk}/bin/java" ]; then
     jdk_path="${unity_jdk}"
     echo "::notice::✅ Using Unity's bundled JDK: ${jdk_path}"
-    if [ -f "${jdk_path}/bin/java" ]; then
+    if [ -x "${jdk_path}/bin/java" ]; then
       local java_version
       java_version=$("${jdk_path}/bin/java" -version 2>&1 | head -1 || echo "Unknown")
       echo "::notice::   Version: ${java_version}"
     fi
-  elif [ -n "${JAVA_HOME_VAR}" ] && [ -d "${JAVA_HOME_VAR}" ]; then
+  elif [ -n "${JAVA_HOME_VAR}" ] && [ -d "${JAVA_HOME_VAR}" ] && [ -f "${JAVA_HOME_VAR}/bin/java" ]; then
     jdk_path="${JAVA_HOME_VAR}"
     echo "::notice::✅ Using external JDK: ${jdk_path}"
     echo "::notice::   Creating symlink for Unity"
+    mkdir -p "${android_player_path}"
     ln -sf "${JAVA_HOME_VAR}" "${unity_jdk}"
   else
     echo "::error::❌ JDK not found"
     echo "::error::   Unity's bundled JDK not found at: ${unity_jdk}"
+    echo "::error::   Checked for: ${unity_jdk}/bin/java"
     echo "::error::   External JAVA_HOME not set or invalid: ${JAVA_HOME_VAR}"
     echo "::error::   Either install Unity with JDK or run setup-android action first"
     exit 1
   fi
 
-  if [ -d "${unity_sdk}" ]; then
+  if [ -d "${unity_sdk}" ] && [ -f "${unity_sdk}/platform-tools/adb" ]; then
     sdk_path="${unity_sdk}"
     echo "::notice::✅ Using Unity's bundled SDK: ${sdk_path}"
-    if [ -f "${sdk_path}/platform-tools/adb" ]; then
+    if [ -x "${sdk_path}/platform-tools/adb" ]; then
       local adb_version
       adb_version=$("${sdk_path}/platform-tools/adb" version 2>&1 | head -1 || echo "Unknown")
       echo "::notice::   Version: ${adb_version}"
     fi
-  elif [ -n "${ANDROID_HOME_VAR}" ] && [ -d "${ANDROID_HOME_VAR}" ]; then
+  elif [ -n "${ANDROID_HOME_VAR}" ] && [ -d "${ANDROID_HOME_VAR}" ] && [ -f "${ANDROID_HOME_VAR}/platform-tools/adb" ]; then
     sdk_path="${ANDROID_HOME_VAR}"
     echo "::notice::✅ Using external SDK: ${sdk_path}"
     echo "::notice::   Creating symlink for Unity"
+    mkdir -p "${android_player_path}"
     ln -sf "${ANDROID_HOME_VAR}" "${unity_sdk}"
   else
     echo "::error::❌ Android SDK not found"
     echo "::error::   Unity's bundled SDK not found at: ${unity_sdk}"
+    echo "::error::   Checked for: ${unity_sdk}/platform-tools/adb"
     echo "::error::   External ANDROID_HOME not set or invalid: ${ANDROID_HOME_VAR}"
     echo "::error::   Either install Unity with SDK or run setup-android action first"
     exit 1
@@ -106,6 +113,7 @@ configure_android_tools() {
     ndk_path="${NDK_HOME_VAR}"
     echo "::notice::✅ Using external NDK: ${ndk_path}"
     echo "::notice::   Creating symlink for Unity"
+    mkdir -p "${android_player_path}"
     ln -sf "${NDK_HOME_VAR}" "${unity_ndk}"
   else
     echo "::error::❌ Android NDK not found"
@@ -131,6 +139,11 @@ main() {
   echo "::notice::Platform: ${RUNNER_OS}"
 
   ANDROID_PLAYER_PATH=$(find_unity_android_player_path)
+
+  if [ -z "${ANDROID_PLAYER_PATH}" ]; then
+    echo "::error::Failed to locate Unity Android Player path"
+    exit 1
+  fi
 
   configure_android_tools "${ANDROID_PLAYER_PATH}"
 

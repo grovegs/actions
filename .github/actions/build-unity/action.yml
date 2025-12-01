@@ -118,6 +118,7 @@ runs:
 
               if [ -f "${UNITY_EXECUTABLE}" ]; then
                 echo "unity-executable=${UNITY_EXECUTABLE}" >> "${GITHUB_OUTPUT}"
+                echo "UNITY_EXECUTABLE=${UNITY_EXECUTABLE}" >> "${GITHUB_ENV}"
                 echo "::notice::Using Unity from: ${UNITY_EXECUTABLE}"
                 "${UNITY_EXECUTABLE}" -version 2>/dev/null || echo "::debug::Could not get Unity version"
               else
