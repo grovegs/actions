@@ -85,23 +85,55 @@ fi
 
 echo "::notice::Executing Firebase distribution command"
 
-OUTPUT_FILE=$(mktemp)
-if firebase "${FIREBASE_ARGS[@]}" > "${OUTPUT_FILE}" 2>&1; then
-  FIREBASE_EXIT_CODE=0
-else
-  FIREBASE_EXIT_CODE=$?
-fi
-
-cat "${OUTPUT_FILE}"
-
+MAX_RETRIES=3
+RETRY_DELAY=5
+ATTEMPT=0
 FIREBASE_FAILED=false
-if [ ${FIREBASE_EXIT_CODE} -ne 0 ]; then
-  FIREBASE_FAILED=true
-elif grep -qi "error:" "${OUTPUT_FILE}"; then
-  FIREBASE_FAILED=true
-elif grep -qi "HTTP Error:" "${OUTPUT_FILE}"; then
-  FIREBASE_FAILED=true
-fi
+
+while [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; do
+  if [ ${ATTEMPT} -gt 0 ]; then
+    echo "::notice::Waiting ${RETRY_DELAY} seconds before retry attempt ${ATTEMPT}/${MAX_RETRIES}..."
+    sleep ${RETRY_DELAY}
+  fi
+
+  OUTPUT_FILE=$(mktemp)
+  if firebase "${FIREBASE_ARGS[@]}" > "${OUTPUT_FILE}" 2>&1; then
+    FIREBASE_EXIT_CODE=0
+  else
+    FIREBASE_EXIT_CODE=$?
+  fi
+
+  cat "${OUTPUT_FILE}"
+
+  FIREBASE_FAILED=false
+  IS_404_ERROR=false
+
+  if [ ${FIREBASE_EXIT_CODE} -ne 0 ]; then
+    FIREBASE_FAILED=true
+  elif grep -qi "error:" "${OUTPUT_FILE}"; then
+    FIREBASE_FAILED=true
+  elif grep -qi "HTTP Error:" "${OUTPUT_FILE}"; then
+    FIREBASE_FAILED=true
+  fi
+
+  if grep -q "HTTP Error: 404" "${OUTPUT_FILE}" 2>/dev/null; then
+    IS_404_ERROR=true
+  fi
+
+  if [ "${FIREBASE_FAILED}" = false ]; then
+    echo "::notice::Firebase distribution succeeded"
+    rm -f "${OUTPUT_FILE}"
+    break
+  fi
+
+  if [ "${IS_404_ERROR}" = true ]; then
+    echo "::warning::Release not yet available (404), retrying..."
+    ATTEMPT=$((ATTEMPT + 1))
+    rm -f "${OUTPUT_FILE}"
+  else
+    break
+  fi
+done
 
 if [ "${FIREBASE_FAILED}" = true ]; then
   if [ -n "${NOTES_FILE}" ]; then
@@ -110,7 +142,12 @@ if [ "${FIREBASE_FAILED}" = true ]; then
 
   echo "::error::Firebase distribution failed"
 
-  if grep -q "HTTP Error: 403" "${OUTPUT_FILE}" 2>/dev/null; then
+  if [ "${IS_404_ERROR}" = true ]; then
+    echo "::error::Release not found (404) after ${MAX_RETRIES} attempts"
+    echo "::notice::The release was uploaded but Firebase couldn't process it in time."
+    echo "::notice::This usually indicates a Firebase backend issue."
+    echo "::notice::Try re-running the workflow or check Firebase console."
+  elif grep -q "HTTP Error: 403" "${OUTPUT_FILE}" 2>/dev/null; then
     echo "::error::Permission denied (403 Forbidden)"
     echo "::notice::The service account '${SERVICE_ACCOUNT}' needs the following role:"
     echo "::notice::  - Firebase App Distribution Admin (roles/firebaseappdistro.admin)"

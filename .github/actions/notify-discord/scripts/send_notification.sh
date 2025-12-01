@@ -51,13 +51,14 @@ fi
 echo "::notice::Sending notification to Discord"
 
 MAX_RETRIES=3
-RETRY_COUNT=0
+RETRY_DELAY=2
+ATTEMPT=0
 SUCCESS=false
 
-while [ ${RETRY_COUNT} -lt ${MAX_RETRIES} ]; do
-  if [ ${RETRY_COUNT} -gt 0 ]; then
-    echo "::notice::Retry attempt ${RETRY_COUNT}/${MAX_RETRIES}"
-    sleep 2
+while [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; do
+  if [ ${ATTEMPT} -gt 0 ]; then
+    echo "::notice::Waiting ${RETRY_DELAY} seconds before retry attempt ${ATTEMPT}/${MAX_RETRIES}..."
+    sleep ${RETRY_DELAY}
   fi
 
   response=$(curl -s -w "\n%{http_code}" \
@@ -76,11 +77,13 @@ while [ ${RETRY_COUNT} -lt ${MAX_RETRIES} ]; do
     break
   elif [[ "${http_code}" == "000" ]]; then
     echo "::warning::Network error (timeout or connection failed)"
-    RETRY_COUNT=$((RETRY_COUNT + 1))
+    ATTEMPT=$((ATTEMPT + 1))
   else
-    echo "::error::Failed to send Discord notification. HTTP code: ${http_code}"
-    echo "::error::Response: ${body}"
-    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "::warning::Failed to send Discord notification. HTTP code: ${http_code}"
+    if [ -n "${body}" ]; then
+      echo "::warning::Response: ${body}"
+    fi
+    ATTEMPT=$((ATTEMPT + 1))
   fi
 done
 
