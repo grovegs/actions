@@ -6,7 +6,7 @@ inputs:
         description: Path to the Unity project folder
         required: true
     unity-path:
-        description: Path to Unity installation directory (default /Applications/Unity/Unity-{VERSION} on macOS or $HOME/Unity-{VERSION} on Linux)
+        description: Custom directory for Unity installations (default /Applications/Unity/Editor on macOS, $HOME/Unity/Editor on Linux)
         required: false
         default: ""
 

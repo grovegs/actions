@@ -34,12 +34,12 @@ UNITY_PATH_INPUT="${UNITY_PATH:-}"
 
 if [ -n "${UNITY_PATH_INPUT}" ]; then
   UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
-  UNITY_DIR="${UNITY_PATH_INPUT}/Unity-${UNITY_VERSION}"
+  UNITY_DIR="${UNITY_PATH_INPUT}/${UNITY_VERSION}"
 else
   if [ "$(uname)" = "Darwin" ]; then
-    UNITY_DIR="/Applications/Unity/Unity-${UNITY_VERSION}"
+    UNITY_DIR="/Applications/Unity/Editor/${UNITY_VERSION}"
   else
-    UNITY_DIR="${HOME}/Unity-${UNITY_VERSION}"
+    UNITY_DIR="${HOME}/Unity/Editor/${UNITY_VERSION}"
   fi
   echo "::notice::Using default Unity path for platform: ${UNITY_DIR}"
 fi
