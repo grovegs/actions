@@ -199,6 +199,38 @@ export_unity_environment() {
   echo "::notice::  UNITY_PATH=${unity_path}"
 }
 
+normalize_unity_installation() {
+  local expected_path="$1"
+  local actual_install_path="$2"
+
+  if [ "${expected_path}" = "${actual_install_path}" ]; then
+    return 0
+  fi
+
+  if [ -d "${actual_install_path}" ] && [ ! -d "${expected_path}" ]; then
+    echo "::notice::Normalizing Unity installation path"
+    echo "::notice::  From: ${actual_install_path}"
+    echo "::notice::  To: ${expected_path}"
+
+    local parent_dir
+    parent_dir=$(dirname "${expected_path}")
+
+    if ! mkdir -p "${parent_dir}"; then
+      echo "::error::Failed to create parent directory: ${parent_dir}"
+      return 1
+    fi
+
+    if ! sudo mv "${actual_install_path}" "${expected_path}"; then
+      echo "::error::Failed to move Unity installation"
+      return 1
+    fi
+
+    echo "::notice::Unity installation normalized successfully"
+  fi
+
+  return 0
+}
+
 install_macos() {
   local install_paths
   install_paths=$(get_default_install_paths "${UNITY_VERSION}")
@@ -212,6 +244,11 @@ install_macos() {
 
   local editor_installer="${DOWNLOAD_DIR}/Unity-${UNITY_VERSION}.pkg"
   run_mac_installer "${editor_installer}"
+
+  local actual_install="/Applications/Unity/Unity-${UNITY_VERSION}"
+  if [ -d "${actual_install}" ]; then
+    normalize_unity_installation "${unity_path}" "${actual_install}"
+  fi
 
   if [ -n "${UNITY_MODULES}" ]; then
     echo "::notice::Installing macOS modules: ${UNITY_MODULES}"

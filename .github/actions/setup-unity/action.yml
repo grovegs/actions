@@ -67,7 +67,7 @@ runs:
           env:
               UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
           run: |
-              DOWNLOAD_DIR="${RUNNER_TEMP}/.downloads/unity/${UNITY_VERSION}"
+              DOWNLOAD_DIR="${RUNNER_TEMP}/downloads/unity/${UNITY_VERSION}"
               echo "download-dir=${DOWNLOAD_DIR}" >> "${GITHUB_OUTPUT}"
               echo "::notice::Download directory: ${DOWNLOAD_DIR}"
 
