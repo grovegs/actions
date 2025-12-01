@@ -83,16 +83,20 @@ if [ -n "${TESTER_GROUPS:-}" ]; then
   )
 fi
 
+FILE_SIZE=$(stat -f%z "${FILE}" 2>/dev/null || stat -c%s "${FILE}" 2>/dev/null || echo "0")
+FILE_SIZE_MB=$((FILE_SIZE / 1048576))
+echo "::notice::File size: ${FILE_SIZE_MB} MB"
 echo "::notice::Executing Firebase distribution command"
 
 MAX_RETRIES=3
-RETRY_DELAY=5
+RETRY_DELAY=60
 ATTEMPT=0
-FIREBASE_FAILED=false
+FIREBASE_SUCCESS=false
 
-while [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; do
+while [ ${ATTEMPT} -le ${MAX_RETRIES} ]; do
   if [ ${ATTEMPT} -gt 0 ]; then
-    echo "::notice::Waiting ${RETRY_DELAY} seconds before retry attempt ${ATTEMPT}/${MAX_RETRIES}..."
+    echo "::notice::Retrying distribution (attempt ${ATTEMPT}/${MAX_RETRIES})..."
+    echo "::notice::Waiting ${RETRY_DELAY} seconds for Firebase to process the release..."
     sleep ${RETRY_DELAY}
   fi
 
@@ -105,49 +109,24 @@ while [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; do
 
   cat "${OUTPUT_FILE}"
 
-  FIREBASE_FAILED=false
-  IS_404_ERROR=false
-
-  if [ ${FIREBASE_EXIT_CODE} -ne 0 ]; then
-    FIREBASE_FAILED=true
-  elif grep -qi "error:" "${OUTPUT_FILE}"; then
-    FIREBASE_FAILED=true
-  elif grep -qi "HTTP Error:" "${OUTPUT_FILE}"; then
-    FIREBASE_FAILED=true
+  if grep -q "added testers/groups successfully" "${OUTPUT_FILE}" 2>/dev/null || \
+     grep -q "✔.*distribut.*successfully" "${OUTPUT_FILE}" 2>/dev/null; then
+    echo "::notice::✓ Firebase distribution succeeded"
+    FIREBASE_SUCCESS=true
+    rm -f "${OUTPUT_FILE}"
+    break
   fi
 
   if grep -q "HTTP Error: 404" "${OUTPUT_FILE}" 2>/dev/null; then
-    IS_404_ERROR=true
+    if [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; then
+      echo "::warning::Release not yet available (404), will retry"
+      ATTEMPT=$((ATTEMPT + 1))
+      rm -f "${OUTPUT_FILE}"
+      continue
+    fi
   fi
 
-  if [ "${FIREBASE_FAILED}" = false ]; then
-    echo "::notice::Firebase distribution succeeded"
-    rm -f "${OUTPUT_FILE}"
-    break
-  fi
-
-  if [ "${IS_404_ERROR}" = true ]; then
-    echo "::warning::Release not yet available (404), retrying..."
-    ATTEMPT=$((ATTEMPT + 1))
-    rm -f "${OUTPUT_FILE}"
-  else
-    break
-  fi
-done
-
-if [ "${FIREBASE_FAILED}" = true ]; then
-  if [ -n "${NOTES_FILE}" ]; then
-    rm -f "${NOTES_FILE}"
-  fi
-
-  echo "::error::Firebase distribution failed"
-
-  if [ "${IS_404_ERROR}" = true ]; then
-    echo "::error::Release not found (404) after ${MAX_RETRIES} attempts"
-    echo "::notice::The release was uploaded but Firebase couldn't process it in time."
-    echo "::notice::This usually indicates a Firebase backend issue."
-    echo "::notice::Try re-running the workflow or check Firebase console."
-  elif grep -q "HTTP Error: 403" "${OUTPUT_FILE}" 2>/dev/null; then
+  if grep -q "HTTP Error: 403" "${OUTPUT_FILE}" 2>/dev/null; then
     echo "::error::Permission denied (403 Forbidden)"
     echo "::notice::The service account '${SERVICE_ACCOUNT}' needs the following role:"
     echo "::notice::  - Firebase App Distribution Admin (roles/firebaseappdistro.admin)"
@@ -158,20 +137,32 @@ if [ "${FIREBASE_FAILED}" = true ]; then
     echo "::notice::  3. Click Edit (pencil icon)"
     echo "::notice::  4. Add Role: Firebase App Distribution Admin"
     echo "::notice::  5. Save and retry the build"
+    rm -f "${OUTPUT_FILE}"
+    break
   fi
 
-  rm -f "${CREDENTIALS_FILE}"
-  rm -f "${OUTPUT_FILE}"
-
-  exit 1
-fi
-
-rm -f "${OUTPUT_FILE}"
+  if grep -qi "error:" "${OUTPUT_FILE}" 2>/dev/null; then
+    echo "::warning::Firebase returned an error"
+    ATTEMPT=$((ATTEMPT + 1))
+    rm -f "${OUTPUT_FILE}"
+  else
+    echo "::warning::Firebase result unclear"
+    ATTEMPT=$((ATTEMPT + 1))
+    rm -f "${OUTPUT_FILE}"
+  fi
+done
 
 if [ -n "${NOTES_FILE}" ]; then
   rm -f "${NOTES_FILE}"
 fi
 
 rm -f "${CREDENTIALS_FILE}"
+
+if [ "${FIREBASE_SUCCESS}" = false ]; then
+  echo "::error::Firebase distribution failed after $((MAX_RETRIES + 1)) attempts"
+  echo "::notice::The release may have been uploaded but distribution to testers failed."
+  echo "::notice::Check the Firebase Console to verify and manually distribute if needed."
+  exit 1
+fi
 
 echo "::notice::✓ Firebase distribution completed successfully"

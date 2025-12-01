@@ -25,8 +25,8 @@ NUGET_SOURCE="${NUGET_SOURCE:-https://api.nuget.org/v3/index.json}"
 SKIP_DUPLICATE="${SKIP_DUPLICATE:-true}"
 
 echo "::notice::Publishing NuGet package: ${PACKAGE_FILE}"
-echo "  Source: ${NUGET_SOURCE}"
-echo "  Skip duplicate: ${SKIP_DUPLICATE}"
+echo "::notice::Source: ${NUGET_SOURCE}"
+echo "::notice::Skip duplicate: ${SKIP_DUPLICATE}"
 
 declare -a DOTNET_ARGS
 DOTNET_ARGS=(
@@ -43,11 +43,64 @@ if [ "${SKIP_DUPLICATE}" = "true" ]; then
   DOTNET_ARGS+=("--skip-duplicate")
 fi
 
-echo "::notice::Executing NuGet push command"
+MAX_RETRIES=3
+RETRY_DELAY=10
+ATTEMPT=0
+SUCCESS=false
 
-if ! dotnet "${DOTNET_ARGS[@]}"; then
-  echo "::error::Failed to publish NuGet package '${PACKAGE_FILE}'"
+while [ ${ATTEMPT} -le ${MAX_RETRIES} ]; do
+  if [ ${ATTEMPT} -gt 0 ]; then
+    echo "::notice::Retrying publish (attempt ${ATTEMPT}/${MAX_RETRIES})..."
+    echo "::notice::Waiting ${RETRY_DELAY} seconds..."
+    sleep ${RETRY_DELAY}
+  fi
+
+  OUTPUT=$(mktemp)
+  if dotnet "${DOTNET_ARGS[@]}" > "${OUTPUT}" 2>&1; then
+    cat "${OUTPUT}"
+    echo "::notice::✓ NuGet package published successfully"
+    SUCCESS=true
+    rm -f "${OUTPUT}"
+    break
+  fi
+
+  cat "${OUTPUT}"
+
+  if grep -q "409.*Conflict" "${OUTPUT}" 2>/dev/null; then
+    echo "::warning::Package version already exists"
+    if [ "${SKIP_DUPLICATE}" = "true" ]; then
+      echo "::notice::Skipping duplicate as configured"
+      SUCCESS=true
+      rm -f "${OUTPUT}"
+      break
+    fi
+  fi
+
+  if grep -q "401.*Unauthorized" "${OUTPUT}" 2>/dev/null || \
+     grep -q "403.*Forbidden" "${OUTPUT}" 2>/dev/null; then
+    echo "::error::Authentication failed - invalid API key"
+    rm -f "${OUTPUT}"
+    break
+  fi
+
+  if grep -q "500" "${OUTPUT}" 2>/dev/null || \
+     grep -q "503" "${OUTPUT}" 2>/dev/null || \
+     grep -q "timeout" "${OUTPUT}" 2>/dev/null; then
+    if [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; then
+      echo "::warning::Server error, will retry"
+      ATTEMPT=$((ATTEMPT + 1))
+      rm -f "${OUTPUT}"
+      continue
+    fi
+  fi
+
+  ATTEMPT=$((ATTEMPT + 1))
+  rm -f "${OUTPUT}"
+done
+
+if [ "${SUCCESS}" = false ]; then
+  echo "::error::Failed to publish NuGet package after $((MAX_RETRIES + 1)) attempts"
   exit 1
 fi
 
-echo "::notice::✓ Successfully published NuGet package: ${PACKAGE_FILE}"
+echo "::notice::✓ NuGet package published: ${PACKAGE_FILE}"

@@ -60,93 +60,77 @@ fi
 
 chmod 600 "${API_KEY_FILE}"
 
-FILE_SIZE=$(stat -f%z "${FILE}" 2> /dev/null || stat -c%s "${FILE}" 2> /dev/null || echo "unknown")
-echo "::notice::Uploading IPA to TestFlight: ${FILE} (${FILE_SIZE} bytes)"
+FILE_SIZE=$(stat -f%z "${FILE}" 2>/dev/null || stat -c%s "${FILE}" 2>/dev/null || echo "unknown")
+FILE_SIZE_MB=$((FILE_SIZE / 1048576))
+echo "::notice::File size: ${FILE_SIZE_MB} MB"
+echo "::notice::Uploading IPA to TestFlight: ${FILE}"
 echo "::notice::Using API Key ID: ${API_KEY_ID}"
 
-is_retryable_error() {
-  local output="$1"
-
-  if echo "${output}" | grep -q "500.*Internal Server Error"; then
-    return 0
-  fi
-  if echo "${output}" | grep -q "503.*Service Unavailable"; then
-    return 0
-  fi
-  if echo "${output}" | grep -q "502.*Bad Gateway"; then
-    return 0
-  fi
-  if echo "${output}" | grep -q "504.*Gateway Timeout"; then
-    return 0
-  fi
-  if echo "${output}" | grep -q "timeout"; then
-    return 0
-  fi
-  if echo "${output}" | grep -q "network.*error"; then
-    return 0
-  fi
-
-  return 1
-}
-
-MAX_ATTEMPTS="${MAX_RETRIES:-5}"
-ATTEMPT=1
+MAX_RETRIES=3
+RETRY_DELAY=60
+ATTEMPT=0
 SUCCESS=false
 
-while [ "${ATTEMPT}" -le "${MAX_ATTEMPTS}" ] && [ "${SUCCESS}" = "false" ]; do
-  if [ "${ATTEMPT}" -gt 1 ]; then
-    WAIT_TIME=$((ATTEMPT * 30))
-    echo "::notice::Attempt ${ATTEMPT}/${MAX_ATTEMPTS} - waiting ${WAIT_TIME}s before retry"
-    sleep "${WAIT_TIME}"
-  else
-    echo "::notice::Attempt ${ATTEMPT}/${MAX_ATTEMPTS} - starting upload"
+while [ ${ATTEMPT} -le ${MAX_RETRIES} ]; do
+  if [ ${ATTEMPT} -gt 0 ]; then
+    echo "::notice::Retrying upload (attempt ${ATTEMPT}/${MAX_RETRIES})..."
+    echo "::notice::Waiting ${RETRY_DELAY} seconds..."
+    sleep ${RETRY_DELAY}
   fi
 
-  set +e
-  OUTPUT=$(xcrun altool --upload-app \
+  OUTPUT=$(mktemp)
+  if xcrun altool --upload-app \
     --type ios \
     --file "${FILE}" \
     --apiKey "${API_KEY_ID}" \
-    --apiIssuer "${API_ISSUER_ID}" 2>&1)
-  EXIT_CODE=$?
-  set -e
-
-  if [ "${EXIT_CODE}" -eq 0 ]; then
-    echo "::notice::✅ TestFlight upload completed successfully"
-    echo "::notice::The build will appear in App Store Connect after processing (usually 5-15 minutes)"
+    --apiIssuer "${API_ISSUER_ID}" > "${OUTPUT}" 2>&1; then
+    echo "::notice::✓ TestFlight upload succeeded"
     SUCCESS=true
-  else
-    echo "::warning::❌ Upload attempt ${ATTEMPT} failed with exit code ${EXIT_CODE}"
-    echo "::warning::Error output:"
-    echo "${OUTPUT}"
+    rm -f "${OUTPUT}"
+    break
+  fi
 
-    if is_retryable_error "${OUTPUT}"; then
-      if [ "${ATTEMPT}" -lt "${MAX_ATTEMPTS}" ]; then
-        echo "::notice::🔄 This appears to be a temporary server error. Will retry"
-      else
-        echo "::error::💀 Maximum retry attempts reached. This appears to be a persistent server issue"
-        echo "::error::Suggestions:"
-        echo "::error::1. Check Apple's System Status: https://developer.apple.com/system-status/"
-        echo "::error::2. Try uploading manually using Xcode or Application Loader"
-        echo "::error::3. Wait 10-30 minutes and re-run the workflow"
-        echo "::error::4. Contact Apple Developer Support if the issue persists"
-      fi
-    else
-      echo "::error::💀 Non-retryable error detected. This requires manual intervention"
-      echo "::error::Common causes:"
-      echo "::error::- Invalid API credentials"
-      echo "::error::- App record not found in App Store Connect"
-      echo "::error::- Bundle ID mismatch"
-      echo "::error::- Invalid provisioning profile"
-      echo "::error::- Missing required app metadata"
-      break
+  cat "${OUTPUT}"
+
+  if grep -q "500.*Internal Server Error" "${OUTPUT}" 2>/dev/null || \
+     grep -q "503.*Service Unavailable" "${OUTPUT}" 2>/dev/null || \
+     grep -q "502.*Bad Gateway" "${OUTPUT}" 2>/dev/null || \
+     grep -q "504.*Gateway Timeout" "${OUTPUT}" 2>/dev/null || \
+     grep -q "timeout" "${OUTPUT}" 2>/dev/null || \
+     grep -q "network.*error" "${OUTPUT}" 2>/dev/null; then
+    if [ ${ATTEMPT} -lt ${MAX_RETRIES} ]; then
+      echo "::warning::Temporary server error, will retry"
+      ATTEMPT=$((ATTEMPT + 1))
+      rm -f "${OUTPUT}"
+      continue
     fi
   fi
 
+  if grep -q "Invalid credentials" "${OUTPUT}" 2>/dev/null || \
+     grep -q "not found" "${OUTPUT}" 2>/dev/null || \
+     grep -q "Bundle ID" "${OUTPUT}" 2>/dev/null; then
+    echo "::error::Non-retryable error detected"
+    echo "::error::Common causes:"
+    echo "::error::  - Invalid API credentials"
+    echo "::error::  - App record not found in App Store Connect"
+    echo "::error::  - Bundle ID mismatch"
+    echo "::error::  - Invalid provisioning profile"
+    rm -f "${OUTPUT}"
+    break
+  fi
+
   ATTEMPT=$((ATTEMPT + 1))
+  rm -f "${OUTPUT}"
 done
 
-if [ "${SUCCESS}" = "false" ]; then
-  echo "::error::TestFlight upload failed after ${MAX_ATTEMPTS} attempts"
+if [ "${SUCCESS}" = false ]; then
+  echo "::error::TestFlight upload failed after $((MAX_RETRIES + 1)) attempts"
+  echo "::notice::Suggestions:"
+  echo "::notice::  1. Check Apple's System Status: https://developer.apple.com/system-status/"
+  echo "::notice::  2. Verify API credentials are correct"
+  echo "::notice::  3. Try uploading manually using Xcode"
   exit 1
 fi
+
+echo "::notice::✓ TestFlight upload completed successfully"
+echo "::notice::The build will appear in App Store Connect after processing (usually 5-15 minutes)"

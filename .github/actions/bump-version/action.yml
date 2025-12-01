@@ -21,6 +21,13 @@ outputs:
 runs:
     using: composite
     steps:
+        - name: 🔖 Configure Git
+          if: ${{ inputs.create-tag }} == 'true'
+          shell: bash
+          run: |
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+
         - name: 🔖 Bump Version
           id: bump-version
           shell: bash
