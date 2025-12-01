@@ -245,11 +245,6 @@ install_macos() {
   local editor_installer="${DOWNLOAD_DIR}/Unity-${UNITY_VERSION}.pkg"
   run_mac_installer "${editor_installer}"
 
-  local actual_install="/Applications/Unity/Unity-${UNITY_VERSION}"
-  if [ -d "${actual_install}" ]; then
-    normalize_unity_installation "${unity_path}" "${actual_install}"
-  fi
-
   if [ -n "${UNITY_MODULES}" ]; then
     echo "::notice::Installing macOS modules: ${UNITY_MODULES}"
 
@@ -280,6 +275,11 @@ install_macos() {
         echo "::warning::Module installer not found: ${installer_name}"
       fi
     done
+  fi
+
+  local actual_install="/Applications/Unity/Unity-${UNITY_VERSION}"
+  if [ -d "${actual_install}" ]; then
+    normalize_unity_installation "${unity_path}" "${actual_install}"
   fi
 
   if ! verify_unity_installation "${unity_exe_path}"; then
