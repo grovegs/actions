@@ -50,14 +50,41 @@ fi
 
 echo "::notice::Sending notification to Discord"
 
-response=$(curl -s -w "\n%{http_code}" -H "Content-Type: application/json" -d "${PAYLOAD}" "${WEBHOOK_URL}")
-http_code=$(echo "${response}" | tail -n1)
-body=$(echo "${response}" | sed '$d')
+MAX_RETRIES=3
+RETRY_COUNT=0
+SUCCESS=false
 
-if [[ "${http_code}" -ge 200 && "${http_code}" -lt 300 ]]; then
-  echo "::notice::Successfully sent Discord notification (HTTP ${http_code})"
-else
-  echo "::error::Failed to send Discord notification. HTTP code: ${http_code}"
-  echo "::error::Response: ${body}"
+while [ ${RETRY_COUNT} -lt ${MAX_RETRIES} ]; do
+  if [ ${RETRY_COUNT} -gt 0 ]; then
+    echo "::notice::Retry attempt ${RETRY_COUNT}/${MAX_RETRIES}"
+    sleep 2
+  fi
+
+  response=$(curl -s -w "\n%{http_code}" \
+    --max-time 30 \
+    --connect-timeout 10 \
+    -H "Content-Type: application/json" \
+    -d "${PAYLOAD}" \
+    "${WEBHOOK_URL}" 2>&1 || echo -e "\n000")
+
+  http_code=$(echo "${response}" | tail -n1)
+  body=$(echo "${response}" | sed '$d')
+
+  if [[ "${http_code}" -ge 200 && "${http_code}" -lt 300 ]]; then
+    echo "::notice::Successfully sent Discord notification (HTTP ${http_code})"
+    SUCCESS=true
+    break
+  elif [[ "${http_code}" == "000" ]]; then
+    echo "::warning::Network error (timeout or connection failed)"
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+  else
+    echo "::error::Failed to send Discord notification. HTTP code: ${http_code}"
+    echo "::error::Response: ${body}"
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+  fi
+done
+
+if [ "${SUCCESS}" = false ]; then
+  echo "::error::Failed to send Discord notification after ${MAX_RETRIES} attempts"
   exit 1
 fi
