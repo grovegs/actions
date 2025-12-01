@@ -45,6 +45,7 @@ if ! echo -n "${CREDENTIALS}" | base64 -d > "${CREDENTIALS_FILE}"; then
   exit 1
 fi
 
+SERVICE_ACCOUNT="unknown"
 if command -v jq > /dev/null 2>&1; then
   SERVICE_ACCOUNT=$(jq -r '.client_email // "unknown"' "${CREDENTIALS_FILE}" 2>/dev/null || echo "unknown")
   echo "::notice::Using service account: ${SERVICE_ACCOUNT}"
@@ -83,27 +84,52 @@ if [ -n "${TESTER_GROUPS:-}" ]; then
 fi
 
 echo "::notice::Executing Firebase distribution command"
-if ! firebase "${FIREBASE_ARGS[@]}"; then
-  ERROR_CODE=$?
+
+OUTPUT_FILE=$(mktemp)
+if firebase "${FIREBASE_ARGS[@]}" > "${OUTPUT_FILE}" 2>&1; then
+  FIREBASE_EXIT_CODE=0
+else
+  FIREBASE_EXIT_CODE=$?
+fi
+
+cat "${OUTPUT_FILE}"
+
+FIREBASE_FAILED=false
+if [ ${FIREBASE_EXIT_CODE} -ne 0 ]; then
+  FIREBASE_FAILED=true
+elif grep -qi "error:" "${OUTPUT_FILE}"; then
+  FIREBASE_FAILED=true
+elif grep -qi "HTTP Error:" "${OUTPUT_FILE}"; then
+  FIREBASE_FAILED=true
+fi
+
+if [ "${FIREBASE_FAILED}" = true ]; then
   if [ -n "${NOTES_FILE}" ]; then
     rm -f "${NOTES_FILE}"
   fi
 
-  if [ ${ERROR_CODE} -eq 1 ]; then
-    echo "::error::Firebase distribution failed"
-    echo "::notice::Common causes for 403 errors:"
-    echo "::notice::  1. Service account missing 'Firebase App Distribution Admin' role"
-    echo "::notice::  2. App ID is incorrect"
-    echo "::notice::  3. Service account not enabled for this project"
-    echo "::notice::Check permissions at: https://console.cloud.google.com/iam-admin/iam"
-  else
-    echo "::error::Firebase distribution failed with exit code ${ERROR_CODE}"
+  echo "::error::Firebase distribution failed"
+
+  if grep -q "HTTP Error: 403" "${OUTPUT_FILE}" 2>/dev/null; then
+    echo "::error::Permission denied (403 Forbidden)"
+    echo "::notice::The service account '${SERVICE_ACCOUNT}' needs the following role:"
+    echo "::notice::  - Firebase App Distribution Admin (roles/firebaseappdistro.admin)"
+    echo "::notice::"
+    echo "::notice::To fix this:"
+    echo "::notice::  1. Go to https://console.cloud.google.com/iam-admin/iam"
+    echo "::notice::  2. Find: ${SERVICE_ACCOUNT}"
+    echo "::notice::  3. Click Edit (pencil icon)"
+    echo "::notice::  4. Add Role: Firebase App Distribution Admin"
+    echo "::notice::  5. Save and retry the build"
   fi
 
   rm -f "${CREDENTIALS_FILE}"
+  rm -f "${OUTPUT_FILE}"
 
   exit 1
 fi
+
+rm -f "${OUTPUT_FILE}"
 
 if [ -n "${NOTES_FILE}" ]; then
   rm -f "${NOTES_FILE}"
