@@ -67,8 +67,14 @@ configure_android_tools() {
     jdk_path="${JAVA_HOME_VAR}"
     echo "::notice::✅ Using external JDK: ${jdk_path}"
     echo "::notice::   Creating symlink for Unity"
-    mkdir -p "${android_player_path}"
-    ln -sf "${JAVA_HOME_VAR}" "${unity_jdk}"
+    if ! sudo mkdir -p "$(dirname "${unity_jdk}")"; then
+      echo "::error::Failed to create parent directory for JDK symlink"
+      exit 1
+    fi
+    if ! sudo ln -sf "${JAVA_HOME_VAR}" "${unity_jdk}"; then
+      echo "::error::Failed to create JDK symlink"
+      exit 1
+    fi
   else
     echo "::error::❌ JDK not found"
     echo "::error::   Unity's bundled JDK not found at: ${unity_jdk}"
@@ -90,8 +96,14 @@ configure_android_tools() {
     sdk_path="${ANDROID_HOME_VAR}"
     echo "::notice::✅ Using external SDK: ${sdk_path}"
     echo "::notice::   Creating symlink for Unity"
-    mkdir -p "${android_player_path}"
-    ln -sf "${ANDROID_HOME_VAR}" "${unity_sdk}"
+    if ! sudo mkdir -p "$(dirname "${unity_sdk}")"; then
+      echo "::error::Failed to create parent directory for SDK symlink"
+      exit 1
+    fi
+    if ! sudo ln -sf "${ANDROID_HOME_VAR}" "${unity_sdk}"; then
+      echo "::error::Failed to create SDK symlink"
+      exit 1
+    fi
   else
     echo "::error::❌ Android SDK not found"
     echo "::error::   Unity's bundled SDK not found at: ${unity_sdk}"
@@ -113,8 +125,14 @@ configure_android_tools() {
     ndk_path="${NDK_HOME_VAR}"
     echo "::notice::✅ Using external NDK: ${ndk_path}"
     echo "::notice::   Creating symlink for Unity"
-    mkdir -p "${android_player_path}"
-    ln -sf "${NDK_HOME_VAR}" "${unity_ndk}"
+    if ! sudo mkdir -p "$(dirname "${unity_ndk}")"; then
+      echo "::error::Failed to create parent directory for NDK symlink"
+      exit 1
+    fi
+    if ! sudo ln -sf "${NDK_HOME_VAR}" "${unity_ndk}"; then
+      echo "::error::Failed to create NDK symlink"
+      exit 1
+    fi
   else
     echo "::error::❌ Android NDK not found"
     echo "::error::   Unity's bundled NDK not found at: ${unity_ndk}"
