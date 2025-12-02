@@ -195,6 +195,10 @@ fi
 
 echo "::notice::Unity build completed successfully"
 
+echo "::notice::Validating Xcode project signing configuration..."
+
+XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+
 echo "::notice::Looking for Xcode project..."
 
 XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
@@ -383,6 +387,10 @@ if ! "${BUILD_CMD[@]}"; then
 fi
 
 echo "::notice::Archive created successfully at ${ARCHIVE_PATH}"
+
+else
+  echo "::warning::Could not find app in archive for verification"
+fi
 
 echo "::notice::Creating export options plist..."
 
