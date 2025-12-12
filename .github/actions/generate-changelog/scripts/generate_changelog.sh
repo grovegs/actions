@@ -122,13 +122,7 @@ parse_commit() {
     esac
   fi
 
-  if [ -n "${scope}" ] && [ -n "${description}" ]; then
-    printf '{"scope":"%s","description":"%s"}' "${scope}" "${description}"
-  elif [ -n "${description}" ]; then
-    printf '{"scope":"","description":"%s"}' "${description}"
-  else
-    printf '{"scope":"","description":"%s"}' "${commit}"
-  fi
+  jq -n --arg scope "${scope}" --arg description "${description}" '{scope: $scope, description: $description}'
 }
 
 while IFS= read -r commit; do
@@ -166,7 +160,7 @@ array_to_json() {
   if [ "$array_size" -eq 0 ]; then
     echo '[]'
   else
-    eval "printf '%s\n' \"\${${array_name}[@]}\"" | jq -s 'map(fromjson)'
+    eval "printf '%s\n' \"\${${array_name}[@]}\"" | jq -s '.'
   fi
 }
 
