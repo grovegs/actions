@@ -58,7 +58,6 @@ if [ -n "${other}" ]; then
   formatted+="### 📦 Other\n"
   while IFS= read -r item; do
     if [ -n "${item}" ]; then
-      local description
       description=$(echo "${item}" | jq -r '.description')
       formatted+="- ${description}\n"
       has_content=true

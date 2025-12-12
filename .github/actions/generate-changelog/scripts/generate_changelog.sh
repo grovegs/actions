@@ -134,7 +134,7 @@ while IFS= read -r commit; do
   commit_type=$(get_commit_type "${clean_commit_msg}")
 
   if [ -z "${commit_type}" ]; then
-    formatted_commit=$(printf '{"scope":"","description":"%s"}' "${clean_commit_msg}")
+    formatted_commit=$(jq -n --arg description "${clean_commit_msg}" '{scope: "", description: $description}')
     other+=("${formatted_commit}")
   else
     formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}")
