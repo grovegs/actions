@@ -195,42 +195,6 @@ fi
 
 echo "::notice::Unity build completed successfully"
 
-echo "::notice::Validating Xcode project signing configuration..."
-
-XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
-
-if [ -z "${XCODEPROJ_FILE}" ]; then
-  echo "::error::No Xcode project found in ${XCODE_PROJECT_DIR}"
-  exit 1
-fi
-
-echo "::notice::Found Xcode project: $(basename "${XCODEPROJ_FILE}")"
-
-PROJECT_PBXPROJ="${XCODEPROJ_FILE}/project.pbxproj"
-
-MANUAL_SIGNING_COUNT=$(grep -c "ProvisioningStyle = Manual" "${PROJECT_PBXPROJ}" 2>/dev/null || echo "0")
-AUTOMATIC_SIGNING_COUNT=$(grep -c "ProvisioningStyle = Automatic" "${PROJECT_PBXPROJ}" 2>/dev/null || echo "0")
-
-echo "::notice::Project signing configuration:"
-echo "::notice::  Manual signing entries: ${MANUAL_SIGNING_COUNT}"
-echo "::notice::  Automatic signing entries: ${AUTOMATIC_SIGNING_COUNT}"
-
-if [ "${AUTOMATIC_SIGNING_COUNT}" -gt "0" ]; then
-  echo "::warning::Unity generated project with AUTOMATIC signing - fixing..."
-  sed -i '' 's/ProvisioningStyle = Automatic/ProvisioningStyle = Manual/g' "${PROJECT_PBXPROJ}"
-  echo "::notice::Changed all signing to Manual"
-fi
-
-PROFILE_IN_PROJECT=$(grep -c "${IOS_PROVISIONING_PROFILE_UUID}" "${PROJECT_PBXPROJ}" 2>/dev/null || echo "0")
-if [ "${PROFILE_IN_PROJECT}" -eq "0" ]; then
-  echo "::warning::Provisioning profile UUID not found in Xcode project (Unity may not have set it)"
-fi
-
-TEAM_IN_PROJECT=$(grep -c "DEVELOPMENT_TEAM = ${IOS_TEAM_ID}" "${PROJECT_PBXPROJ}" 2>/dev/null || echo "0")
-if [ "${TEAM_IN_PROJECT}" -eq "0" ]; then
-  echo "::warning::Team ID not found in Xcode project (will be set via xcodebuild)"
-fi
-
 echo "::notice::Looking for Xcode project..."
 
 XCODEPROJ_FILE=$(find "${XCODE_PROJECT_DIR}" -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
@@ -361,22 +325,6 @@ security find-identity -v -p codesigning "${KEYCHAIN_FILE}"
 mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
 cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${IOS_PROVISIONING_PROFILE_UUID}.mobileprovision"
 
-echo "::notice::Extracting entitlements from provisioning profile..."
-ENTITLEMENTS_PLIST="${XCODE_PROJECT_DIR}/entitlements.plist"
-if security cms -D -i "${PROVISIONING_FILE}" | plutil -extract Entitlements xml1 -o "${ENTITLEMENTS_PLIST}" - 2>/dev/null; then
-  echo "::notice::Entitlements extracted to ${ENTITLEMENTS_PLIST}"
-  plutil -p "${ENTITLEMENTS_PLIST}" || true
-
-  if [ ! -f "${ENTITLEMENTS_PLIST}" ]; then
-    echo "::error::Failed to create entitlements.plist"
-    exit 1
-  fi
-else
-  echo "::error::Could not extract entitlements from provisioning profile"
-  echo "::error::This will cause installation failures - stopping build"
-  exit 1
-fi
-
 echo "::notice::Building and archiving iOS project..."
 
 echo "::notice::Patching UnityAppController.h to disable CAMetalDisplayLink (Unity 6 freeze workaround)"
@@ -403,7 +351,6 @@ if [ "${BUILD_TYPE}" = "workspace" ]; then
     -archivePath "${ARCHIVE_PATH}"
     archive
     CODE_SIGN_STYLE=Manual
-    CODE_SIGN_ENTITLEMENTS="${ENTITLEMENTS_PLIST}"
     DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
     PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
     STRIP_SWIFT_SYMBOLS=YES
@@ -421,7 +368,6 @@ else
     -archivePath "${ARCHIVE_PATH}"
     archive
     CODE_SIGN_STYLE=Manual
-    CODE_SIGN_ENTITLEMENTS="${ENTITLEMENTS_PLIST}"
     DEVELOPMENT_TEAM="${IOS_TEAM_ID}"
     PROVISIONING_PROFILE_SPECIFIER="${IOS_PROVISIONING_PROFILE_UUID}"
     STRIP_SWIFT_SYMBOLS=YES
@@ -437,56 +383,6 @@ if ! "${BUILD_CMD[@]}"; then
 fi
 
 echo "::notice::Archive created successfully at ${ARCHIVE_PATH}"
-
-echo "::notice::Verifying archive entitlements..."
-ARCHIVE_APP=$(find "${ARCHIVE_PATH}/Products/Applications" -name "*.app" -type d 2>/dev/null | head -1)
-
-if [ -n "${ARCHIVE_APP}" ]; then
-  echo "::notice::Found app in archive: $(basename "${ARCHIVE_APP}")"
-
-  ARCHIVE_ENTITLEMENTS=$(codesign --display --entitlements - "${ARCHIVE_APP}" 2>/dev/null | plutil -p - 2>/dev/null || echo "NONE")
-
-  if [ "${ARCHIVE_ENTITLEMENTS}" = "NONE" ] || ! echo "${ARCHIVE_ENTITLEMENTS}" | grep -q "application-identifier"; then
-    echo "::warning::Archive missing entitlements - attempting manual re-sign..."
-
-    SIGNING_IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN_FILE}" | grep "iPhone Distribution" | head -1 | awk -F'"' '{print $2}')
-
-    if [ -z "${SIGNING_IDENTITY}" ]; then
-      echo "::error::Could not find signing identity for re-signing"
-      exit 1
-    fi
-
-    echo "::notice::Re-signing with identity: ${SIGNING_IDENTITY}"
-    echo "::notice::Using entitlements: ${ENTITLEMENTS_PLIST}"
-
-    /usr/bin/codesign --force --sign "${SIGNING_IDENTITY}" \
-      --entitlements "${ENTITLEMENTS_PLIST}" \
-      --timestamp \
-      --generate-entitlement-der \
-      "${ARCHIVE_APP}"
-
-    ARCHIVE_ENTITLEMENTS=$(codesign --display --entitlements - "${ARCHIVE_APP}" 2>/dev/null | plutil -p - 2>/dev/null || echo "NONE")
-
-    if [ "${ARCHIVE_ENTITLEMENTS}" = "NONE" ]; then
-      echo "::error::CRITICAL: Re-signing failed - still no entitlements"
-      exit 1
-    fi
-
-    echo "::notice::✅ Re-signing successful"
-  fi
-
-  echo "::notice::Archive entitlements verified:"
-  echo "${ARCHIVE_ENTITLEMENTS}" | head -20
-
-  if echo "${ARCHIVE_ENTITLEMENTS}" | grep -q "application-identifier"; then
-    echo "::notice::✅ application-identifier entitlement present"
-  else
-    echo "::error::❌ application-identifier entitlement MISSING!"
-    exit 1
-  fi
-else
-  echo "::warning::Could not find app in archive for verification"
-fi
 
 echo "::notice::Creating export options plist..."
 
