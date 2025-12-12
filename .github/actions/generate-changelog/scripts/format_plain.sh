@@ -14,42 +14,39 @@ fi
 formatted=""
 has_content=false
 
-features=$(echo "${RAW_CHANGELOG}" | jq -r '.features[]?' 2>/dev/null || echo "")
-if [ -n "${features}" ]; then
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="• ${item}\n"
-      has_content=true
-    fi
-  done <<< "${features}"
-fi
+add_section() {
+  local section_name="$1"
+  local json_key="$2"
 
-fixes=$(echo "${RAW_CHANGELOG}" | jq -r '.fixes[]?' 2>/dev/null || echo "")
-if [ -n "${fixes}" ]; then
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="• ${item}\n"
-      has_content=true
-    fi
-  done <<< "${fixes}"
-fi
+  local items
+  items=$(echo "${RAW_CHANGELOG}" | jq -r ".${json_key}[]?" 2>/dev/null || echo "")
 
-refactors=$(echo "${RAW_CHANGELOG}" | jq -r '.refactors[]?' 2>/dev/null || echo "")
-if [ -n "${refactors}" ]; then
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="• ${item}\n"
-      has_content=true
-    fi
-  done <<< "${refactors}"
-fi
+  if [ -n "${items}" ]; then
+    formatted+="${section_name}\n"
+    while IFS= read -r item; do
+      if [ -n "${item}" ]; then
+        formatted+="• ${item}\n"
+        has_content=true
+      fi
+    done <<< "${items}"
+    formatted+="\n"
+  fi
+}
+
+add_section "Features" "features"
+add_section "Bug Fixes" "fixes"
+add_section "Performance" "perf"
+add_section "Refactors" "refactors"
+add_section "Tests" "tests"
 
 if [ "${has_content}" = false ]; then
   formatted="Bug fixes and performance improvements.\n"
 fi
 
+formatted=$(printf "%b" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+
 {
   echo "changelog-plain<<EOF"
-  printf "%b" "${formatted}"
+  printf "%s\n" "${formatted}"
   echo "EOF"
 } >> "${GITHUB_OUTPUT}"

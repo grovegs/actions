@@ -14,101 +14,35 @@ fi
 formatted=""
 has_content=false
 
-features=$(echo "${RAW_CHANGELOG}" | jq -r '.features[]?' 2>/dev/null || echo "")
-if [ -n "${features}" ]; then
-  formatted+="### 🚀 Features\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${features}"
-  formatted+="\n"
-fi
+add_section() {
+  local section_name="$1"
+  local section_icon="$2"
+  local json_key="$3"
 
-fixes=$(echo "${RAW_CHANGELOG}" | jq -r '.fixes[]?' 2>/dev/null || echo "")
-if [ -n "${fixes}" ]; then
-  formatted+="### 🐞 Bug Fixes\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${fixes}"
-  formatted+="\n"
-fi
+  local items
+  items=$(echo "${RAW_CHANGELOG}" | jq -r ".${json_key}[]?" 2>/dev/null || echo "")
 
-chores=$(echo "${RAW_CHANGELOG}" | jq -r '.chores[]?' 2>/dev/null || echo "")
-if [ -n "${chores}" ]; then
-  formatted+="### 🧹 Chores\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${chores}"
-  formatted+="\n"
-fi
+  if [ -n "${items}" ]; then
+    formatted+="### ${section_icon} ${section_name}\n"
+    while IFS= read -r item; do
+      if [ -n "${item}" ]; then
+        formatted+="- ${item}\n"
+        has_content=true
+      fi
+    done <<< "${items}"
+    formatted+="\n"
+  fi
+}
 
-refactors=$(echo "${RAW_CHANGELOG}" | jq -r '.refactors[]?' 2>/dev/null || echo "")
-if [ -n "${refactors}" ]; then
-  formatted+="### 🔨 Refactors\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${refactors}"
-  formatted+="\n"
-fi
-
-tests=$(echo "${RAW_CHANGELOG}" | jq -r '.tests[]?' 2>/dev/null || echo "")
-if [ -n "${tests}" ]; then
-  formatted+="### 🧪 Tests\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${tests}"
-  formatted+="\n"
-fi
-
-ci=$(echo "${RAW_CHANGELOG}" | jq -r '.ci[]?' 2>/dev/null || echo "")
-if [ -n "${ci}" ]; then
-  formatted+="### 🔧 CI/CD\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${ci}"
-  formatted+="\n"
-fi
-
-reverts=$(echo "${RAW_CHANGELOG}" | jq -r '.reverts[]?' 2>/dev/null || echo "")
-if [ -n "${reverts}" ]; then
-  formatted+="### ⏪ Reverts\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${reverts}"
-  formatted+="\n"
-fi
-
-docs=$(echo "${RAW_CHANGELOG}" | jq -r '.docs[]?' 2>/dev/null || echo "")
-if [ -n "${docs}" ]; then
-  formatted+="### 📚 Documentation\n"
-  while IFS= read -r item; do
-    if [ -n "${item}" ]; then
-      formatted+="- ${item}\n"
-      has_content=true
-    fi
-  done <<< "${docs}"
-  formatted+="\n"
-fi
+add_section "Features" "🚀" "features"
+add_section "Bug Fixes" "🐞" "fixes"
+add_section "Performance" "⚡" "perf"
+add_section "Refactors" "🔨" "refactors"
+add_section "Documentation" "📚" "docs"
+add_section "Tests" "🧪" "tests"
+add_section "CI/CD" "🔧" "ci"
+add_section "Chores" "🧹" "chores"
+add_section "Reverts" "⏪" "reverts"
 
 other=$(echo "${RAW_CHANGELOG}" | jq -r '.other[]?' 2>/dev/null || echo "")
 if [ -n "${other}" ]; then
@@ -126,8 +60,10 @@ if [ "${has_content}" = false ]; then
   formatted="No changes in this release.\n"
 fi
 
+formatted=$(printf "%b" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+
 {
   echo "changelog-markdown<<EOF"
-  printf "%b" "${formatted}"
+  printf "%s\n" "${formatted}"
   echo "EOF"
 } >> "${GITHUB_OUTPUT}"

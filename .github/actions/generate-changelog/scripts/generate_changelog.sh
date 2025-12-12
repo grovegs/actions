@@ -23,6 +23,7 @@ declare -a features=()
 declare -a fixes=()
 declare -a chores=()
 declare -a refactors=()
+declare -a perf=()
 declare -a tests=()
 declare -a ci=()
 declare -a reverts=()
@@ -45,9 +46,10 @@ get_commit_type() {
   case "${commit_lower}" in
     feat\(* | feat:* | feat\[*) printf "feat" ;;
     fix\(* | fix:* | fix\[* | fixes\(* | fixes:* | fixes\[* | hotfix\(* | hotfix:* | hotfix\[*) printf "fix" ;;
+    perf\(* | perf:* | perf\[*) printf "perf" ;;
     chore\(* | chore:* | chore\[* | style\(* | style:* | style\[*) printf "chore" ;;
     docs\(* | docs:* | docs\[* | doc\(* | doc:* | doc\[*) printf "docs" ;;
-    refactor\(* | refactor:* | refactor\[* | perf\(* | perf:* | perf\[*) printf "refactor" ;;
+    refactor\(* | refactor:* | refactor\[*) printf "refactor" ;;
     test\(* | test:* | test\[* | tests\(* | tests:* | tests\[*) printf "test" ;;
     ci\(* | ci:* | ci\[* | build\(* | build:* | build\[*) printf "ci" ;;
     revert\(* | revert:* | revert\[*) printf "revert" ;;
@@ -64,46 +66,48 @@ parse_commit() {
 
   case "${commit_type}" in
     feat)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Ff][Ee][Aa][Tt][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Ff][Ee][Aa][Tt]//')
       ;;
     fix)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Ff][Ii][Xx][Ee]*[Ss]*[\[\(:]*//' | sed 's/^[Hh][Oo][Tt][Ff][Ii][Xx][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^([Ff][Ii][Xx][Ee]*[Ss]*|[Hh][Oo][Tt][Ff][Ii][Xx])//')
+      ;;
+    perf)
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Pp][Ee][Rr][Ff]//')
       ;;
     chore)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Cc][Hh][Oo][Rr][Ee][\[\(:]*//' | sed 's/^[Ss][Tt][Yy][Ll][Ee][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^([Cc][Hh][Oo][Rr][Ee]|[Ss][Tt][Yy][Ll][Ee])//')
       ;;
     docs)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Dd][Oo][Cc][Ss]*[\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Dd][Oo][Cc][Ss]*//')
       ;;
     refactor)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Rr][Ee][Ff][Aa][Cc][Tt][Oo][Rr][\[\(:]*//' | sed 's/^[Pp][Ee][Rr][Ff][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Rr][Ee][Ff][Aa][Cc][Tt][Oo][Rr]//')
       ;;
     test)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Tt][Ee][Ss][Tt][Ss]*[\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Tt][Ee][Ss][Tt][Ss]*//')
       ;;
     ci)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Cc][Ii][\[\(:]*//' | sed 's/^[Bb][Uu][Ii][Ll][Dd][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^([Cc][Ii]|[Bb][Uu][Ii][Ll][Dd])//')
       ;;
     revert)
-      remaining=$(printf "%s" "${commit}" | sed 's/^[Rr][Ee][Vv][Ee][Rr][Tt][\[\(:]*//')
+      remaining=$(printf "%s" "${commit}" | sed -E 's/^[Rr][Ee][Vv][Ee][Rr][Tt]//')
       ;;
     *)
       remaining="${commit}"
       ;;
   esac
 
-  if printf "%s" "${remaining}" | grep -q '):\|]:\|}:'; then
-    scope=$(printf "%s" "${remaining}" | sed 's/^\([^:)]*[)\]]\):.*$/\1/' | sed 's/[[\](){}]//g')
-    description=$(printf "%s" "${remaining}" | sed 's/^[^:)]*[)\]]:*[[:space:]]*//')
-  elif printf "%s" "${remaining}" | grep -q ':'; then
-    description=$(printf "%s" "${remaining}" | sed 's/^[^:]*:[[:space:]]*//')
+  if printf "%s" "${remaining}" | grep -qE '^[\[\(]([^\]\)]+)[\]\)]:'; then
+    scope=$(printf "%s" "${remaining}" | sed -E 's/^[\[\(]([^\]\)]+)[\]\)]:.*/\1/')
+    description=$(printf "%s" "${remaining}" | sed -E 's/^[\[\(][^\]\)]+[\]\)]:[[:space:]]*//')
+  elif printf "%s" "${remaining}" | grep -qE '^:'; then
+    description=$(printf "%s" "${remaining}" | sed -E 's/^:[[:space:]]*//')
   else
     description="${remaining}"
   fi
 
   if [ -n "${scope}" ]; then
     scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    scope=$(printf "%s" "${scope}" | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9]*$//')
   fi
 
   description=$(printf "%s" "${description}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -144,6 +148,7 @@ while IFS= read -r commit; do
     case ${commit_type} in
       feat) features+=("${formatted_commit}") ;;
       fix) fixes+=("${formatted_commit}") ;;
+      perf) perf+=("${formatted_commit}") ;;
       chore) chores+=("${formatted_commit}") ;;
       refactor) refactors+=("${formatted_commit}") ;;
       test) tests+=("${formatted_commit}") ;;
@@ -168,6 +173,7 @@ array_to_json() {
 json_obj=$(jq -n \
   --argjson features "$(array_to_json features)" \
   --argjson fixes "$(array_to_json fixes)" \
+  --argjson perf "$(array_to_json perf)" \
   --argjson chores "$(array_to_json chores)" \
   --argjson refactors "$(array_to_json refactors)" \
   --argjson tests "$(array_to_json tests)" \
@@ -178,6 +184,7 @@ json_obj=$(jq -n \
   '{
     features: $features,
     fixes: $fixes,
+    perf: $perf,
     chores: $chores,
     refactors: $refactors,
     tests: $tests,
