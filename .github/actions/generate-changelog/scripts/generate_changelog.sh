@@ -110,7 +110,7 @@ parse_commit() {
     scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   fi
 
-  description=$(printf "%s" "${description}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  description=$(printf "%s" "${description}" | sed -E 's/^[[:space:]]*//;s/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//;s/[[:space:]]*$//')
 
   if [ -n "${description}" ]; then
     local first_char
@@ -123,11 +123,11 @@ parse_commit() {
   fi
 
   if [ -n "${scope}" ] && [ -n "${description}" ]; then
-    printf "%s: %s" "${scope}" "${description}"
+    printf '{"scope":"%s","description":"%s"}' "${scope}" "${description}"
   elif [ -n "${description}" ]; then
-    printf "%s" "${description}"
+    printf '{"scope":"","description":"%s"}' "${description}"
   else
-    printf "%s" "${commit}"
+    printf '{"scope":"","description":"%s"}' "${commit}"
   fi
 }
 
@@ -140,7 +140,7 @@ while IFS= read -r commit; do
   commit_type=$(get_commit_type "${clean_commit_msg}")
 
   if [ -z "${commit_type}" ]; then
-    formatted_commit="${clean_commit_msg}"
+    formatted_commit=$(printf '{"scope":"","description":"%s"}' "${clean_commit_msg}")
     other+=("${formatted_commit}")
   else
     formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}")
@@ -166,7 +166,7 @@ array_to_json() {
   if [ "$array_size" -eq 0 ]; then
     echo '[]'
   else
-    eval "printf '%s\n' \"\${${array_name}[@]}\"" | jq -R . | jq -s .
+    eval "printf '%s\n' \"\${${array_name}[@]}\"" | jq -s 'map(fromjson)'
   fi
 }
 

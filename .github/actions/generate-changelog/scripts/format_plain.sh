@@ -19,13 +19,22 @@ add_section() {
   local json_key="$2"
 
   local items
-  items=$(echo "${RAW_CHANGELOG}" | jq -r ".${json_key}[]?" 2>/dev/null || echo "")
+  items=$(echo "${RAW_CHANGELOG}" | jq -c ".${json_key}[]?" 2>/dev/null || echo "")
 
   if [ -n "${items}" ]; then
     formatted+="${section_name}\n"
     while IFS= read -r item; do
       if [ -n "${item}" ]; then
-        formatted+="• ${item}\n"
+        local scope
+        local description
+        scope=$(echo "${item}" | jq -r '.scope')
+        description=$(echo "${item}" | jq -r '.description')
+
+        if [ -n "${scope}" ] && [ "${scope}" != "null" ] && [ "${scope}" != "" ]; then
+          formatted+="• ${scope}: ${description}\n"
+        else
+          formatted+="• ${description}\n"
+        fi
         has_content=true
       fi
     done <<< "${items}"
