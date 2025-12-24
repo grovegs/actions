@@ -97,9 +97,9 @@ parse_commit() {
       ;;
   esac
 
-  if printf "%s" "${remaining}" | grep -qE '^[\[\(]([^\]\)]+)[\]\)]:'; then
-    scope=$(printf "%s" "${remaining}" | sed -E 's/^[\[\(]([^\]\)]+)[\]\)]:.*/\1/')
-    description=$(printf "%s" "${remaining}" | sed -E 's/^[\[\(][^\]\)]+[\]\)]:[[:space:]]*//')
+  if printf "%s" "${remaining}" | grep -qE '^[\[(]([^\])]+)[\])]:'; then
+    scope=$(printf "%s" "${remaining}" | sed -E 's/^[\[(]([^\])]+)[\])]:.*/\1/')
+    description=$(printf "%s" "${remaining}" | sed -E 's/^[\[(][^\])]+[\])]:[[:space:]]*//')
   elif printf "%s" "${remaining}" | grep -qE '^:'; then
     description=$(printf "%s" "${remaining}" | sed -E 's/^:[[:space:]]*//')
   else
@@ -107,7 +107,7 @@ parse_commit() {
   fi
 
   if [ -n "${scope}" ]; then
-    scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[()\[\]]//g')
+    scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   fi
 
   description=$(printf "%s" "${description}" | sed -E 's/^[[:space:]]*//;s/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//;s/[[:space:]]*$//')
