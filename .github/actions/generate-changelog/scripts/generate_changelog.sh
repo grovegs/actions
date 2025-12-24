@@ -107,7 +107,7 @@ parse_commit() {
   fi
 
   if [ -n "${scope}" ]; then
-    scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    scope=$(printf "%s" "${scope}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[()\[\]]//g')
   fi
 
   description=$(printf "%s" "${description}" | sed -E 's/^[[:space:]]*//;s/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//;s/[[:space:]]*$//')
