@@ -106,6 +106,15 @@ mkdir -p "${PLATFORM_BUILDS_DIR}"
 mkdir -p "${XCODE_PROJECT_DIR}"
 mkdir -p "${SECRETS_DIR}"
 
+echo "::notice::Setting up temporary keychain..."
+KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
+security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+security list-keychains -d user -s "${KEYCHAIN_FILE}" $(security list-keychains -d user | sed s/\"//g)
+security default-keychain -s "${KEYCHAIN_FILE}"
+
 echo "::notice::Decoding certificate and provisioning profile..."
 echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}" || {
   echo "::error::Failed to decode iOS certificate"
@@ -289,12 +298,7 @@ else
   exit 1
 fi
 
-echo "::notice::Setting up iOS signing..."
-KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-
-security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
-security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
-security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+echo "::notice::Importing certificate..."
 
 security import "${CERTIFICATE_FILE}" \
   -k "${KEYCHAIN_FILE}" \
@@ -309,9 +313,6 @@ security set-key-partition-list \
   -s \
   -k "${KEYCHAIN_PASSWORD}" \
   "${KEYCHAIN_FILE}"
-
-security list-keychains -d user -s "${KEYCHAIN_FILE}" $(security list-keychains -d user | sed s/\"//g)
-security default-keychain -s "${KEYCHAIN_FILE}"
 
 if ! security find-identity -v -p codesigning "${KEYCHAIN_FILE}" >/dev/null 2>&1; then
   echo "::error::Certificate not found in keychain after import"
