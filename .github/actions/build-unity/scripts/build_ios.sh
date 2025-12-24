@@ -85,6 +85,7 @@ SECRETS_DIR="${RUNNER_TEMP}/secrets"
 KEYCHAIN_FILE="${SECRETS_DIR}/ios.keychain-db"
 CERTIFICATE_FILE="${SECRETS_DIR}/ios.p12"
 PROVISIONING_FILE="${SECRETS_DIR}/profile.mobileprovision"
+ORIGINAL_KEYCHAIN=$(security default-keychain 2>/dev/null | xargs) || ORIGINAL_KEYCHAIN=""
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
@@ -290,8 +291,6 @@ fi
 
 echo "::notice::Setting up iOS signing..."
 KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-
-ORIGINAL_KEYCHAIN=$(security default-keychain | xargs)
 
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
