@@ -98,6 +98,23 @@ cleanup() {
 
   rm -rf "${SECRETS_DIR}" || true
   rm -f "${EXPORT_OPTIONS_PLIST}" || true
+
+  if [ -d "${ARCHIVE_PATH:-}" ]; then
+    ARCHIVE_SIZE=$(du -sh "${ARCHIVE_PATH}" 2>/dev/null | cut -f1 || echo "unknown")
+    echo "::notice::Removing archive (${ARCHIVE_SIZE}): ${ARCHIVE_PATH}"
+    rm -rf "${ARCHIVE_PATH}"
+  fi
+
+  if [ -d "${XCODE_PROJECT_DIR:-}" ]; then
+    XCODE_SIZE=$(du -sh "${XCODE_PROJECT_DIR}" 2>/dev/null | cut -f1 || echo "unknown")
+    echo "::notice::Removing Xcode project (${XCODE_SIZE}): ${XCODE_PROJECT_DIR}"
+    rm -rf "${XCODE_PROJECT_DIR}"
+  fi
+
+  if [ -n "${SCHEME_NAME:-}" ] && [ -d ~/Library/Developer/Xcode/DerivedData ]; then
+    echo "::notice::Cleaning only this project's DerivedData..."
+    find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -type d -name "*${SCHEME_NAME}*" -exec rm -rf {} + 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
 
