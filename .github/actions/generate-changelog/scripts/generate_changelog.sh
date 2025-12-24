@@ -97,9 +97,9 @@ parse_commit() {
       ;;
   esac
 
-  if printf "%s" "${remaining}" | grep -qE '^[\[(]([^\])]+)[\])]:'; then
-    scope=$(printf "%s" "${remaining}" | sed -E 's/^[\[(]([^\])]+)[\])]:.*/\1/')
-    description=$(printf "%s" "${remaining}" | sed -E 's/^[\[(][^\])]+[\])]:[[:space:]]*//')
+  if printf "%s" "${remaining}" | grep -qE '^[[(]([^])]+)[])]:'; then
+    scope=$(printf "%s" "${remaining}" | sed -E 's/^[[(]([^])]+)[])]:.*/\1/')
+    description=$(printf "%s" "${remaining}" | sed -E 's/^[[(][^])]+[])]:[[:space:]]*//')
   elif printf "%s" "${remaining}" | grep -qE '^:'; then
     description=$(printf "%s" "${remaining}" | sed -E 's/^:[[:space:]]*//')
   else
