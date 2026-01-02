@@ -423,9 +423,7 @@ fi
 echo "::notice::Using bundle ID: ${BUNDLE_ID}"
 echo "::notice::Using provisioning profile UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
 
-if [ "${IOS_EXPORT_METHOD}" = "ad-hoc" ]; then
-  echo "::notice::Configuring ad-hoc export without thinning"
-  cat > "${EXPORT_OPTIONS_PLIST}" << EOF
+cat > "${EXPORT_OPTIONS_PLIST}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -452,36 +450,6 @@ if [ "${IOS_EXPORT_METHOD}" = "ad-hoc" ]; then
 </dict>
 </plist>
 EOF
-else
-  echo "::notice::Configuring ${IOS_EXPORT_METHOD} export with thinning"
-  cat > "${EXPORT_OPTIONS_PLIST}" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>${IOS_EXPORT_METHOD}</string>
-    <key>teamID</key>
-    <string>${IOS_TEAM_ID}</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>${BUNDLE_ID}</key>
-        <string>${IOS_PROVISIONING_PROFILE_UUID}</string>
-    </dict>
-    <key>uploadSymbols</key>
-    <true/>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>thinning</key>
-    <string>&lt;thin-for-all-variants&gt;</string>
-    <key>stripSwiftSymbols</key>
-    <true/>
-</dict>
-</plist>
-EOF
-fi
 
 echo "::notice::Exporting IPA from archive..."
 if ! xcodebuild -exportArchive \
