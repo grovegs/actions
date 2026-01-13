@@ -13,16 +13,20 @@ fi
 
 PROJECT_NAME=$(basename "${PROJECT_DIR}")
 SOLUTION_FILE="${PROJECT_DIR}/${PROJECT_NAME}.sln"
+SOLUTION_XML_FILE="${PROJECT_DIR}/${PROJECT_NAME}.slnx"
 PROJECT_FILE="${PROJECT_DIR}/${PROJECT_NAME}.csproj"
 
 if [ -f "${SOLUTION_FILE}" ]; then
   TARGET_FILE="${SOLUTION_FILE}"
   FILE_TYPE="solution"
+elif [ -f "${SOLUTION_XML_FILE}" ]; then
+  TARGET_FILE="${SOLUTION_XML_FILE}"
+  FILE_TYPE="solution"
 elif [ -f "${PROJECT_FILE}" ]; then
   TARGET_FILE="${PROJECT_FILE}"
   FILE_TYPE="project"
 else
-  echo "::error::Neither solution file '${SOLUTION_FILE}' nor project file '${PROJECT_FILE}' exists"
+  echo "::error::No solution file (.sln, .slnx) or project file (.csproj) found in '${PROJECT_DIR}'"
   exit 1
 fi
 

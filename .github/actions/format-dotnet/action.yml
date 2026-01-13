@@ -3,7 +3,7 @@ description: Formats a .NET project.
 
 inputs:
     project:
-        description: The relative path to the .NET project directory containing csproj or sln file.
+        description: The relative path to the .NET project directory containing csproj, sln, or slnx file.
         required: true
 
 runs:
