@@ -90,3 +90,19 @@ jobs:
 
                       [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
                   color: "15158332"
+
+    cleanup:
+        name: Cleanup on Failure
+        if: always() && (failure() || cancelled()) && needs.prepare.result == 'success'
+        needs: [prepare, release]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - name: 🗑️ Delete Tag
+              run: |
+                  git push origin :refs/tags/v${{ needs.prepare.outputs.version }}
