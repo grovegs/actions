@@ -233,8 +233,6 @@ jobs:
 
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog
-              with:
-                  next-version: ${{ steps.bump-version.outputs.next-version }}
 
     test-package-actions:
         name: Test Package Actions

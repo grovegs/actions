@@ -70,7 +70,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build Project
         uses: grovegs/actions/build-unity@v1.0.0
@@ -98,7 +98,7 @@ jobs:
   build-android:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Android SDK
         uses: grovegs/actions/setup-android@v1.0.0
@@ -111,7 +111,6 @@ jobs:
         with:
           project: ./MyGame
           unity-modules: android
-          cache: true
 
       - name: Build Android
         uses: grovegs/actions/build-unity@v1.0.0
@@ -144,7 +143,7 @@ jobs:
   build-ios:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: grovegs/actions/setup-dotnet@v1.0.0
@@ -161,7 +160,6 @@ jobs:
         with:
           global-json-file: ./MyGame/global.json
           target-platforms: iOS
-          cache: true
 
       - name: Build iOS
         uses: grovegs/actions/build-godot@v1.0.0
@@ -195,13 +193,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: grovegs/actions/setup-dotnet@v1.0.0
         with:
           global-json-file: ./global.json
-          cache: true
 
       - name: Test
         uses: grovegs/actions/test-dotnet@v1.0.0
@@ -240,17 +237,19 @@ jobs:
 
 **setup-dotnet** - Configure .NET environment
 
-- Inputs: `global-json-file`, `cache`
+- Inputs: `global-json-file`
 - Outputs: `dotnet-version`
 
 **setup-godot** - Install Godot engine and export templates
 
-- Inputs: `global-json-file`, `target-platforms`, `cache`
+- Inputs: `global-json-file`, `target-platforms`, `godot-path`
+- Outputs: `godot-path`, `godot-version`
 - Supports: Linux, macOS
 
 **setup-unity** - Install Unity editor and modules
 
-- Inputs: `project`, `unity-version`, `unity-modules`, `cache`
+- Inputs: `project`, `unity-version`, `unity-modules`, `unity-path`
+- Outputs: `unity-path`, `unity-version`
 - Supports: Linux, macOS with iOS/Android modules
 
 **setup-android** - Configure Android SDK, NDK, and Java
@@ -262,6 +261,11 @@ jobs:
 - Inputs: `xcode-version`
 - Requires: macOS runner
 
+**setup-firebase** - Install and configure Firebase CLI
+
+- Inputs: `version`, `skip-login`
+- Outputs: `firebase-version`, `firebase-path`
+
 ### Build Actions
 
 **build-dotnet** - Build .NET projects
@@ -270,12 +274,14 @@ jobs:
 
 **build-godot** - Build Godot projects for mobile platforms
 
-- Inputs: `project`, `global-json-file`, `version`, `platform`, `preset`, `configuration`, `filename`
+- Inputs: `project`, `global-json-file`, `version`, `platform`, `preset`, `configuration`, `filename`, `godot-path`, `define-symbols`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`
+- Outputs: `file`
 - Supports: Android (APK/AAB), iOS (IPA)
 
 **build-unity** - Build Unity projects using Build Profiles
 
-- Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`
+- Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`, `unity-email`, `unity-password`, `unity-license-key`, `unity-path`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`, `ios-export-method`, `build-method`, `cache`
+- Outputs: `file`
 - Supports: Android (APK/AAB), iOS (IPA)
 
 ### Test Actions
@@ -286,11 +292,11 @@ jobs:
 
 **test-godot** - Run Godot project tests
 
-- Inputs: `project`, `global-json-file`
+- Inputs: `project`, `godot-path`
 
 **test-unity** - Run Unity project tests
 
-- Inputs: `project`
+- Inputs: `project`, `unity-path`
 
 ### Format Actions
 
@@ -327,12 +333,12 @@ jobs:
 
 **publish-testflight** - Upload to Apple TestFlight
 
-- Inputs: `file`, `api-key`, `api-key-id`, `api-issuer-id`
+- Inputs: `file`, `api-key`, `api-key-id`, `api-issuer-id`, `max-retries`
 - Requires: macOS runner
 
 **publish-nuget** - Publish to NuGet.org
 
-- Inputs: `file`, `api-key`
+- Inputs: `file`, `api-key`, `source`, `skip-duplicate`
 
 **publish-github** - Create GitHub releases with assets
 
@@ -342,21 +348,26 @@ jobs:
 
 **bump-version** - Automatic version bumping based on Git tags
 
-- Inputs: `version-type` (major, minor, patch)
+- Inputs: `version-type` (major, minor, patch), `create-tag`
 - Outputs: `latest-version`, `next-version`
 
 **generate-changelog** - Generate structured release notes
 
-- Inputs: `next-version`
 - Outputs: `changelog-raw`, `changelog-plain`, `changelog-markdown`
 
 **upload-artifact** - Upload artifacts with metadata
 
-- Inputs: `name`, `path`, `retention-days`
+- Inputs: `name`, `path`, `if-no-files-found`, `retention-days`, `compression-level`, `overwrite`, `include-hidden-files`
+- Outputs: `artifact-id`, `artifact-url`, `artifact-digest`
 
 **download-artifact** - Download artifacts with metadata restoration
 
-- Inputs: `name`, `path`
+- Inputs: `name`, `path`, `pattern`, `merge-multiple`, `github-token`, `repository`, `run-id`
+- Outputs: `download-path`
+
+**notify-discord** - Send notifications to Discord via webhook
+
+- Inputs: `webhook-url`, `title`, `description`, `color`
 
 ---
 
@@ -389,7 +400,7 @@ jobs:
       version: ${{ steps.bump.outputs.next-version }}
       changelog: ${{ steps.changelog.outputs.changelog-markdown }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -402,8 +413,6 @@ jobs:
       - name: Generate Changelog
         id: changelog
         uses: grovegs/actions/generate-changelog@v1.0.0
-        with:
-          next-version: ${{ steps.bump.outputs.next-version }}
 
   build-unity:
     needs: prepare
@@ -412,7 +421,7 @@ jobs:
         platform: [Android, iOS]
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup
         uses: grovegs/actions/setup-unity@v1.0.0
@@ -439,7 +448,7 @@ jobs:
     needs: [prepare, build-unity]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download Artifacts
         uses: grovegs/actions/download-artifact@v1.0.0
@@ -584,12 +593,12 @@ IOS_PROVISIONING_PROFILE_UUID: Profile UUID
 
 **Issue: Cache not working or builds are slow**
 
-**Solution:** Enable caching in setup actions:
+**Solution:** Enable caching in build-unity action:
 
 ```yaml
-- uses: grovegs/actions/setup-unity@v1.0.0
+- uses: grovegs/actions/build-unity@v1.0.0
   with:
-    cache: true  # Enable caching
+    cache: true
 ```
 
 ---
