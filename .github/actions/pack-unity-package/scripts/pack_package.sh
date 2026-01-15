@@ -58,6 +58,7 @@ PACKAGE_DIR="${TEMP_DIR}/$(basename "${PACKAGE_PATH}")"
 
 if [ -f "README.md" ]; then
   echo "::notice::Including README.md"
+  rm -f "${PACKAGE_DIR}/README.md"
   if ! cp "README.md" "${PACKAGE_DIR}"; then
     echo "::warning::Failed to copy README.md to '${PACKAGE_DIR}'"
   fi
@@ -65,6 +66,7 @@ fi
 
 if [ -f "LICENSE" ]; then
   echo "::notice::Including LICENSE"
+  rm -f "${PACKAGE_DIR}/LICENSE"
   if ! cp "LICENSE" "${PACKAGE_DIR}"; then
     echo "::warning::Failed to copy LICENSE to '${PACKAGE_DIR}'"
   fi
