@@ -11,10 +11,15 @@ if [ ! -d "${PROJECT_DIR}" ]; then
   exit 1
 fi
 
-PROJECT_NAME=$(basename "${PROJECT_DIR}")
-SOLUTION_FILE="${PROJECT_DIR}/${PROJECT_NAME}.sln"
-SOLUTION_XML_FILE="${PROJECT_DIR}/${PROJECT_NAME}.slnx"
-PROJECT_FILE="${PROJECT_DIR}/${PROJECT_NAME}.csproj"
+if [[ "${PROJECT_DIR}" == "." ]]; then
+  FILE_NAME="$(basename "$(pwd)")"
+else
+  FILE_NAME="$(basename "${PROJECT_DIR}")"
+fi
+
+SOLUTION_FILE="${PROJECT_DIR}/${FILE_NAME}.sln"
+SOLUTION_XML_FILE="${PROJECT_DIR}/${FILE_NAME}.slnx"
+PROJECT_FILE="${PROJECT_DIR}/${FILE_NAME}.csproj"
 
 if [ -f "${SOLUTION_FILE}" ]; then
   TARGET_FILE="${SOLUTION_FILE}"
@@ -26,7 +31,7 @@ elif [ -f "${PROJECT_FILE}" ]; then
   TARGET_FILE="${PROJECT_FILE}"
   FILE_TYPE="project"
 else
-  echo "::error::No solution file (.sln, .slnx) or project file (.csproj) found in '${PROJECT_DIR}'"
+  echo "::error::No solution file (.sln, .slnx) or project file (.csproj) found for '${FILE_NAME}' in '${PROJECT_DIR}'"
   exit 1
 fi
 
