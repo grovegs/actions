@@ -32,65 +32,127 @@ fi
 if [ -n "${DESTINATION_PATH}" ]; then
   echo "::notice::Custom destination path specified, skipping metadata restoration"
 
-  METADATA_FILES=$(find "${DOWNLOAD_DIR}" -name "*.meta" -type f 2>/dev/null || true)
-
-  if [ -n "${METADATA_FILES}" ]; then
-    while IFS= read -r meta_file; do
-      rm -f "${meta_file}"
-    done <<< "${METADATA_FILES}"
-  fi
+  find "${DOWNLOAD_DIR}" -name "*.meta" -type f -delete 2>/dev/null || true
 
   {
     echo "download-path=${DOWNLOAD_DIR}"
   } >> "${GITHUB_OUTPUT}"
 
-  echo "::notice::✓ Files available at: ${DOWNLOAD_DIR}"
-else
-  METADATA_FILE="${DOWNLOAD_DIR}/${ARTIFACT_NAME}.meta"
+  echo "::notice::Files available at: ${DOWNLOAD_DIR}"
+  exit 0
+fi
 
-  if [ ! -f "${METADATA_FILE}" ]; then
-    echo "::warning::No metadata file found. Files will remain in download directory."
+METADATA_FILES=$(find "${DOWNLOAD_DIR}" -name "*.meta" -type f 2>/dev/null || true)
 
-    {
-      echo "download-path=${DOWNLOAD_DIR}"
-    } >> "${GITHUB_OUTPUT}"
+if [ -z "${METADATA_FILES}" ]; then
+  echo "::warning::No metadata files found. Files will remain in download directory."
 
-    echo "::notice::✓ Files available at: ${DOWNLOAD_DIR}"
+  {
+    echo "download-path=${DOWNLOAD_DIR}"
+  } >> "${GITHUB_OUTPUT}"
+
+  echo "::notice::Files available at: ${DOWNLOAD_DIR}"
+  exit 0
+fi
+
+echo "::notice::Restoring files to original paths using metadata"
+
+parse_artifact_name() {
+  local meta_file="$1"
+
+  if command -v jq &>/dev/null; then
+    jq -r '.artifact_name // empty' "${meta_file}" 2>/dev/null
   else
-    echo "::notice::Restoring files to original paths using metadata"
+    grep -o '"artifact_name"[[:space:]]*:[[:space:]]*"[^"]*"' "${meta_file}" | sed 's/.*: *"\([^"]*\)".*/\1/'
+  fi
+}
 
-    declare -a FILE_PATHS
-    while IFS= read -r line; do
-      if [[ "${line}" =~ \"([^\"]+)\" ]]; then
-        FILE_PATHS+=("${BASH_REMATCH[1]}")
-      fi
-    done < <(grep -o '"[^"]*"' "${METADATA_FILE}" | grep -v '"version"' | grep -v '"artifact_name"' | grep -v '"workspace"' | grep -v '"created_at"' | grep -v '"files_count"' | grep -v '"files"')
+parse_file_paths() {
+  local meta_file="$1"
 
-    for rel_path in "${FILE_PATHS[@]}"; do
-      SOURCE="${DOWNLOAD_DIR}/${rel_path}"
-      TARGET="${WORKSPACE}/${rel_path}"
+  if command -v jq &>/dev/null; then
+    jq -r '.files[]? // empty' "${meta_file}" 2>/dev/null
+  else
+    sed -n '/"files":/,/]/p' "${meta_file}" | grep -o '"[^"]*"' | grep -v '"files"' | sed 's/"//g'
+  fi
+}
 
-      if [ ! -e "${SOURCE}" ]; then
-        continue
-      fi
+RESTORED_COUNT=0
+METADATA_COUNT=0
 
-      TARGET_DIR=$(dirname "${TARGET}")
-      mkdir -p "${TARGET_DIR}"
+while IFS= read -r METADATA_FILE; do
+  if [ ! -f "${METADATA_FILE}" ]; then
+    continue
+  fi
 
-      mv "${SOURCE}" "${TARGET}"
-      echo "Restored: ${rel_path}"
-    done
+  METADATA_COUNT=$((METADATA_COUNT + 1))
+  ARTIFACT_DIR=$(dirname "${METADATA_FILE}")
+  ARTIFACT_NAME_FROM_META=$(parse_artifact_name "${METADATA_FILE}")
 
-    rm -f "${METADATA_FILE}"
+  echo "Processing artifact: ${ARTIFACT_NAME_FROM_META:-unknown} from ${ARTIFACT_DIR}"
 
-    if [ -d "${DOWNLOAD_DIR}" ] && [ -z "$(ls -A "${DOWNLOAD_DIR}")" ]; then
-      rm -rf "${DOWNLOAD_DIR}"
+  FILE_PATHS=$(parse_file_paths "${METADATA_FILE}")
+
+  if [ -z "${FILE_PATHS}" ]; then
+    echo "::warning::No file paths found in metadata: ${METADATA_FILE}"
+    continue
+  fi
+
+  while IFS= read -r rel_path; do
+    if [ -z "${rel_path}" ]; then
+      continue
     fi
 
-    {
-      echo "download-path=${WORKSPACE}"
-    } >> "${GITHUB_OUTPUT}"
+    SOURCE="${ARTIFACT_DIR}/${rel_path}"
+    TARGET="${WORKSPACE}/${rel_path}"
 
-    echo "::notice::✓ Files restored to original paths"
+    if [ ! -e "${SOURCE}" ]; then
+      echo "::warning::Source not found: ${SOURCE}"
+      continue
+    fi
+
+    TARGET_DIR=$(dirname "${TARGET}")
+    mkdir -p "${TARGET_DIR}"
+
+    if [ -e "${TARGET}" ]; then
+      echo "::warning::Target already exists, overwriting: ${TARGET}"
+      rm -rf "${TARGET}"
+    fi
+
+    mv "${SOURCE}" "${TARGET}"
+    echo "  Restored: ${rel_path}"
+    RESTORED_COUNT=$((RESTORED_COUNT + 1))
+  done <<< "${FILE_PATHS}"
+
+  rm -f "${METADATA_FILE}"
+
+  if [ -d "${ARTIFACT_DIR}" ]; then
+    find "${ARTIFACT_DIR}" -type d -empty -delete 2>/dev/null || true
+
+    if [ -z "$(ls -A "${ARTIFACT_DIR}" 2>/dev/null)" ]; then
+      rm -rf "${ARTIFACT_DIR}"
+      echo "  Cleaned up artifact directory: ${ARTIFACT_DIR}"
+    else
+      echo "::warning::Artifact directory not empty after restoration: ${ARTIFACT_DIR}"
+      echo "Remaining contents:"
+      ls -la "${ARTIFACT_DIR}"
+    fi
+  fi
+done <<< "${METADATA_FILES}"
+
+if [ -d "${DOWNLOAD_DIR}" ]; then
+  if [ -z "$(ls -A "${DOWNLOAD_DIR}" 2>/dev/null)" ]; then
+    rm -rf "${DOWNLOAD_DIR}"
+    echo "::notice::Cleaned up download directory: ${DOWNLOAD_DIR}"
+  else
+    echo "::warning::Download directory not empty after restoration: ${DOWNLOAD_DIR}"
+    echo "Remaining contents:"
+    ls -la "${DOWNLOAD_DIR}"
   fi
 fi
+
+{
+  echo "download-path=${WORKSPACE}"
+} >> "${GITHUB_OUTPUT}"
+
+echo "::notice::Successfully restored ${RESTORED_COUNT} files from ${METADATA_COUNT} artifacts to original paths"
