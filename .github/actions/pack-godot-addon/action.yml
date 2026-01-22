@@ -11,6 +11,14 @@ inputs:
     filename:
         description: Name of the output addon file without .zip extension
         required: true
+    readme:
+        description: Path to the README file to include
+        required: false
+        default: ""
+    license:
+        description: Path to the LICENSE file to include
+        required: false
+        default: ""
 
 outputs:
     package:
@@ -30,6 +38,8 @@ runs:
               ADDON_PATH: ${{ inputs.addon }}
               ADDON_VERSION: ${{ inputs.version }}
               ADDON_FILENAME: ${{ inputs.filename }}
+              ADDON_README: ${{ inputs.readme }}
+              ADDON_LICENSE: ${{ inputs.readme }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
               "${{ github.action_path }}/scripts/pack_addon.sh"

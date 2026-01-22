@@ -40,6 +40,22 @@ sed -i.bak "s/version=\"[^\"]*\"/version=\"${ADDON_VERSION}\"/" "${PLUGIN_CFG_PA
 rm -f "${PLUGIN_CFG_PATH}.bak"
 echo "  ✓ Updated version to ${ADDON_VERSION}"
 
+MODIFIED_FILES="${PLUGIN_CFG_PATH}"
+
+if [ -n "${ADDON_README:-}" ] && [ -f "${ADDON_README}" ]; then
+  echo "::notice::Syncing README to ${ADDON_PATH}"
+  TARGET_README="${ADDON_PATH}/README.md"
+  cp "${ADDON_README}" "${TARGET_README}"
+  MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_README}"
+fi
+
+if [ -n "${ADDON_LICENSE:-}" ] && [ -f "${ADDON_LICENSE}" ]; then
+  echo "::notice::Syncing LICENSE to ${ADDON_PATH}"
+  TARGET_LICENSE="${ADDON_PATH}/LICENSE"
+  cp "${ADDON_LICENSE}" "${TARGET_LICENSE}"
+  MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_LICENSE}"
+fi
+
 ADDONS_DIR="${HOME}/.godot/addons"
 TEMP_DIR="${ADDONS_DIR}/${ADDON_FILENAME}"
 
@@ -52,24 +68,6 @@ echo "::notice::Copying addon files to temporary directory"
 if ! cp -r "${ADDON_PATH}" "${TEMP_DIR}"; then
   echo "::error::Failed to copy addon '${ADDON_PATH}' to '${TEMP_DIR}'"
   exit 1
-fi
-
-ADDON_DIR="${TEMP_DIR}/$(basename "${ADDON_PATH}")"
-
-if [ -f "README.md" ]; then
-  echo "::notice::Including README.md"
-  rm -f "${ADDON_DIR}/README.md"
-  if ! cp "README.md" "${ADDON_DIR}"; then
-    echo "::warning::Failed to copy README.md to '${ADDON_DIR}'"
-  fi
-fi
-
-if [ -f "LICENSE" ]; then
-  echo "::notice::Including LICENSE"
-  rm -f "${ADDON_DIR}/LICENSE"
-  if ! cp "LICENSE" "${ADDON_DIR}"; then
-    echo "::warning::Failed to copy LICENSE to '${ADDON_DIR}'"
-  fi
 fi
 
 cd "${ADDONS_DIR}" || {
@@ -94,5 +92,5 @@ echo "::notice::✓ Successfully created addon package: ${PACKAGE_FILE}"
 
 {
   echo "package=${PACKAGE_FILE}"
-  echo "modified-files=${PLUGIN_CFG_PATH}"
+  echo "modified-files=${MODIFIED_FILES}"
 } >> "${GITHUB_OUTPUT}"
