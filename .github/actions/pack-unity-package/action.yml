@@ -11,6 +11,14 @@ inputs:
     filename:
         description: Name of the output package file without .tgz extension
         required: true
+    readme:
+        description: Path to the README file to include
+        required: false
+        default: ""
+    license:
+        description: Path to the LICENSE file to include
+        required: false
+        default: ""
 
 outputs:
     package:
@@ -30,6 +38,8 @@ runs:
               PACKAGE_PATH: ${{ inputs.package }}
               PACKAGE_VERSION: ${{ inputs.version }}
               PACKAGE_FILENAME: ${{ inputs.filename }}
+              PACKAGE_README: ${{ inputs.readme }}
+              PACKAGE_LICENSE: ${{ inputs.license }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_package.sh"
               "${{ github.action_path }}/scripts/pack_package.sh"

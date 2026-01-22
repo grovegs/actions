@@ -40,6 +40,22 @@ sed -i.bak "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"${PA
 rm -f "${PACKAGE_JSON_PATH}.bak"
 echo "  ✓ Updated version to ${PACKAGE_VERSION}"
 
+MODIFIED_FILES="${PACKAGE_JSON_PATH}"
+
+if [ -n "${PACKAGE_README:-}" ] && [ -f "${PACKAGE_README}" ]; then
+  echo "::notice::Syncing README to ${PACKAGE_PATH}"
+  TARGET_README="${PACKAGE_PATH}/README.md"
+  cp "${PACKAGE_README}" "${TARGET_README}"
+  MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_README}"
+fi
+
+if [ -n "${PACKAGE_LICENSE:-}" ] && [ -f "${PACKAGE_LICENSE}" ]; then
+  echo "::notice::Syncing LICENSE to ${PACKAGE_PATH}"
+  TARGET_LICENSE="${PACKAGE_PATH}/LICENSE"
+  cp "${PACKAGE_LICENSE}" "${TARGET_LICENSE}"
+  MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_LICENSE}"
+fi
+
 PACKAGES_DIR="${HOME}/.unity/packages"
 TEMP_DIR="${PACKAGES_DIR}/${PACKAGE_FILENAME}"
 
@@ -52,24 +68,6 @@ echo "::notice::Copying package files to temporary directory"
 if ! cp -r "${PACKAGE_PATH}" "${TEMP_DIR}"; then
   echo "::error::Failed to copy package '${PACKAGE_PATH}' to '${TEMP_DIR}'"
   exit 1
-fi
-
-PACKAGE_DIR="${TEMP_DIR}/$(basename "${PACKAGE_PATH}")"
-
-if [ -f "README.md" ]; then
-  echo "::notice::Including README.md"
-  rm -f "${PACKAGE_DIR}/README.md"
-  if ! cp "README.md" "${PACKAGE_DIR}"; then
-    echo "::warning::Failed to copy README.md to '${PACKAGE_DIR}'"
-  fi
-fi
-
-if [ -f "LICENSE" ]; then
-  echo "::notice::Including LICENSE"
-  rm -f "${PACKAGE_DIR}/LICENSE"
-  if ! cp "LICENSE" "${PACKAGE_DIR}"; then
-    echo "::warning::Failed to copy LICENSE to '${PACKAGE_DIR}'"
-  fi
 fi
 
 cd "${PACKAGES_DIR}" || {
@@ -94,5 +92,5 @@ echo "::notice::✓ Successfully created package tarball: ${PACKAGE_FILE}"
 
 {
   echo "package=${PACKAGE_FILE}"
-  echo "modified-files=${PACKAGE_JSON_PATH}"
+  echo "modified-files=${MODIFIED_FILES}"
 } >> "${GITHUB_OUTPUT}"
