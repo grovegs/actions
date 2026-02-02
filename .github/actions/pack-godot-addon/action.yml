@@ -39,7 +39,7 @@ runs:
               ADDON_VERSION: ${{ inputs.version }}
               ADDON_FILENAME: ${{ inputs.filename }}
               ADDON_README: ${{ inputs.readme }}
-              ADDON_LICENSE: ${{ inputs.readme }}
+              ADDON_LICENSE: ${{ inputs.license }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
               "${{ github.action_path }}/scripts/pack_addon.sh"
