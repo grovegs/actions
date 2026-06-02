@@ -22,7 +22,7 @@ runs:
     using: composite
     steps:
         - name: 🔖 Configure Git
-          if: ${{ inputs.create-tag }} == 'true'
+          if: ${{ inputs.create-tag == 'true' }}
           shell: bash
           run: |
               git config user.name "github-actions[bot]"

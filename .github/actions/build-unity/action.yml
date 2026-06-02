@@ -160,7 +160,7 @@ runs:
         - name: 📚 Cache Unity Library
           if: inputs.cache == 'true'
           id: cache-unity-library
-          uses: actions/cache@v4
+          uses: actions/cache@v5
           with:
               path: |
                   ${{ inputs.project }}/Library
