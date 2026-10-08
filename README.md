@@ -153,7 +153,7 @@ jobs:
       - name: Setup Xcode
         uses: grovegs/actions/setup-xcode@v1.0.0
         with:
-          xcode-version: "16.2"
+          xcode-version: "26.2"
 
       - name: Setup Godot
         uses: grovegs/actions/setup-godot@v1.0.0

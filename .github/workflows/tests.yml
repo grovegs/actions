@@ -136,7 +136,7 @@ jobs:
             - name: 🍎 Setup Xcode
               uses: ./.github/actions/setup-xcode
               with:
-                  xcode-version: "16.2"
+                  xcode-version: "26.2"
 
     test-firebase-setup:
         name: Test Firebase Setup
