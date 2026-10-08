@@ -348,8 +348,13 @@ jobs:
 
 **bump-version** - Automatic version bumping based on Git tags
 
-- Inputs: `version-type` (major, minor, patch), `create-tag`
+- Inputs: `version-type` (major, minor, patch)
 - Outputs: `latest-version`, `next-version`
+
+**create-tag** - Tag the current commit with a version and push the tag
+
+- Inputs: `version`
+- Outputs: `tag`
 
 **generate-changelog** - Generate structured release notes
 

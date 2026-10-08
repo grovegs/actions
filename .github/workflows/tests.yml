@@ -229,7 +229,33 @@ jobs:
               uses: ./.github/actions/bump-version
               with:
                   version-type: patch
-                  create-tag: "false"
+
+            - name: 🏷️ Test Create Tag
+              shell: bash
+              env:
+                  RELEASE_VERSION: ${{ steps.bump-version.outputs.next-version }}
+              run: |
+                  set -euo pipefail
+
+                  remote="${RUNNER_TEMP}/remote.git"
+                  repository="${RUNNER_TEMP}/repository"
+                  git init --bare --quiet "${remote}"
+                  git clone --quiet "${remote}" "${repository}"
+                  cd "${repository}"
+                  git -c user.name=test -c user.email=test@example.com commit --allow-empty --quiet -m "release"
+                  git push --quiet origin HEAD
+
+                  GITHUB_OUTPUT="${RUNNER_TEMP}/create-tag-output" bash "${GITHUB_WORKSPACE}/.github/actions/create-tag/scripts/create_tag.sh"
+
+                  tagged=$(git --git-dir="${remote}" rev-parse "v${RELEASE_VERSION}^{commit}")
+                  [ "${tagged}" = "$(git rev-parse HEAD)" ] || { echo "Tag does not point at HEAD"; exit 1; }
+
+                  if GITHUB_OUTPUT=/dev/null bash "${GITHUB_WORKSPACE}/.github/actions/create-tag/scripts/create_tag.sh"; then
+                      echo "Creating an existing tag should fail"
+                      exit 1
+                  fi
+
+                  echo "✅ Tag v${RELEASE_VERSION} created on HEAD and duplicate rejected"
 
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog

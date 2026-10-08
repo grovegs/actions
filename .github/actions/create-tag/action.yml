@@ -1,0 +1,24 @@
+name: Create Tag
+description: Creates an annotated Git tag for a version on the current commit and pushes it.
+
+inputs:
+    version:
+        description: The version to tag, without the v prefix, such as 1.2.3.
+        required: true
+
+outputs:
+    tag:
+        description: The name of the created tag.
+        value: ${{ steps.create-tag.outputs.tag }}
+
+runs:
+    using: composite
+    steps:
+        - name: 🏷️ Create Tag
+          id: create-tag
+          shell: bash
+          env:
+              RELEASE_VERSION: ${{ inputs.version }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/create_tag.sh"
+              "${{ github.action_path }}/scripts/create_tag.sh"
