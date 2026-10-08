@@ -70,7 +70,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build Project
         uses: grovegs/actions/build-unity@v1.0.0
@@ -98,7 +98,7 @@ jobs:
   build-android:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Android SDK
         uses: grovegs/actions/setup-android@v1.0.0
@@ -143,7 +143,7 @@ jobs:
   build-ios:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
         uses: grovegs/actions/setup-dotnet@v1.0.0
@@ -193,7 +193,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
         uses: grovegs/actions/setup-dotnet@v1.0.0
@@ -405,7 +405,7 @@ jobs:
       version: ${{ steps.bump.outputs.next-version }}
       changelog: ${{ steps.changelog.outputs.changelog-markdown }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -426,7 +426,7 @@ jobs:
         platform: [Android, iOS]
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup
         uses: grovegs/actions/setup-unity@v1.0.0
@@ -453,7 +453,7 @@ jobs:
     needs: [prepare, build-unity]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download Artifacts
         uses: grovegs/actions/download-artifact@v1.0.0
@@ -536,7 +536,7 @@ All pack actions follow a consistent pattern:
     directory-build-props: Directory.Build.props
 
 - name: Upload Package
-  uses: actions/upload-artifact@v4
+  uses: actions/upload-artifact@v7
   with:
     name: nuget-package
     path: ${{ steps.pack.outputs.package }}
