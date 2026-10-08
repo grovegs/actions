@@ -41,7 +41,7 @@ runs:
     steps:
         - name: 📥 Download Artifact
           id: download
-          uses: actions/download-artifact@v7
+          uses: actions/download-artifact@v8
           with:
               name: ${{ inputs.name }}
               artifact-ids: ${{ inputs.artifact-ids }}
