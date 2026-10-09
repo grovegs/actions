@@ -344,20 +344,6 @@ cp "${PROVISIONING_FILE}" "${HOME}/Library/MobileDevice/Provisioning Profiles/${
 
 echo "::notice::Building and archiving iOS project..."
 
-echo "::notice::Patching UnityAppController.h to disable CAMetalDisplayLink (Unity 6 freeze workaround)"
-
-UNITY_APP_CONTROLLER="${XCODE_PROJECT_DIR}/Classes/UnityAppController.h"
-if [ -f "${UNITY_APP_CONTROLLER}" ]; then
-  if grep -q "#define UNITY_USES_METAL_DISPLAY_LINK" "${UNITY_APP_CONTROLLER}"; then
-    sed -i '' 's/#define UNITY_USES_METAL_DISPLAY_LINK.*/#define UNITY_USES_METAL_DISPLAY_LINK 0/' "${UNITY_APP_CONTROLLER}"
-    echo "::notice::Patched UNITY_USES_METAL_DISPLAY_LINK to 0 in UnityAppController.h"
-  else
-    echo "::warning::UNITY_USES_METAL_DISPLAY_LINK not found in UnityAppController.h"
-  fi
-else
-  echo "::warning::UnityAppController.h not found at ${UNITY_APP_CONTROLLER}"
-fi
-
 if [ "${BUILD_TYPE}" = "workspace" ]; then
   BUILD_CMD=(
     xcodebuild
