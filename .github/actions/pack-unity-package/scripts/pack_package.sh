@@ -42,11 +42,38 @@ echo "  ✓ Updated version to ${PACKAGE_VERSION}"
 
 MODIFIED_FILES="${PACKAGE_JSON_PATH}"
 
+ensure_meta() {
+  local asset_path="$1"
+  local importer="$2"
+  local meta_path="${asset_path}.meta"
+
+  if [ -f "${meta_path}" ]; then
+    return
+  fi
+
+  local guid
+  guid=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+
+  {
+    echo "fileFormatVersion: 2"
+    echo "guid: ${guid}"
+    echo "${importer}:"
+    echo "  externalObjects: {}"
+    echo "  userData: "
+    echo "  assetBundleName: "
+    echo "  assetBundleVariant: "
+  } > "${meta_path}"
+
+  echo "  ✓ Created ${meta_path}"
+  MODIFIED_FILES="${MODIFIED_FILES} ${meta_path}"
+}
+
 if [ -n "${PACKAGE_README:-}" ] && [ -f "${PACKAGE_README}" ]; then
   echo "::notice::Syncing README to ${PACKAGE_PATH}"
   TARGET_README="${PACKAGE_PATH}/README.md"
   cp "${PACKAGE_README}" "${TARGET_README}"
   MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_README}"
+  ensure_meta "${TARGET_README}" "TextScriptImporter"
 fi
 
 if [ -n "${PACKAGE_LICENSE:-}" ] && [ -f "${PACKAGE_LICENSE}" ]; then
@@ -54,6 +81,7 @@ if [ -n "${PACKAGE_LICENSE:-}" ] && [ -f "${PACKAGE_LICENSE}" ]; then
   TARGET_LICENSE="${PACKAGE_PATH}/LICENSE"
   cp "${PACKAGE_LICENSE}" "${TARGET_LICENSE}"
   MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_LICENSE}"
+  ensure_meta "${TARGET_LICENSE}" "DefaultImporter"
 fi
 
 PACKAGES_DIR="${HOME}/.unity/packages"
