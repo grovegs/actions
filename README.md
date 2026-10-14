@@ -32,7 +32,7 @@ A comprehensive collection of reusable GitHub Actions designed specifically for 
 - **Automated Testing**: Run unit tests and validation across all platforms
 - **Code Formatting**: Automatic formatting for C#, YAML, JSON, Markdown, and Shell scripts
 - **Package Management**: Create NuGet packages, Unity packages, and Godot addons
-- **Distribution**: Publish to Firebase, TestFlight, NuGet, and GitHub Releases
+- **Distribution**: Publish to Firebase, TestFlight, NuGet, GitHub Releases, and Cloudflare Pages
 - **Smart Caching**: Intelligent caching for Unity, Godot, .NET, and build dependencies
 - **Version Management**: Automatic version bumping and changelog generation
 
@@ -343,6 +343,12 @@ jobs:
 **publish-github** - Create GitHub releases with assets
 
 - Inputs: `title`, `version`, `changelog`, `github-token`, `assets`
+
+**publish-cloudflare** - Deploy a static site to Cloudflare Pages
+
+- Inputs: `directory`, `project-name`, `branch`, `api-token`, `account-id`, `wrangler-version`
+- Outputs: `deployment-url`, `alias-url`, `environment`
+- Requires: Node.js and jq on the runner, and a Direct Upload Pages project
 
 ### Utility Actions
 

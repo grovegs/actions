@@ -24,7 +24,7 @@ This repository contains composite GitHub Actions by Grove Games for game develo
 - **Test Actions**: `test-unity`, `test-godot`, `test-dotnet` - Run automated tests
 - **Format Actions**: `format-dotnet`, `format-files` - Code formatting and style consistency
 - **Package Actions**: `pack-dotnet`, `pack-godot-addon`, `pack-unity-package` - Create distributable packages
-- **Publish Actions**: `publish-firebase`, `publish-testflight`, `publish-nuget`, `publish-github` - Deploy to various platforms
+- **Publish Actions**: `publish-firebase`, `publish-testflight`, `publish-nuget`, `publish-github`, `publish-cloudflare` - Deploy to various platforms
 - **Utility Actions**: `bump-version`, `generate-changelog`, `upload-artifact`, `download-artifact` - Version management and artifact handling
 
 ## Development Commands
