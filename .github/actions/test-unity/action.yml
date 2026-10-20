@@ -1,23 +1,88 @@
 name: Test Unity
-description: Run EditMode and PlayMode tests for a Unity project.
+description: Run EditMode and PlayMode tests for a Unity project with the Unity CLI.
 
 inputs:
     project:
         description: Path to the Unity project folder
         required: true
+    test-modes:
+        description: Comma-separated list of test platforms to run. Supported values are EditMode and PlayMode.
+        required: false
+        default: EditMode,PlayMode
     unity-path:
-        description: Custom directory for Unity installations (default /Applications/Unity/Editor on macOS, $HOME/Unity/Editor on Linux)
+        description: Custom directory for Unity installations. Defaults to the editor installed by setup-unity or registered with the Unity CLI.
         required: false
         default: ""
+    unity-email:
+        description: The Unity account email. Required with unity-license-key when the runner has no active license.
+        required: false
+        default: ""
+    unity-password:
+        description: The Unity account password. Required with unity-license-key when the runner has no active license.
+        required: false
+        default: ""
+    unity-license-key:
+        description: The Unity license serial key. Leave empty when the runner already has an active license.
+        required: false
+        default: ""
+    unity-accelerator:
+        description: Unity Accelerator endpoint such as accelerator.local:10080 to share imported assets between runners.
+        required: false
+        default: ""
+    retries:
+        description: Number of times to re-run failing tests. Tests that pass on a retry are reported as flaky.
+        required: false
+        default: "0"
+    timeout:
+        description: Maximum number of seconds each test run may take. Empty disables the timeout.
+        required: false
+        default: ""
+    cache:
+        description: Cache Unity Library between test runs. Only enable if safe for your workflow.
+        required: false
+        default: "false"
+
+outputs:
+    results-dir:
+        description: Directory containing the NUnit and JUnit test reports
+        value: ${{ steps.test-project.outputs.results-dir }}
 
 runs:
     using: composite
     steps:
-        - name: 🧪 Test Project
+        - name: 🔑 Create Cache Key
+          if: inputs.cache == 'true'
+          id: cache-key
           shell: bash
           env:
               PROJECT_DIR: ${{ inputs.project }}
-              UNITY_PATH: ${{ inputs.unity-path }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/get_cache_key.sh"
+              "${{ github.action_path }}/scripts/get_cache_key.sh"
+
+        - name: 📚 Cache Unity Library
+          if: inputs.cache == 'true'
+          uses: actions/cache@v6
+          with:
+              path: ${{ inputs.project }}/Library
+              key: ${{ steps.cache-key.outputs.prefix }}-${{ hashFiles(format('{0}/Assets/**/*.meta', inputs.project), format('{0}/ProjectSettings/**', inputs.project)) }}
+              restore-keys: |
+                  ${{ steps.cache-key.outputs.prefix }}-
+                  ${{ steps.cache-key.outputs.editor-prefix }}-
+
+        - name: 🧪 Test Project
+          id: test-project
+          shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
+              TEST_MODES: ${{ inputs.test-modes }}
+              UNITY_PATH_INPUT: ${{ inputs.unity-path }}
+              UNITY_EMAIL: ${{ inputs.unity-email }}
+              UNITY_PASSWORD: ${{ inputs.unity-password }}
+              UNITY_LICENSE_KEY: ${{ inputs.unity-license-key }}
+              UNITY_ACCELERATOR: ${{ inputs.unity-accelerator }}
+              TEST_RETRIES: ${{ inputs.retries }}
+              TEST_TIMEOUT: ${{ inputs.timeout }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
               "${{ github.action_path }}/scripts/test_project.sh"

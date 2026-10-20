@@ -38,13 +38,43 @@ fi
 
 if [ "${CACHE_ENABLED:-false}" == "true" ]; then
   if [ "${CACHE_HIT:-false}" == "true" ]; then
-    echo "::notice::✅ Using cached Unity Library - this should speed up the build significantly"
+    echo "::notice::✅ Restored exact Unity Library cache"
+  elif [ -n "${CACHE_MATCHED_KEY:-}" ]; then
+    echo "::notice::♻️  Restored partial Unity Library cache: ${CACHE_MATCHED_KEY}"
   else
     echo "::notice::❄️  Cold start - Unity Library will be rebuilt and cached for next time"
   fi
 else
   echo "::notice::🚫 Caching disabled - build will not use or create cache"
 fi
+
+if ! command -v unity > /dev/null 2>&1; then
+  echo "::error::Unity CLI is not installed. Run setup-unity before build-unity"
+  exit 1
+fi
+
+UNITY_PATH_INPUT="${UNITY_PATH_INPUT:-}"
+UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
+
+if [ -n "${UNITY_PATH_INPUT}" ]; then
+  UNITY_VERSION=$(grep "m_EditorVersion:" "${PROJECT_DIR}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2 | tr -d '\r')
+  if [ "$(uname)" = "Darwin" ]; then
+    UNITY_EDITOR_PATH="${UNITY_PATH_INPUT}/${UNITY_VERSION}/Unity.app"
+  else
+    UNITY_EDITOR_PATH="${UNITY_PATH_INPUT}/${UNITY_VERSION}/Editor/Unity"
+  fi
+else
+  UNITY_EDITOR_PATH="${UNITY_EXECUTABLE:-}"
+  UNITY_EDITOR_PATH="${UNITY_EDITOR_PATH%/Contents/MacOS/Unity}"
+fi
+
+if [ -n "${UNITY_EDITOR_PATH}" ] && [ ! -e "${UNITY_EDITOR_PATH}" ]; then
+  echo "::error::Unity not found at: ${UNITY_EDITOR_PATH}"
+  exit 1
+fi
+
+echo "::notice::Using Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI from ProjectVersion.txt}"
+export UNITY_EDITOR_PATH
 
 case "${PLATFORM}" in
   "Android")

@@ -246,10 +246,10 @@ jobs:
 - Outputs: `godot-path`, `godot-version`
 - Supports: Linux, macOS
 
-**setup-unity** - Install Unity editor and modules
+**setup-unity** - Install the Unity CLI, Unity editor and modules
 
-- Inputs: `project`, `unity-version`, `unity-modules`, `unity-path`
-- Outputs: `unity-path`, `unity-version`
+- Inputs: `project`, `unity-version`, `unity-modules`, `unity-child-modules`, `unity-path`, `unity-cli-channel`, `cache`
+- Outputs: `unity-path`, `unity-executable`, `unity-version`
 - Supports: Linux, macOS with iOS/Android modules
 
 **setup-android** - Configure Android SDK, NDK, and Java
@@ -280,7 +280,7 @@ jobs:
 
 **build-unity** - Build Unity projects using Build Profiles
 
-- Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`, `unity-email`, `unity-password`, `unity-license-key`, `unity-path`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`, `ios-export-method`, `build-method`, `cache`
+- Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`, `unity-email`, `unity-password`, `unity-license-key`, `unity-path`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`, `ios-export-method`, `build-method`, `cache`, `unity-accelerator`
 - Outputs: `file`
 - Supports: Android (APK/AAB), iOS (IPA)
 
@@ -294,9 +294,10 @@ jobs:
 
 - Inputs: `project`, `godot-path`
 
-**test-unity** - Run Unity project tests
+**test-unity** - Run Unity project tests with NUnit and JUnit reports
 
-- Inputs: `project`, `unity-path`
+- Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `retries`, `timeout`, `cache`
+- Outputs: `results-dir`
 
 ### Format Actions
 
