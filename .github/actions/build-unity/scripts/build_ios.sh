@@ -70,8 +70,6 @@ if [[ ! "${IOS_TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]]; then
   echo "::warning::iOS Team ID format appears invalid. Expected 10 uppercase alphanumeric characters."
 fi
 
-UNITY_CMD="${UNITY_EXECUTABLE:-unity}"
-
 if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" && pwd)"
 fi
@@ -169,7 +167,7 @@ fi
   echo "::notice::  Team ID: ${IOS_TEAM_ID}"
   echo "::notice::  Export Method: ${IOS_EXPORT_METHOD}"
   echo "::notice::  Provisioning UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
-  echo "::notice::  Unity: ${UNITY_CMD}"
+  echo "::notice::  Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -191,21 +189,35 @@ else
   BUILD_METHOD_ARGS=("-executeMethod" "BuildiOS.Build")
 fi
 
-declare -a BUILD_ARGS
-BUILD_ARGS=(
-  -batchmode
+LOG_FILE="${RUNNER_TEMP}/unity-build-ios.log"
+
+declare -a RUN_ARGS
+RUN_ARGS=(
+  "${PROJECT_DIR}"
+  --non-interactive
+  --no-banner
+  --log-file "${LOG_FILE}"
+)
+
+if [ -n "${UNITY_EDITOR_PATH:-}" ]; then
+  RUN_ARGS+=(--editor-path "${UNITY_EDITOR_PATH}")
+fi
+
+if [ -n "${UNITY_ACCELERATOR:-}" ]; then
+  RUN_ARGS+=(--accelerator "${UNITY_ACCELERATOR}")
+fi
+
+declare -a UNITY_ARGS
+UNITY_ARGS=(
   -nographics
-  -quit
   -username "${UNITY_EMAIL}"
   -password "${UNITY_PASSWORD}"
   -serial "${UNITY_LICENSE_KEY}"
-  -projectPath "${PROJECT_DIR}"
   -buildTarget iOS
-  -logFile -
 )
 
-BUILD_ARGS+=("${BUILD_METHOD_ARGS[@]}")
-BUILD_ARGS+=(
+UNITY_ARGS+=("${BUILD_METHOD_ARGS[@]}")
+UNITY_ARGS+=(
   -outputPath "${XCODE_PROJECT_DIR}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -215,8 +227,9 @@ BUILD_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! "${UNITY_CMD}" "${BUILD_ARGS[@]}" 2>&1; then
+if ! unity run "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for iOS"
+  echo "::error::Check the Unity log output above or ${LOG_FILE} for specific error details"
   exit 1
 fi
 

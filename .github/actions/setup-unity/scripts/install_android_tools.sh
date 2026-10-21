@@ -29,7 +29,11 @@ find_unity_android_player_path() {
     return 1
   fi
 
-  local android_player_path="${UNITY_PATH_VAR}/PlaybackEngines/AndroidPlayer"
+  local android_player_path=""
+  case "${RUNNER_OS}" in
+    "macOS") android_player_path="${UNITY_PATH_VAR}/PlaybackEngines/AndroidPlayer" ;;
+    "Linux") android_player_path="${UNITY_PATH_VAR}/Editor/Data/PlaybackEngines/AndroidPlayer" ;;
+  esac
 
   if [ ! -d "${android_player_path}" ]; then
     echo "::error::Unity Android Player not found at: ${android_player_path}" >&2

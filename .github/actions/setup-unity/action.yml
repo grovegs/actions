@@ -1,5 +1,5 @@
 name: Setup Unity
-description: Download, install, and cache Unity for macOS and Linux platforms with iOS and Android support.
+description: Install the Unity CLI, then install and optionally cache the Unity editor for macOS and Linux platforms with iOS and Android support.
 
 inputs:
     project:
@@ -14,15 +14,30 @@ inputs:
         description: Comma-separated list of target modules to install such as ios, android
         required: false
         default: ""
+    unity-child-modules:
+        description: Install child modules such as the Android SDK, NDK and OpenJDK. When false, Android tools are linked from setup-android.
+        required: false
+        default: "false"
     unity-path:
-        description: Custom directory for Unity installations (default /Applications/Unity on macOS, $HOME on Linux)
+        description: Custom directory for Unity installations (default is the Unity CLI install path)
         required: false
         default: ""
+    unity-cli-channel:
+        description: Release channel of the Unity CLI to install.
+        required: false
+        default: beta
+    cache:
+        description: Cache the installed Unity editor on GitHub-hosted runners. Editors are several GB, so only enable if your cache quota allows it.
+        required: false
+        default: "false"
 
 outputs:
     unity-path:
         description: Root directory of Unity installation
-        value: ${{ steps.install-unity.outputs.unity-path || steps.check-installation.outputs.unity-path }}
+        value: ${{ steps.install-unity.outputs.unity-path }}
+    unity-executable:
+        description: Path to the Unity editor executable
+        value: ${{ steps.install-unity.outputs.unity-executable }}
     unity-version:
         description: Installed Unity version
         value: ${{ steps.get-unity-info.outputs.version }}
@@ -49,64 +64,55 @@ runs:
               chmod +x "${{ github.action_path }}/scripts/get_unity_info.sh"
               "${{ github.action_path }}/scripts/get_unity_info.sh"
 
-        - name: 🔍 Check Existing Installation
-          id: check-installation
+        - name: 🔧 Install Unity CLI
+          shell: bash
+          env:
+              UNITY_CLI_CHANNEL: ${{ inputs.unity-cli-channel }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/install_unity_cli.sh"
+              "${{ github.action_path }}/scripts/install_unity_cli.sh"
+
+        - name: 📂 Get Install Directory
+          if: inputs.cache == 'true' && runner.environment == 'github-hosted'
+          id: get-install-dir
           shell: bash
           env:
               UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
               UNITY_PATH: ${{ inputs.unity-path }}
-              UNITY_MODULES: ${{ inputs.unity-modules }}
           run: |
-              chmod +x "${{ github.action_path }}/scripts/check_installation.sh"
-              "${{ github.action_path }}/scripts/check_installation.sh"
+              chmod +x "${{ github.action_path }}/scripts/get_install_dir.sh"
+              "${{ github.action_path }}/scripts/get_install_dir.sh"
 
-        - name: 🔧 Prepare Download Directory
-          if: steps.check-installation.outputs.installed != 'true'
-          id: prepare-paths
-          shell: bash
-          env:
-              UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
-          run: |
-              DOWNLOAD_DIR="${RUNNER_TEMP}/downloads/unity/${UNITY_VERSION}"
-              echo "download-dir=${DOWNLOAD_DIR}" >> "${GITHUB_OUTPUT}"
-              echo "::notice::Download directory: ${DOWNLOAD_DIR}"
+        - name: 📥 Restore Unity Editor
+          if: inputs.cache == 'true' && runner.environment == 'github-hosted'
+          id: restore-editor
+          uses: actions/cache/restore@v6
+          with:
+              path: ${{ steps.get-install-dir.outputs.install-dir }}
+              key: unity-editor-${{ runner.os }}-${{ runner.arch }}-${{ steps.get-unity-info.outputs.version }}-${{ steps.get-unity-info.outputs.changeset }}-${{ inputs.unity-modules }}-${{ inputs.unity-child-modules }}
 
-        - name: ⬇️ Download Unity
-          if: steps.check-installation.outputs.installed != 'true'
+        - name: ⚙️ Install Unity
+          id: install-unity
           shell: bash
           env:
               UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
               UNITY_CHANGESET: ${{ steps.get-unity-info.outputs.changeset }}
               UNITY_MODULES: ${{ inputs.unity-modules }}
-              DOWNLOAD_DIR: ${{ steps.prepare-paths.outputs.download-dir }}
-          run: |
-              chmod +x "${{ github.action_path }}/scripts/download_unity.sh"
-              "${{ github.action_path }}/scripts/download_unity.sh"
-
-        - name: ⚙️ Install Unity
-          if: steps.check-installation.outputs.installed != 'true'
-          id: install-unity
-          shell: bash
-          env:
-              UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}
-              UNITY_MODULES: ${{ inputs.unity-modules }}
+              UNITY_CHILD_MODULES: ${{ inputs.unity-child-modules }}
               UNITY_PATH: ${{ inputs.unity-path }}
-              DOWNLOAD_DIR: ${{ steps.prepare-paths.outputs.download-dir }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/install_unity.sh"
               "${{ github.action_path }}/scripts/install_unity.sh"
 
-        - name: 📝 Set Unity Path Output
-          shell: bash
-          run: |
-              if [ "${{ steps.check-installation.outputs.installed }}" = "true" ]; then
-                echo "unity-path=${{ steps.check-installation.outputs.unity-path }}" >> "${GITHUB_OUTPUT}"
-                echo "UNITY_PATH=${{ steps.check-installation.outputs.unity-path }}" >> "${GITHUB_ENV}"
-                echo "::notice::Using existing Unity installation at ${{ steps.check-installation.outputs.unity-path }}"
-              fi
+        - name: 💾 Save Unity Editor
+          if: inputs.cache == 'true' && runner.environment == 'github-hosted' && steps.restore-editor.outputs.cache-hit != 'true'
+          uses: actions/cache/save@v6
+          with:
+              path: ${{ steps.get-install-dir.outputs.install-dir }}
+              key: ${{ steps.restore-editor.outputs.cache-primary-key }}
 
         - name: 📱 Configure Android Tools
-          if: contains(inputs.unity-modules, 'android')
+          if: contains(inputs.unity-modules, 'android') && inputs.unity-child-modules != 'true'
           shell: bash
           env:
               UNITY_VERSION: ${{ steps.get-unity-info.outputs.version }}

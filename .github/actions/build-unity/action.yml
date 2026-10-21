@@ -31,7 +31,11 @@ inputs:
         description: The Unity license serial key.
         required: true
     unity-path:
-        description: Path to Unity installation directory (default /Applications/Unity/Editor on macOS or $HOME/Unity/Editor on Linux)
+        description: Path to Unity installation directory. Defaults to the editor installed by setup-unity or registered with the Unity CLI.
+        required: false
+        default: ""
+    unity-accelerator:
+        description: Unity Accelerator endpoint such as accelerator.local:10080 to share imported assets between runners.
         required: false
         default: ""
     android-keystore:
@@ -78,116 +82,27 @@ outputs:
 runs:
     using: composite
     steps:
-        - name: 📋 Get Unity Version
-          id: unity-version
-          shell: bash
-          run: |
-              if [ -f "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" ]; then
-                version=$(grep "m_EditorVersion:" "${{ inputs.project }}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2)
-                echo "version=${version}" >> "${GITHUB_OUTPUT}"
-                echo "::notice::Detected Unity version: ${version}"
-              else
-                echo "version=unknown" >> "${GITHUB_OUTPUT}"
-                echo "::warning::Could not detect Unity version"
-              fi
-
-        - name: 🔍 Locate Unity Installation
-          id: check-unity
-          shell: bash
-          run: |
-              UNITY_VERSION="${{ steps.unity-version.outputs.version }}"
-              UNITY_PATH_INPUT="${{ inputs.unity-path }}"
-
-              if [ -n "${UNITY_PATH_INPUT}" ]; then
-                UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
-                UNITY_DIR="${UNITY_PATH_INPUT}/${UNITY_VERSION}"
-              else
-                if [ "$(uname)" = "Darwin" ]; then
-                  UNITY_DIR="/Applications/Unity/Editor/${UNITY_VERSION}"
-                else
-                  UNITY_DIR="${HOME}/Unity/Editor/${UNITY_VERSION}"
-                fi
-                echo "::notice::Using default Unity path for platform: ${UNITY_DIR}"
-              fi
-
-              if [ "$(uname)" = "Darwin" ]; then
-                UNITY_EXECUTABLE="${UNITY_DIR}/Unity.app/Contents/MacOS/Unity"
-              else
-                UNITY_EXECUTABLE="${UNITY_DIR}/Editor/Unity"
-              fi
-
-              if [ -f "${UNITY_EXECUTABLE}" ]; then
-                echo "unity-executable=${UNITY_EXECUTABLE}" >> "${GITHUB_OUTPUT}"
-                echo "UNITY_EXECUTABLE=${UNITY_EXECUTABLE}" >> "${GITHUB_ENV}"
-                echo "::notice::Using Unity from: ${UNITY_EXECUTABLE}"
-                "${UNITY_EXECUTABLE}" -version 2>/dev/null || echo "::debug::Could not get Unity version"
-              else
-                echo "::error::Unity not found at: ${UNITY_EXECUTABLE}"
-                echo "::error::Please install Unity at the default location or provide unity-path input"
-                exit 1
-              fi
-
         - name: 🔑 Create Cache Key
           if: inputs.cache == 'true'
           id: cache-key
           shell: bash
+          env:
+              PROJECT_DIR: ${{ inputs.project }}
+              PLATFORM: ${{ inputs.platform }}
           run: |
-              echo "::notice::Generating cache key for ${{ inputs.project }}..."
-
-              declare -a project_files
-              while IFS= read -r file; do
-                project_files+=("${file}")
-              done < <(find "${{ inputs.project }}" -name "*.meta" -o -name "ProjectSettings.asset" -o -name "packages-lock.json" -o -name "Packages/manifest.json" 2>/dev/null | sort || true)
-
-              if [ "${#project_files[@]}" -gt 0 ]; then
-                if command -v sha256sum >/dev/null 2>&1; then
-                  project_hash=$(cat "${project_files[@]}" 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "fallback")
-                else
-                  project_hash=$(cat "${project_files[@]}" 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "fallback")
-                fi
-              else
-                if command -v sha256sum >/dev/null 2>&1; then
-                  project_hash=$(echo "${{ inputs.project }}" | sha256sum | cut -d' ' -f1)
-                else
-                  project_hash=$(echo "${{ inputs.project }}" | shasum -a 256 | cut -d' ' -f1)
-                fi
-              fi
-
-              cache_key="unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-${project_hash:0:8}"
-              echo "key=${cache_key}" >> "${GITHUB_OUTPUT}"
-              echo "::notice::Cache key: ${cache_key}"
+              chmod +x "${{ github.action_path }}/scripts/get_cache_key.sh"
+              "${{ github.action_path }}/scripts/get_cache_key.sh"
 
         - name: 📚 Cache Unity Library
           if: inputs.cache == 'true'
           id: cache-unity-library
           uses: actions/cache@v6
           with:
-              path: |
-                  ${{ inputs.project }}/Library
-                  ${{ inputs.project }}/Temp/UnityLockfile
-              key: ${{ steps.cache-key.outputs.key }}
+              path: ${{ inputs.project }}/Library
+              key: ${{ steps.cache-key.outputs.prefix }}-${{ hashFiles(format('{0}/Assets/**/*.meta', inputs.project), format('{0}/ProjectSettings/**', inputs.project)) }}
               restore-keys: |
-                  unity-${{ steps.unity-version.outputs.version }}-${{ inputs.platform }}-
-                  unity-${{ steps.unity-version.outputs.version }}-
-
-        - name: 🧹 Clean Corrupted Cache
-          if: inputs.cache == 'true' && steps.cache-unity-library.outputs.cache-hit == 'true'
-          shell: bash
-          run: |
-              echo "::notice::Cache hit - checking integrity..."
-
-              if [ -f "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" ]; then
-                if grep -q "corrupted\|error\|failed" "${{ inputs.project }}/Library/LastSceneManagerSetup.txt" 2>/dev/null; then
-                  echo "::warning::Detected corrupted cache, cleaning..."
-                  rm -rf "${{ inputs.project }}/Library"
-                  rm -rf "${{ inputs.project }}/Temp"
-                fi
-              fi
-
-              if [ -d "${{ inputs.project }}/Library" ] && [ -z "$(ls -A "${{ inputs.project }}/Library" 2>/dev/null)" ]; then
-                echo "::warning::Empty Library folder detected, removing..."
-                rm -rf "${{ inputs.project }}/Library"
-              fi
+                  ${{ steps.cache-key.outputs.prefix }}-
+                  ${{ steps.cache-key.outputs.editor-prefix }}-
 
         - name: 🏗️ Build Project
           id: build-project
@@ -199,7 +114,8 @@ runs:
               CONFIGURATION: ${{ inputs.configuration }}
               FILENAME: ${{ inputs.filename }}
               PROFILE_NAME: ${{ inputs.profile-name }}
-              UNITY_EXECUTABLE: ${{ steps.check-unity.outputs.unity-executable }}
+              UNITY_PATH_INPUT: ${{ inputs.unity-path }}
+              UNITY_ACCELERATOR: ${{ inputs.unity-accelerator }}
               UNITY_EMAIL: ${{ inputs.unity-email }}
               UNITY_PASSWORD: ${{ inputs.unity-password }}
               UNITY_LICENSE_KEY: ${{ inputs.unity-license-key }}
@@ -215,26 +131,7 @@ runs:
               BUILD_METHOD: ${{ inputs.build-method }}
               CACHE_ENABLED: ${{ inputs.cache }}
               CACHE_HIT: ${{ steps.cache-unity-library.outputs.cache-hit }}
+              CACHE_MATCHED_KEY: ${{ steps.cache-unity-library.outputs.cache-matched-key }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/build_project.sh"
               "${{ github.action_path }}/scripts/build_project.sh"
-
-        - name: 📊 Build Statistics
-          shell: bash
-          run: |
-              echo "::notice::=== Build Statistics ==="
-              echo "::notice::Unity path: ${{ steps.check-unity.outputs.unity-executable }}"
-              echo "::notice::Caching enabled: ${{ inputs.cache }}"
-
-              if [ "${{ inputs.cache }}" == "true" ]; then
-                echo "::notice::Cache hit: ${{ steps.cache-unity-library.outputs.cache-hit }}"
-                echo "::notice::Cache key: ${{ steps.cache-key.outputs.key }}"
-              fi
-
-              echo "::notice::Unity version: ${{ steps.unity-version.outputs.version }}"
-              echo "::notice::Platform: ${{ inputs.platform }}"
-
-              if [ -d "${{ inputs.project }}/Library" ]; then
-                lib_size=$(du -sh "${{ inputs.project }}/Library" 2>/dev/null | cut -f1 || echo "unknown")
-                echo "::notice::Library folder size: ${lib_size}"
-              fi

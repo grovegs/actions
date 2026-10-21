@@ -51,8 +51,6 @@ if [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ]; then
   exit 1
 fi
 
-UNITY_CMD="${UNITY_EXECUTABLE:-unity}"
-
 if [[ "${PROJECT_DIR}" != /* ]]; then
   PROJECT_DIR="$(cd "${PROJECT_DIR}" 2>/dev/null && pwd)" || {
     echo "::error::Project directory not found or inaccessible: ${PROJECT_DIR}"
@@ -127,7 +125,7 @@ fi
   echo "::notice::  Format: ${ANDROID_FORMAT}"
   echo "::notice::  Output: ${OUTPUT_FILE}"
   echo "::notice::  Profile: ${PROFILE_NAME:-default}"
-  echo "::notice::  Unity: ${UNITY_CMD}"
+  echo "::notice::  Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -157,21 +155,35 @@ mkdir -p "$(dirname "${OUTPUT_FILE}")" || {
   exit 1
 }
 
-declare -a BUILD_ARGS
-BUILD_ARGS=(
-  -batchmode
+LOG_FILE="${RUNNER_TEMP}/unity-build-android.log"
+
+declare -a RUN_ARGS
+RUN_ARGS=(
+  "${PROJECT_DIR}"
+  --non-interactive
+  --no-banner
+  --log-file "${LOG_FILE}"
+)
+
+if [ -n "${UNITY_EDITOR_PATH:-}" ]; then
+  RUN_ARGS+=(--editor-path "${UNITY_EDITOR_PATH}")
+fi
+
+if [ -n "${UNITY_ACCELERATOR:-}" ]; then
+  RUN_ARGS+=(--accelerator "${UNITY_ACCELERATOR}")
+fi
+
+declare -a UNITY_ARGS
+UNITY_ARGS=(
   -nographics
-  -quit
   -username "${UNITY_EMAIL}"
   -password "${UNITY_PASSWORD}"
   -serial "${UNITY_LICENSE_KEY}"
-  -projectPath "${PROJECT_DIR}"
-  -logFile -
   -buildTarget Android
 )
 
-BUILD_ARGS+=("${BUILD_METHOD_ARGS[@]}")
-BUILD_ARGS+=(
+UNITY_ARGS+=("${BUILD_METHOD_ARGS[@]}")
+UNITY_ARGS+=(
   -outputPath "${OUTPUT_FILE}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -183,23 +195,13 @@ BUILD_ARGS+=(
   -keyaliasPass "${ANDROID_KEYSTORE_PASSWORD}"
 )
 
-echo "::notice::Unity command line:"
-printf '%s ' "${BUILD_ARGS[@]}"
-echo ""
-
 echo "::notice::Starting Unity build..."
-if ! "${UNITY_CMD}" "${BUILD_ARGS[@]}" 2>&1; then
+if ! unity run "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for Android"
-  echo "::error::Check the Unity log output above for specific error details"
-
-  echo "::debug::Project directory contents:"
-  ls -la "${PROJECT_DIR}" || echo "::debug::Cannot list project directory"
+  echo "::error::Check the Unity log output above or ${LOG_FILE} for specific error details"
 
   echo "::debug::Build directory contents:"
   ls -la "${PLATFORM_BUILDS_DIR}" || echo "::debug::Cannot list build directory"
-
-  echo "::debug::Unity version:"
-  "${UNITY_CMD}" -version 2>/dev/null || echo "::debug::Cannot get Unity version"
 
   exit 1
 fi
