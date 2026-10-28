@@ -32,6 +32,10 @@ if ! PAYLOAD=$(jq -n \
   --arg timestamp "${timestamp}" \
   'def clip($limit):
     if length <= $limit then . else .[0:($limit - 1)] + "…" end;
+  def bold_headings:
+    split("\n")
+    | map(if test("^#{1,6} +") then "**" + sub("^#{1,6} +"; "") + "**" else . end)
+    | join("\n");
   def fit($limit):
     if length <= $limit then .
     else
@@ -52,7 +56,7 @@ if ! PAYLOAD=$(jq -n \
   {
     embeds: [{
       title: ($title | gsub("\n"; " ") | clip($title_limit)),
-      description: ($description | fit($description_limit)),
+      description: ($description | bold_headings | fit($description_limit)),
       color: $color,
       timestamp: $timestamp
     }]
