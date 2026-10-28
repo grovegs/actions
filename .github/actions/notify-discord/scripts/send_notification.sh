@@ -16,36 +16,53 @@ if ! command -v curl > /dev/null 2>&1; then
   exit 1
 fi
 
-escape_json() {
-  local string="$1"
-  printf '%s' "${string}" | jq -Rs .
-}
-
 TITLE="${TITLE:-}"
 DESCRIPTION="${DESCRIPTION:-}"
 COLOR="${COLOR:-3447003}"
-
-title_json=$(escape_json "${TITLE}")
-description_json=$(escape_json "${DESCRIPTION}")
+TITLE_LIMIT=250
+DESCRIPTION_LIMIT=4000
 timestamp=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 
-PAYLOAD=$(jq -n \
-  --argjson title "${title_json}" \
-  --argjson description "${description_json}" \
+if ! PAYLOAD=$(jq -n \
+  --arg title "${TITLE}" \
+  --arg description "${DESCRIPTION}" \
   --argjson color "${COLOR}" \
+  --argjson title_limit "${TITLE_LIMIT}" \
+  --argjson description_limit "${DESCRIPTION_LIMIT}" \
   --arg timestamp "${timestamp}" \
-  '{
+  'def clip($limit):
+    if length <= $limit then . else .[0:($limit - 1)] + "…" end;
+  def fit($limit):
+    if length <= $limit then .
+    else
+      split("\n\n") as $blocks
+      | if ($blocks | length) < 2 then clip($limit)
+        else
+          ("\n…\n\n" + $blocks[-1]) as $footer
+          | ($blocks[0:-1] | join("\n\n")) as $body
+          | ($limit - ($footer | length)) as $available
+          | if $available < 1 then clip($limit)
+            else
+              $body[0:$available] as $cut
+              | ($cut | rindex("\n")) as $line
+              | (if $line != null and $line > 0 then $cut[0:$line] else $cut end) + $footer
+            end
+        end
+    end;
+  {
     embeds: [{
-      title: $title,
-      description: $description,
+      title: ($title | gsub("\n"; " ") | clip($title_limit)),
+      description: ($description | fit($description_limit)),
       color: $color,
       timestamp: $timestamp
     }]
-  }')
+  }'); then
+  echo "::error::Failed to build the Discord payload"
+  exit 1
+fi
 
-description_length=${#DESCRIPTION}
-if [ "${description_length}" -gt 4096 ]; then
-  echo "::warning::Description is ${description_length} characters (limit: 4096). It may be truncated by Discord."
+if [ "$(printf '%s' "${DESCRIPTION}" | jq -Rs 'length')" -gt "${DESCRIPTION_LIMIT}" ]; then
+  echo "::warning::Description is longer than ${DESCRIPTION_LIMIT} characters and was shortened to fit the Discord embed limit."
 fi
 
 echo "::notice::Sending notification to Discord"
