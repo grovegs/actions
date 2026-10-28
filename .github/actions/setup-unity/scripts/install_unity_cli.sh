@@ -11,16 +11,44 @@ if [ -z "${RUNNER_TEMP:-}" ]; then
   exit 1
 fi
 
-UNITY_CLI_BIN_DIR="${HOME}/.unity/bin"
+declare -a CANDIDATE_DIRS
+CANDIDATE_DIRS=(
+  "${HOME}/.unity/bin"
+  "${HOME}/.local/bin"
+  "${HOME}/bin"
+  "/usr/local/bin"
+  "/opt/homebrew/bin"
+)
+
+find_unity_cli() {
+  local dir
+  local found
+
+  for dir in "${CANDIDATE_DIRS[@]}"; do
+    if [ -x "${dir}/unity" ] && [ ! -d "${dir}/unity" ]; then
+      echo "${dir}/unity"
+      return 0
+    fi
+  done
+
+  found=$(find "${HOME}" -maxdepth 5 -type f -name unity -perm -u+x 2> /dev/null | head -n 1 || true)
+
+  if [ -n "${found}" ]; then
+    echo "${found}"
+    return 0
+  fi
+
+  return 1
+}
 
 if command -v unity > /dev/null 2>&1; then
   echo "::notice::Unity CLI already installed: $(unity --version)"
   exit 0
 fi
 
-if [ -x "${UNITY_CLI_BIN_DIR}/unity" ]; then
-  echo "${UNITY_CLI_BIN_DIR}" >> "${GITHUB_PATH}"
-  echo "::notice::Unity CLI already installed: $("${UNITY_CLI_BIN_DIR}/unity" --version)"
+if UNITY_CLI=$(find_unity_cli); then
+  dirname "${UNITY_CLI}" >> "${GITHUB_PATH}"
+  echo "::notice::Unity CLI already installed: $("${UNITY_CLI}" --version)"
   exit 0
 fi
 
@@ -43,10 +71,10 @@ fi
 
 rm -rf "${INSTALLER_DIR}"
 
-if [ ! -x "${UNITY_CLI_BIN_DIR}/unity" ]; then
-  echo "::error::Unity CLI binary not found at ${UNITY_CLI_BIN_DIR}/unity after installation"
+if ! UNITY_CLI=$(find_unity_cli); then
+  echo "::error::Unity CLI binary not found after installation. Looked in ${CANDIDATE_DIRS[*]} and under ${HOME}"
   exit 1
 fi
 
-echo "${UNITY_CLI_BIN_DIR}" >> "${GITHUB_PATH}"
-echo "::notice::Installed Unity CLI $("${UNITY_CLI_BIN_DIR}/unity" --version)"
+dirname "${UNITY_CLI}" >> "${GITHUB_PATH}"
+echo "::notice::Installed Unity CLI $("${UNITY_CLI}" --version) at ${UNITY_CLI}"
