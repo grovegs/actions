@@ -20,10 +20,10 @@ add_section() {
   local json_key="$3"
 
   local items
-  items=$(echo "${RAW_CHANGELOG}" | jq -c ".${json_key}[]?" 2>/dev/null || echo "")
+  items=$(echo "${RAW_CHANGELOG}" | jq -c ".${json_key}[]?" 2> /dev/null || echo "")
 
   if [ -n "${items}" ]; then
-    formatted+="### ${section_icon} ${section_name}\n"
+    formatted+="### ${section_icon} ${section_name}"$'\n'
     while IFS= read -r item; do
       if [ -n "${item}" ]; then
         local scope
@@ -32,14 +32,14 @@ add_section() {
         description=$(echo "${item}" | jq -r '.description')
 
         if [ -n "${scope}" ] && [ "${scope}" != "null" ] && [ "${scope}" != "" ]; then
-          formatted+="- **${scope}**: ${description}\n"
+          formatted+="- **${scope}**: ${description}"$'\n'
         else
-          formatted+="- ${description}\n"
+          formatted+="- ${description}"$'\n'
         fi
         has_content=true
       fi
     done <<< "${items}"
-    formatted+="\n"
+    formatted+=$'\n'
   fi
 }
 
@@ -53,24 +53,24 @@ add_section "CI/CD" "🔧" "ci"
 add_section "Chores" "🧹" "chores"
 add_section "Reverts" "⏪" "reverts"
 
-other=$(echo "${RAW_CHANGELOG}" | jq -c '.other[]?' 2>/dev/null || echo "")
+other=$(echo "${RAW_CHANGELOG}" | jq -c '.other[]?' 2> /dev/null || echo "")
 if [ -n "${other}" ]; then
-  formatted+="### 📦 Other\n"
+  formatted+="### 📦 Other"$'\n'
   while IFS= read -r item; do
     if [ -n "${item}" ]; then
       description=$(echo "${item}" | jq -r '.description')
-      formatted+="- ${description}\n"
+      formatted+="- ${description}"$'\n'
       has_content=true
     fi
   done <<< "${other}"
-  formatted+="\n"
+  formatted+=$'\n'
 fi
 
 if [ "${has_content}" = false ]; then
-  formatted="No changes in this release.\n"
+  formatted="No changes in this release."$'\n'
 fi
 
-formatted=$(printf "%b" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+formatted=$(printf "%s" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
 
 {
   echo "changelog-markdown<<EOF"

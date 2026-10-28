@@ -19,10 +19,10 @@ add_section() {
   local json_key="$2"
 
   local items
-  items=$(echo "${RAW_CHANGELOG}" | jq -c ".${json_key}[]?" 2>/dev/null || echo "")
+  items=$(echo "${RAW_CHANGELOG}" | jq -c ".${json_key}[]?" 2> /dev/null || echo "")
 
   if [ -n "${items}" ]; then
-    formatted+="${section_name}\n"
+    formatted+="${section_name}"$'\n'
     while IFS= read -r item; do
       if [ -n "${item}" ]; then
         local scope
@@ -31,14 +31,14 @@ add_section() {
         description=$(echo "${item}" | jq -r '.description')
 
         if [ -n "${scope}" ] && [ "${scope}" != "null" ] && [ "${scope}" != "" ]; then
-          formatted+="• ${scope}: ${description}\n"
+          formatted+="• ${scope}: ${description}"$'\n'
         else
-          formatted+="• ${description}\n"
+          formatted+="• ${description}"$'\n'
         fi
         has_content=true
       fi
     done <<< "${items}"
-    formatted+="\n"
+    formatted+=$'\n'
   fi
 }
 
@@ -49,10 +49,10 @@ add_section "Refactors" "refactors"
 add_section "Tests" "tests"
 
 if [ "${has_content}" = false ]; then
-  formatted="Bug fixes and performance improvements.\n"
+  formatted="Bug fixes and performance improvements."$'\n'
 fi
 
-formatted=$(printf "%b" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+formatted=$(printf "%s" "${formatted}" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
 
 {
   echo "changelog-plain<<EOF"
