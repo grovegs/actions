@@ -86,16 +86,27 @@ SECRETS_DIR="${RUNNER_TEMP}/secrets"
 KEYCHAIN_FILE="${SECRETS_DIR}/ios.keychain-db"
 CERTIFICATE_FILE="${SECRETS_DIR}/ios.p12"
 PROVISIONING_FILE="${SECRETS_DIR}/profile.mobileprovision"
-ORIGINAL_KEYCHAIN=$(security default-keychain 2> /dev/null | xargs) || ORIGINAL_KEYCHAIN=""
+declare -a ORIGINAL_KEYCHAINS
+ORIGINAL_KEYCHAIN_COUNT=0
+
+while IFS= read -r keychain; do
+  if [ -n "${keychain}" ]; then
+    ORIGINAL_KEYCHAINS+=("${keychain}")
+    ORIGINAL_KEYCHAIN_COUNT=$((ORIGINAL_KEYCHAIN_COUNT + 1))
+  fi
+done < <(security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//')
+
+restore_keychains() {
+  if [ "${ORIGINAL_KEYCHAIN_COUNT}" -gt 0 ]; then
+    security list-keychains -d user -s "${ORIGINAL_KEYCHAINS[@]}" 2> /dev/null || true
+    echo "::notice::Restored keychain search list"
+  fi
+}
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
+  restore_keychains
   security delete-keychain "${KEYCHAIN_FILE}" 2> /dev/null || true
-
-  if [ -n "${ORIGINAL_KEYCHAIN}" ] && [ -f "${ORIGINAL_KEYCHAIN}" ]; then
-    security default-keychain -s "${ORIGINAL_KEYCHAIN}"
-    echo "::notice::Restored original keychain: ${ORIGINAL_KEYCHAIN}"
-  fi
 
   rm -rf "${SECRETS_DIR}" || true
   rm -f "${EXPORT_OPTIONS_PLIST}" || true
@@ -130,8 +141,11 @@ KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
 security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
 security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
-security list-keychains -d user -s "${KEYCHAIN_FILE}" $(security list-keychains -d user | sed s/\"//g)
-security default-keychain -s "${KEYCHAIN_FILE}"
+if [ "${ORIGINAL_KEYCHAIN_COUNT}" -gt 0 ]; then
+  security list-keychains -d user -s "${KEYCHAIN_FILE}" "${ORIGINAL_KEYCHAINS[@]}"
+else
+  security list-keychains -d user -s "${KEYCHAIN_FILE}"
+fi
 
 echo "::notice::Decoding certificate and provisioning profile..."
 echo -n "${IOS_CERTIFICATE}" | base64 -d > "${CERTIFICATE_FILE}" || {
