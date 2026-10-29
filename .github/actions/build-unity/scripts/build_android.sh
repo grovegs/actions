@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=run_unity.sh
+source "${GITHUB_ACTION_PATH}/scripts/run_unity.sh"
+
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
   exit 1
@@ -52,7 +55,7 @@ if [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ]; then
 fi
 
 if [[ "${PROJECT_DIR}" != /* ]]; then
-  PROJECT_DIR="$(cd "${PROJECT_DIR}" 2>/dev/null && pwd)" || {
+  PROJECT_DIR="$(cd "${PROJECT_DIR}" 2> /dev/null && pwd)" || {
     echo "::error::Project directory not found or inaccessible: ${PROJECT_DIR}"
     exit 1
   }
@@ -196,9 +199,9 @@ UNITY_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! unity run "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
+if ! run_unity "${LOG_FILE}" "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for Android"
-  echo "::error::Check the Unity log output above or ${LOG_FILE} for specific error details"
+  echo "::error::Check the Unity log above or ${LOG_FILE} for specific error details"
 
   echo "::debug::Build directory contents:"
   ls -la "${PLATFORM_BUILDS_DIR}" || echo "::debug::Cannot list build directory"
@@ -213,6 +216,6 @@ if [ ! -f "${OUTPUT_FILE}" ]; then
   exit 1
 fi
 
-FILE_SIZE=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null || echo "unknown")
+FILE_SIZE=$(stat -f%z "${OUTPUT_FILE}" 2> /dev/null || stat -c%s "${OUTPUT_FILE}" 2> /dev/null || echo "unknown")
 echo "::notice::Build completed successfully: ${OUTPUT_FILE} (${FILE_SIZE} bytes)"
 echo "file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"
