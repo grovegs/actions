@@ -73,6 +73,10 @@ inputs:
         description: Cache Unity Library and packages. Only enable if safe for your workflow.
         required: false
         default: "false"
+    timeout:
+        description: Maximum number of seconds the Unity build may take before it is stopped. Use 0 to disable the limit.
+        required: false
+        default: "3600"
 
 outputs:
     file:
@@ -130,6 +134,7 @@ runs:
               IOS_EXPORT_METHOD: ${{ inputs.ios-export-method }}
               BUILD_METHOD: ${{ inputs.build-method }}
               CACHE_ENABLED: ${{ inputs.cache }}
+              BUILD_TIMEOUT: ${{ inputs.timeout }}
               CACHE_HIT: ${{ steps.cache-unity-library.outputs.cache-hit }}
               CACHE_MATCHED_KEY: ${{ steps.cache-unity-library.outputs.cache-matched-key }}
           run: |

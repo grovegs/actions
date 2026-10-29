@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=run_unity.sh
+source "${GITHUB_ACTION_PATH}/scripts/run_unity.sh"
+
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
   exit 1
@@ -83,11 +86,11 @@ SECRETS_DIR="${RUNNER_TEMP}/secrets"
 KEYCHAIN_FILE="${SECRETS_DIR}/ios.keychain-db"
 CERTIFICATE_FILE="${SECRETS_DIR}/ios.p12"
 PROVISIONING_FILE="${SECRETS_DIR}/profile.mobileprovision"
-ORIGINAL_KEYCHAIN=$(security default-keychain 2>/dev/null | xargs) || ORIGINAL_KEYCHAIN=""
+ORIGINAL_KEYCHAIN=$(security default-keychain 2> /dev/null | xargs) || ORIGINAL_KEYCHAIN=""
 
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
-  security delete-keychain "${KEYCHAIN_FILE}" 2>/dev/null || true
+  security delete-keychain "${KEYCHAIN_FILE}" 2> /dev/null || true
 
   if [ -n "${ORIGINAL_KEYCHAIN}" ] && [ -f "${ORIGINAL_KEYCHAIN}" ]; then
     security default-keychain -s "${ORIGINAL_KEYCHAIN}"
@@ -98,20 +101,20 @@ cleanup() {
   rm -f "${EXPORT_OPTIONS_PLIST}" || true
 
   if [ -d "${ARCHIVE_PATH:-}" ]; then
-    ARCHIVE_SIZE=$(du -sh "${ARCHIVE_PATH}" 2>/dev/null | cut -f1 || echo "unknown")
+    ARCHIVE_SIZE=$(du -sh "${ARCHIVE_PATH}" 2> /dev/null | cut -f1 || echo "unknown")
     echo "::notice::Removing archive (${ARCHIVE_SIZE}): ${ARCHIVE_PATH}"
     rm -rf "${ARCHIVE_PATH}"
   fi
 
   if [ -d "${XCODE_PROJECT_DIR:-}" ]; then
-    XCODE_SIZE=$(du -sh "${XCODE_PROJECT_DIR}" 2>/dev/null | cut -f1 || echo "unknown")
+    XCODE_SIZE=$(du -sh "${XCODE_PROJECT_DIR}" 2> /dev/null | cut -f1 || echo "unknown")
     echo "::notice::Removing Xcode project (${XCODE_SIZE}): ${XCODE_PROJECT_DIR}"
     rm -rf "${XCODE_PROJECT_DIR}"
   fi
 
   if [ -n "${SCHEME_NAME:-}" ] && [ -d ~/Library/Developer/Xcode/DerivedData ]; then
     echo "::notice::Cleaning only this project's DerivedData..."
-    find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -type d -name "*${SCHEME_NAME}*" -exec rm -rf {} + 2>/dev/null || true
+    find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -type d -name "*${SCHEME_NAME}*" -exec rm -rf {} + 2> /dev/null || true
   fi
 }
 trap cleanup EXIT
@@ -227,9 +230,9 @@ UNITY_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! unity run "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
+if ! run_unity "${LOG_FILE}" "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for iOS"
-  echo "::error::Check the Unity log output above or ${LOG_FILE} for specific error details"
+  echo "::error::Check the Unity log above or ${LOG_FILE} for specific error details"
   exit 1
 fi
 
@@ -283,7 +286,7 @@ PODFILE_END
       }
     fi
 
-    POD_VERSION=$(pod --version 2>/dev/null)
+    POD_VERSION=$(pod --version 2> /dev/null)
     echo "::notice::Using CocoaPods ${POD_VERSION}"
 
     pod install || {
@@ -307,7 +310,7 @@ if [ -n "${XCWORKSPACE_FILE}" ]; then
   echo "::notice::Found Xcode workspace: ${WORKSPACE_NAME}"
   echo "::notice::Using scheme: ${SCHEME_NAME}"
 
-  xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2>/dev/null || echo "::debug::Could not list schemes"
+  xcodebuild -workspace "${XCWORKSPACE_FILE}" -list 2> /dev/null || echo "::debug::Could not list schemes"
 
   BUILD_WORKSPACE="${XCWORKSPACE_FILE}"
   BUILD_TYPE="workspace"
@@ -344,7 +347,7 @@ security set-key-partition-list \
   -k "${KEYCHAIN_PASSWORD}" \
   "${KEYCHAIN_FILE}"
 
-if ! security find-identity -v -p codesigning "${KEYCHAIN_FILE}" >/dev/null 2>&1; then
+if ! security find-identity -v -p codesigning "${KEYCHAIN_FILE}" > /dev/null 2>&1; then
   echo "::error::Certificate not found in keychain after import"
   exit 1
 fi
@@ -404,7 +407,7 @@ echo "::notice::Creating export options plist..."
 
 BUNDLE_ID=""
 if [ -d "${ARCHIVE_PATH}" ]; then
-  BUNDLE_ID=$(defaults read "${ARCHIVE_PATH}/Info.plist" ApplicationProperties 2>/dev/null | grep -o 'CFBundleIdentifier = "[^"]*"' | cut -d'"' -f2 | head -1)
+  BUNDLE_ID=$(defaults read "${ARCHIVE_PATH}/Info.plist" ApplicationProperties 2> /dev/null | grep -o 'CFBundleIdentifier = "[^"]*"' | cut -d'"' -f2 | head -1)
 fi
 
 if [ -z "${BUNDLE_ID}" ]; then
@@ -469,6 +472,6 @@ if [ ! -f "${EXPORT_PATH}" ]; then
   exit 1
 fi
 
-FILE_SIZE=$(stat -f%z "${EXPORT_PATH}" 2>/dev/null || stat -c%s "${EXPORT_PATH}" 2>/dev/null || echo "unknown")
+FILE_SIZE=$(stat -f%z "${EXPORT_PATH}" 2> /dev/null || stat -c%s "${EXPORT_PATH}" 2> /dev/null || echo "unknown")
 echo "::notice::Build completed successfully: ${EXPORT_PATH} (${FILE_SIZE} bytes)"
 echo "file=${EXPORT_PATH}" >> "${GITHUB_OUTPUT}"
