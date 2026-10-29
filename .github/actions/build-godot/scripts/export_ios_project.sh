@@ -77,9 +77,27 @@ EXPORT_FILE="${BUILDS_DIR}/${FILENAME}.ipa"
 
 export DefineSymbols="${DEFINE_SYMBOLS:-}"
 
+declare -a ORIGINAL_KEYCHAINS
+ORIGINAL_KEYCHAIN_COUNT=0
+
+while IFS= read -r keychain; do
+  if [ -n "${keychain}" ]; then
+    ORIGINAL_KEYCHAINS+=("${keychain}")
+    ORIGINAL_KEYCHAIN_COUNT=$((ORIGINAL_KEYCHAIN_COUNT + 1))
+  fi
+done < <(security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//')
+
+restore_keychains() {
+  if [ "${ORIGINAL_KEYCHAIN_COUNT}" -gt 0 ]; then
+    security list-keychains -d user -s "${ORIGINAL_KEYCHAINS[@]}" 2> /dev/null || true
+    echo "::notice::Restored keychain search list"
+  fi
+}
+
 cleanup() {
   echo "::notice::Cleaning up sensitive files..."
-  security delete-keychain "${KEYCHAIN_FILE}" 2>/dev/null || true
+  restore_keychains
+  security delete-keychain "${KEYCHAIN_FILE}" 2> /dev/null || true
   rm -f "${CERTIFICATE_FILE}" "${PROVISIONING_PROFILE_FILE}" || true
 }
 trap cleanup EXIT
@@ -128,13 +146,33 @@ security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}" || {
 }
 
 echo "::notice::Configuring temporary keychain..."
-security set-keychain-settings -lut 3600 "${KEYCHAIN_FILE}"
+security set-keychain-settings -lut 21600 "${KEYCHAIN_FILE}"
 security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
-security list-keychains -d user -s "${KEYCHAIN_FILE}"
+
+if [ "${ORIGINAL_KEYCHAIN_COUNT}" -gt 0 ]; then
+  security list-keychains -d user -s "${KEYCHAIN_FILE}" "${ORIGINAL_KEYCHAINS[@]}"
+else
+  security list-keychains -d user -s "${KEYCHAIN_FILE}"
+fi
 
 echo "::notice::Importing certificate into keychain..."
-security import "${CERTIFICATE_FILE}" -k "${KEYCHAIN_FILE}" -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign || {
+security import "${CERTIFICATE_FILE}" \
+  -k "${KEYCHAIN_FILE}" \
+  -P "${IOS_CERTIFICATE_PASSWORD}" \
+  -T /usr/bin/codesign \
+  -T /usr/bin/security \
+  -T /usr/bin/productbuild \
+  -A || {
   echo "::error::Failed to import the .p12 certificate into the keychain"
+  exit 1
+}
+
+security set-key-partition-list \
+  -S apple-tool:,apple:,codesign: \
+  -s \
+  -k "${KEYCHAIN_PASSWORD}" \
+  "${KEYCHAIN_FILE}" > /dev/null || {
+  echo "::error::Failed to allow codesign to use the keychain"
   exit 1
 }
 
@@ -240,6 +278,6 @@ if [ ! -f "${EXPORT_FILE}" ]; then
   exit 1
 fi
 
-FILE_SIZE=$(stat -f%z "${EXPORT_FILE}" 2>/dev/null || stat -c%s "${EXPORT_FILE}" 2>/dev/null || echo "unknown")
+FILE_SIZE=$(stat -f%z "${EXPORT_FILE}" 2> /dev/null || stat -c%s "${EXPORT_FILE}" 2> /dev/null || echo "unknown")
 echo "::notice::Build completed successfully: ${EXPORT_FILE} (${FILE_SIZE} bytes)"
 echo "file=${EXPORT_FILE}" >> "${GITHUB_OUTPUT}"
