@@ -140,3 +140,14 @@ runs:
           run: |
               chmod +x "${{ github.action_path }}/scripts/build_project.sh"
               "${{ github.action_path }}/scripts/build_project.sh"
+
+        - name: 🔓 Return Unity License
+          if: always() && steps.build-project.outputs.editor-path != ''
+          shell: bash
+          env:
+              UNITY_EDITOR_PATH: ${{ steps.build-project.outputs.editor-path }}
+              UNITY_EMAIL: ${{ inputs.unity-email }}
+              UNITY_PASSWORD: ${{ inputs.unity-password }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/return_license.sh"
+              "${{ github.action_path }}/scripts/return_license.sh"
