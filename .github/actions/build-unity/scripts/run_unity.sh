@@ -41,6 +41,8 @@ run_unity() {
   tail -n +1 -F "${log_file}" 2> /dev/null &
   tail_pid=$!
 
+  echo "editor-path=${UNITY_EDITOR_PATH}" >> "${GITHUB_OUTPUT}"
+
   set -m
   "${UNITY_EDITOR_PATH}" "${editor_args[@]}" "$@" &
   unity_pid=$!

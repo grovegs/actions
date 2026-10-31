@@ -283,6 +283,7 @@ jobs:
 - Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`, `unity-email`, `unity-password`, `unity-license-key`, `unity-path`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`, `ios-export-method`, `build-method`, `cache`, `unity-accelerator`
 - Outputs: `file`
 - Supports: Android (APK/AAB), iOS (IPA)
+- Returns the Unity license when the build ends, even when it fails or is cancelled
 
 ### Test Actions
 
