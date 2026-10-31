@@ -184,7 +184,7 @@ fi
   echo "::notice::  Team ID: ${IOS_TEAM_ID}"
   echo "::notice::  Export Method: ${IOS_EXPORT_METHOD}"
   echo "::notice::  Provisioning UUID: ${IOS_PROVISIONING_PROFILE_UUID}"
-  echo "::notice::  Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI}"
+  echo "::notice::  Unity: ${UNITY_EDITOR_PATH}"
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
@@ -208,22 +208,6 @@ fi
 
 LOG_FILE="${RUNNER_TEMP}/unity-build-ios.log"
 
-declare -a RUN_ARGS
-RUN_ARGS=(
-  "${PROJECT_DIR}"
-  --non-interactive
-  --no-banner
-  --log-file "${LOG_FILE}"
-)
-
-if [ -n "${UNITY_EDITOR_PATH:-}" ]; then
-  RUN_ARGS+=(--editor-path "${UNITY_EDITOR_PATH}")
-fi
-
-if [ -n "${UNITY_ACCELERATOR:-}" ]; then
-  RUN_ARGS+=(--accelerator "${UNITY_ACCELERATOR}")
-fi
-
 declare -a UNITY_ARGS
 UNITY_ARGS=(
   -nographics
@@ -244,7 +228,7 @@ UNITY_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! run_unity "${LOG_FILE}" "${RUN_ARGS[@]}" -- "${UNITY_ARGS[@]}"; then
+if ! run_unity "${LOG_FILE}" "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for iOS"
   echo "::error::Check the Unity log above or ${LOG_FILE} for specific error details"
   exit 1

@@ -48,32 +48,31 @@ else
   echo "::notice::🚫 Caching disabled - build will not use or create cache"
 fi
 
-if ! command -v unity > /dev/null 2>&1; then
-  echo "::error::Unity CLI is not installed. Run setup-unity before build-unity"
-  exit 1
-fi
-
 UNITY_PATH_INPUT="${UNITY_PATH_INPUT:-}"
 UNITY_PATH_INPUT="${UNITY_PATH_INPUT/#\~/$HOME}"
 
 if [ -n "${UNITY_PATH_INPUT}" ]; then
   UNITY_VERSION=$(grep "m_EditorVersion:" "${PROJECT_DIR}/ProjectSettings/ProjectVersion.txt" | cut -d' ' -f2 | tr -d '\r')
   if [ "$(uname)" = "Darwin" ]; then
-    UNITY_EDITOR_PATH="${UNITY_PATH_INPUT}/${UNITY_VERSION}/Unity.app"
+    UNITY_EDITOR_PATH="${UNITY_PATH_INPUT}/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity"
   else
     UNITY_EDITOR_PATH="${UNITY_PATH_INPUT}/${UNITY_VERSION}/Editor/Unity"
   fi
 else
   UNITY_EDITOR_PATH="${UNITY_EXECUTABLE:-}"
-  UNITY_EDITOR_PATH="${UNITY_EDITOR_PATH%/Contents/MacOS/Unity}"
 fi
 
-if [ -n "${UNITY_EDITOR_PATH}" ] && [ ! -e "${UNITY_EDITOR_PATH}" ]; then
+if [ -z "${UNITY_EDITOR_PATH}" ]; then
+  echo "::error::Unity editor not found. Run setup-unity before build-unity or set unity-path"
+  exit 1
+fi
+
+if [ ! -x "${UNITY_EDITOR_PATH}" ]; then
   echo "::error::Unity not found at: ${UNITY_EDITOR_PATH}"
   exit 1
 fi
 
-echo "::notice::Using Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI from ProjectVersion.txt}"
+echo "::notice::Using Unity: ${UNITY_EDITOR_PATH}"
 export UNITY_EDITOR_PATH
 
 case "${PLATFORM}" in

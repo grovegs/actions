@@ -4,11 +4,13 @@ run_unity() {
   local log_file="$1"
   shift
   local timeout="${BUILD_TIMEOUT:-0}"
+  local accelerator="${UNITY_ACCELERATOR:-}"
   local poll_interval=5
   local elapsed=0
   local exit_code=0
   local unity_pid
   local tail_pid
+  local -a editor_args
 
   if [ -z "${timeout}" ]; then
     timeout=0
@@ -21,12 +23,26 @@ run_unity() {
       ;;
   esac
 
+  editor_args=(
+    -batchmode
+    -quit
+    -projectPath "${PROJECT_DIR}"
+    -logFile "${log_file}"
+  )
+
+  if [ -n "${accelerator}" ]; then
+    if [[ "${accelerator}" != *:* ]]; then
+      accelerator="${accelerator}:10080"
+    fi
+    editor_args+=(-EnableCacheServer -cacheServerEndpoint "${accelerator}")
+  fi
+
   : > "${log_file}"
   tail -n +1 -F "${log_file}" 2> /dev/null &
   tail_pid=$!
 
   set -m
-  unity run "$@" &
+  "${UNITY_EDITOR_PATH}" "${editor_args[@]}" "$@" &
   unity_pid=$!
   set +m
 
