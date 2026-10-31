@@ -31,7 +31,7 @@ inputs:
         description: The Unity license serial key.
         required: true
     unity-path:
-        description: Path to Unity installation directory. Defaults to the editor installed by setup-unity or registered with the Unity CLI.
+        description: Path to Unity installation directory. Defaults to the editor installed by setup-unity.
         required: false
         default: ""
     unity-accelerator:
