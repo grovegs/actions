@@ -299,6 +299,7 @@ jobs:
 
 - Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `retries`, `timeout`, `cache`
 - Outputs: `results-dir`
+- Returns the license from `unity-license-key` when the tests end, even when they fail or are cancelled
 
 ### Format Actions
 
