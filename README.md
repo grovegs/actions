@@ -229,6 +229,20 @@ jobs:
           api-key: ${{ secrets.NUGET_API_KEY }}
 ```
 
+To publish with nuget.org trusted publishing instead of an API key, add a policy on nuget.org for the repository and workflow file, then publish from a job in that workflow file:
+
+```yaml
+  publish-nuget:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: grovegs/actions/.github/actions/publish-nuget@v1.6.0
+        with:
+          artifact: nuget-package
+          user: ${{ secrets.NUGET_USER }}
+```
+
 ---
 
 ## Available Actions
@@ -342,7 +356,8 @@ jobs:
 
 **publish-nuget** - Publish to NuGet.org
 
-- Inputs: `file`, `api-key`, `source`, `skip-duplicate`
+- Inputs: `file` or `artifact`, `api-key` or `user`, `source`, `skip-duplicate`
+- With `user` and no `api-key`, it logs in with nuget.org trusted publishing, so no long-lived key is needed. The job needs `id-token: write`, and nuget.org only accepts it from a job defined in the workflow file named by the policy, not from inside a reusable workflow.
 
 **publish-github** - Create GitHub releases with assets
 
