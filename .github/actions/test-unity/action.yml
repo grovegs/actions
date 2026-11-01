@@ -22,7 +22,7 @@ inputs:
         required: false
         default: ""
     unity-license-key:
-        description: The Unity license serial key. Leave empty when the runner already has an active license.
+        description: The Unity license serial key, returned when the tests end. Leave empty when the runner already has an active license.
         required: false
         default: ""
     unity-accelerator:
@@ -86,3 +86,14 @@ runs:
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
               "${{ github.action_path }}/scripts/test_project.sh"
+
+        - name: 🔓 Return Unity License
+          if: always() && inputs.unity-license-key != '' && steps.test-project.outputs.editor-path != ''
+          shell: bash
+          env:
+              UNITY_EDITOR_PATH: ${{ steps.test-project.outputs.editor-path }}
+              UNITY_EMAIL: ${{ inputs.unity-email }}
+              UNITY_PASSWORD: ${{ inputs.unity-password }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/return_license.sh"
+              "${{ github.action_path }}/scripts/return_license.sh"

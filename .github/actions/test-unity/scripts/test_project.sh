@@ -56,11 +56,24 @@ if [ -n "${UNITY_EDITOR_PATH}" ] && [ ! -e "${UNITY_EDITOR_PATH}" ]; then
   exit 1
 fi
 
+if [ -n "${UNITY_LICENSE_KEY:-}" ] && [ -z "${UNITY_EDITOR_PATH}" ]; then
+  echo "::error::Unity editor not found. Run setup-unity before test-unity or set unity-path so the license can be returned"
+  exit 1
+fi
+
 echo "::notice::Using Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI from ProjectVersion.txt}"
 
 RESULTS_DIR="${RUNNER_TEMP}/unity-test-results"
 mkdir -p "${RESULTS_DIR}"
 echo "results-dir=${RESULTS_DIR}" >> "${GITHUB_OUTPUT}"
+
+if [ -n "${UNITY_EDITOR_PATH}" ]; then
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "editor-path=${UNITY_EDITOR_PATH}/Contents/MacOS/Unity" >> "${GITHUB_OUTPUT}"
+  else
+    echo "editor-path=${UNITY_EDITOR_PATH}" >> "${GITHUB_OUTPUT}"
+  fi
+fi
 
 declare -a TEST_ARGS
 TEST_ARGS=(
