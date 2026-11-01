@@ -317,6 +317,7 @@ jobs:
 
 - Inputs: `project`, `configuration`, `version`, `name`, `directory-build-props`
 - Outputs: `package`, `modified-files`
+- A stable version that depends on a prerelease package fails (NU5104), so a stable release can't point at a dev dependency.
 
 **pack-godot-addon** - Package Godot addons
 
@@ -355,10 +356,17 @@ jobs:
 
 ### Utility Actions
 
-**bump-version** - Automatic version bumping based on Git tags
+**bump-version** - Calculate the next version from Git tags and Conventional Commits
 
-- Inputs: `version-type` (major, minor, patch)
-- Outputs: `latest-version`, `next-version`
+- Inputs: `version-type` (auto, major, minor, patch), `version-suffix` (such as `dev` for `1.2.0-dev`), `auto-major` (default `true`)
+- Outputs: `latest-version`, `next-version`, `next-base-version`, `bump-type`
+- `auto` reads the commits since the previous release: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps major from 1.0.0 on and minor before it, `feat:` bumps minor, and anything else bumps patch. With `auto-major: false`, breaking changes bump minor and major is only bumped when chosen.
+- Choosing a lower bump than the commits suggest logs a warning. Release commits (`chore: release version …`) are ignored.
+
+**check-pull-request-title** - Check that a pull request title follows Conventional Commits
+
+- Inputs: `title`
+- Squash merges use the title as the commit message, which drives `bump-version` and `generate-changelog`.
 
 **create-tag** - Tag the current commit with a version and push the tag
 
@@ -367,7 +375,9 @@ jobs:
 
 **generate-changelog** - Generate structured release notes
 
+- Inputs: `include-prereleases` (default `true`; `false` lists everything since the previous stable release)
 - Outputs: `changelog-raw`, `changelog-plain`, `changelog-markdown`
+- Breaking changes get their own section in the markdown changelog, and release commits are skipped.
 
 **upload-artifact** - Upload artifacts with metadata
 
@@ -398,8 +408,10 @@ on:
       version-type:
         description: Version to increment
         required: true
+        default: auto
         type: choice
         options:
+          - auto
           - major
           - minor
           - patch
@@ -581,7 +593,7 @@ UNITY_LICENSE: Your Unity serial key
 **Solution:** Keystore must be base64 encoded:
 
 ```bash
-base64 -i your-keystore.jks | pbcopy  # macOS
+base64 -i your-keystore.jks | pbcopy # macOS
 base64 -i your-keystore.jks          # Linux
 ```
 

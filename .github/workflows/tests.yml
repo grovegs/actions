@@ -260,6 +260,138 @@ jobs:
             - name: 📝 Generate Changelog
               uses: ./.github/actions/generate-changelog
 
+            - name: 🆙 Test Version Bumps From Commits
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  repository="${RUNNER_TEMP}/bump-repository"
+                  git init --quiet "${repository}"
+                  cd "${repository}"
+
+                  commit() {
+                      git -c user.name=test -c user.email=test@example.com commit --allow-empty --quiet "$@"
+                  }
+
+                  expect() {
+                      local expected="$1"
+                      shift
+                      local output="${RUNNER_TEMP}/bump-output"
+                      : > "${output}"
+                      env "$@" GITHUB_OUTPUT="${output}" bash "${GITHUB_WORKSPACE}/.github/actions/bump-version/scripts/bump_version.sh" > /dev/null
+                      local actual
+                      actual=$(sed -n 's/^next-version=//p' "${output}")
+                      [ "${actual}" = "${expected}" ] || { echo "Expected ${expected}, got ${actual} for $*"; exit 1; }
+                      echo "✓ ${expected} for $*"
+                  }
+
+                  commit -m "chore: initial commit"
+                  expect 0.0.1 VERSION_TYPE=auto
+                  commit -m "feat: first feature"
+                  expect 0.1.0-dev VERSION_TYPE=auto VERSION_SUFFIX=dev
+                  git tag v0.1.0-dev
+
+                  commit -m "chore: release version 0.1.0-dev [skip ci]"
+                  commit -m "fix: a bug"
+                  expect 0.1.1 VERSION_TYPE=auto
+                  commit -m "feat(core)!: break the api"
+                  expect 0.2.0 VERSION_TYPE=auto
+                  expect 1.0.0 VERSION_TYPE=major
+                  git tag v1.0.0
+
+                  commit -m "docs: notes" -m "BREAKING CHANGE: removed the old api"
+                  expect 2.0.0-dev VERSION_TYPE=auto VERSION_SUFFIX=dev
+                  expect 1.1.0-dev VERSION_TYPE=auto VERSION_SUFFIX=dev AUTO_MAJOR=false
+                  expect 1.0.1 VERSION_TYPE=patch
+
+                  if env VERSION_TYPE=auto VERSION_SUFFIX='dev;x' GITHUB_OUTPUT=/dev/null bash "${GITHUB_WORKSPACE}/.github/actions/bump-version/scripts/bump_version.sh" > /dev/null 2>&1; then
+                      echo "An invalid suffix should fail"
+                      exit 1
+                  fi
+
+                  echo "✅ Version bumps follow the commits"
+
+            - name: 📝 Test Changelog Sections
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  scripts="${GITHUB_WORKSPACE}/.github/actions/generate-changelog/scripts"
+                  repository="${RUNNER_TEMP}/changelog-repository"
+                  git init --quiet "${repository}"
+                  cd "${repository}"
+
+                  commit() {
+                      git -c user.name=test -c user.email=test@example.com commit --allow-empty --quiet "$@"
+                  }
+
+                  commit -m "feat: stable feature"
+                  git tag v0.1.0
+                  commit -m "feat(ui): dev feature (#12)"
+                  commit -m "chore: release version 0.2.0-dev [skip ci]"
+                  git tag v0.2.0-dev
+                  commit -m "feat(core)!: break the api (#13)"
+                  commit -m "fix: a bug"
+
+                  markdown() {
+                      local raw_output="${RUNNER_TEMP}/changelog-raw"
+                      local markdown_output="${RUNNER_TEMP}/changelog-markdown"
+                      : > "${raw_output}"
+                      : > "${markdown_output}"
+                      INCLUDE_PRERELEASES="$1" GITHUB_OUTPUT="${raw_output}" bash "${scripts}/generate_changelog.sh" > /dev/null
+                      RAW_CHANGELOG=$(sed -n '/^changelog-raw<<EOF$/,/^EOF$/p' "${raw_output}" | sed '1d;$d') \
+                          GITHUB_OUTPUT="${markdown_output}" bash "${scripts}/format_markdown.sh"
+                      cat "${markdown_output}"
+                  }
+
+                  development=$(markdown true)
+                  printf "%s\n" "${development}"
+                  printf "%s" "${development}" | grep -q "### ⚠️ Breaking Changes" || { echo "Missing breaking changes"; exit 1; }
+                  printf "%s" "${development}" | grep -q -- "- \*\*core\*\*: break the api" || { echo "Missing breaking commit"; exit 1; }
+                  if printf "%s" "${development}" | grep -q "dev feature"; then
+                      echo "A development changelog should start at the latest tag"
+                      exit 1
+                  fi
+                  if printf "%s" "${development}" | grep -q "release version"; then
+                      echo "Release commits should be skipped"
+                      exit 1
+                  fi
+
+                  production=$(markdown false)
+                  printf "%s\n" "${production}"
+                  printf "%s" "${production}" | grep -q "dev feature" || { echo "A stable changelog should start at the latest stable tag"; exit 1; }
+                  if printf "%s" "${production}" | grep -q "release version"; then
+                      echo "Release commits should be skipped"
+                      exit 1
+                  fi
+
+                  echo "✅ Changelog sections are correct"
+
+            - name: 🔎 Test Pull Request Titles
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  script="${GITHUB_WORKSPACE}/.github/actions/check-pull-request-title/scripts/check_pull_request_title.sh"
+
+                  for title in "feat: add a modal" "fix(ui): align labels" "refactor!: rename services" "chore(deps)!: drop netstandard2.0"; do
+                      PULL_REQUEST_TITLE="${title}" bash "${script}" > /dev/null || { echo "Rejected valid title: ${title}"; exit 1; }
+                  done
+
+                  for title in "Update stuff" "feat:missing space" "feature: unknown type" "feat: "; do
+                      if PULL_REQUEST_TITLE="${title}" bash "${script}" > /dev/null 2>&1; then
+                          echo "Accepted invalid title: ${title}"
+                          exit 1
+                      fi
+                  done
+
+                  echo "✅ Pull request titles are checked"
+
+            - name: 🔎 Check Pull Request Title
+              uses: ./.github/actions/check-pull-request-title
+              with:
+                  title: "feat: check pull request titles"
+
     test-package-actions:
         name: Test Package Actions
         runs-on: ubuntu-latest

@@ -1,6 +1,12 @@
 name: Generate Changelog
 description: Generate structured changelog from git commits and format in multiple output formats.
 
+inputs:
+    include-prereleases:
+        description: If true, the changelog starts at the latest version tag including prereleases such as v1.2.0-dev. If false, it starts at the latest stable tag, so a stable release lists everything since the previous stable release.
+        required: false
+        default: "true"
+
 outputs:
     changelog-raw:
         description: Raw structured changelog with categories and commits
@@ -18,6 +24,8 @@ runs:
         - name: 📝 Generate Raw Structured Changelog
           id: generate-raw
           shell: bash
+          env:
+              INCLUDE_PRERELEASES: ${{ inputs.include-prereleases }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/generate_changelog.sh"
               "${{ github.action_path }}/scripts/generate_changelog.sh"
