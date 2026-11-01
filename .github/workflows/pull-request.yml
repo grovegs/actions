@@ -1,0 +1,25 @@
+name: 🔎 Pull Request
+
+on:
+    pull_request:
+        types:
+            - opened
+            - edited
+            - synchronize
+            - reopened
+
+permissions:
+    contents: read
+
+jobs:
+    check-title:
+        name: Check Title
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v7
+
+            - name: 🔎 Check Pull Request Title
+              uses: ./.github/actions/check-pull-request-title
+              with:
+                  title: ${{ github.event.pull_request.title }}

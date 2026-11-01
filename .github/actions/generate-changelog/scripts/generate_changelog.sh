@@ -11,12 +11,33 @@ if ! command -v jq > /dev/null 2>&1; then
   exit 1
 fi
 
-latest_version=$(git tag --merged HEAD --sort=-version:refname | head -n 1 2> /dev/null || echo "")
+INCLUDE_PRERELEASES="${INCLUDE_PRERELEASES:-true}"
+
+case "${INCLUDE_PRERELEASES}" in
+  true)
+    VERSION_TAG_PATTERN='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+    ;;
+  false)
+    VERSION_TAG_PATTERN='^v?[0-9]+\.[0-9]+\.[0-9]+$'
+    ;;
+  *)
+    echo "::error::Invalid include-prereleases: ${INCLUDE_PRERELEASES}. Valid options: true, false"
+    exit 1
+    ;;
+esac
+
+latest_version=$(git tag --merged HEAD 2> /dev/null \
+  | grep -E "${VERSION_TAG_PATTERN}" \
+  | awk '{ base = $0; sub(/^v/, "", base); sub(/-.*/, "", base); print base " " $0 }' \
+  | sort -V \
+  | tail -n 1 \
+  | cut -d ' ' -f 2 || true)
 
 if [ -z "${latest_version}" ]; then
-  commits=$(git log --pretty=format:"%s")
+  range="HEAD"
 else
-  commits=$(git log "${latest_version}..HEAD" --pretty=format:"%s")
+  echo "::notice::Generating changelog since ${latest_version}"
+  range="${latest_version}..HEAD"
 fi
 
 declare -a features=()
@@ -60,6 +81,7 @@ get_commit_type() {
 parse_commit() {
   local commit="$1"
   local commit_type="$2"
+  local breaking="$3"
   local scope=""
   local description=""
   local remaining
@@ -122,22 +144,41 @@ parse_commit() {
     esac
   fi
 
-  jq -n --arg scope "${scope}" --arg description "${description}" '{scope: $scope, description: $description}'
+  jq -n --arg scope "${scope}" --arg description "${description}" --argjson breaking "${breaking}" \
+    '{scope: $scope, description: $description, breaking: $breaking}'
 }
 
-while IFS= read -r commit; do
-  [ -z "${commit}" ] && continue
+while IFS= read -r -d $'\x1e' record; do
+  record="${record#$'\n'}"
+  [ -z "${record}" ] && continue
+
+  commit="${record%%$'\x1f'*}"
+  body="${record#*$'\x1f'}"
 
   clean_commit_msg=$(clean_commit "${commit}")
   [ -z "${clean_commit_msg}" ] && continue
 
+  if printf "%s" "${clean_commit_msg}" | grep -qiE '^chore(\([^)]*\))?: release version '; then
+    continue
+  fi
+
+  breaking=false
+  if printf "%s" "${clean_commit_msg}" | grep -qE '^[A-Za-z]+(\([^)]*\)|\[[^]]*\])?!:'; then
+    breaking=true
+    clean_commit_msg=$(printf "%s" "${clean_commit_msg}" | sed -E 's/^([A-Za-z]+(\([^)]*\)|\[[^]]*\])?)!:/\1:/')
+  fi
+  if printf "%s" "${body}" | grep -qE '^BREAKING[ -]CHANGE:'; then
+    breaking=true
+  fi
+
   commit_type=$(get_commit_type "${clean_commit_msg}")
 
   if [ -z "${commit_type}" ]; then
-    formatted_commit=$(jq -n --arg description "${clean_commit_msg}" '{scope: "", description: $description}')
+    formatted_commit=$(jq -n --arg description "${clean_commit_msg}" --argjson breaking "${breaking}" \
+      '{scope: "", description: $description, breaking: $breaking}')
     other+=("${formatted_commit}")
   else
-    formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}")
+    formatted_commit=$(parse_commit "${clean_commit_msg}" "${commit_type}" "${breaking}")
 
     case ${commit_type} in
       feat) features+=("${formatted_commit}") ;;
@@ -151,7 +192,7 @@ while IFS= read -r commit; do
       docs) docs+=("${formatted_commit}") ;;
     esac
   fi
-done <<< "${commits}"
+done < <(git log "${range}" --format='%s%x1f%b%x1e' 2> /dev/null || true)
 
 array_to_json() {
   local array_name=$1
@@ -164,18 +205,19 @@ array_to_json() {
   fi
 }
 
-json_obj=$(jq -n \
-  --argjson features "$(array_to_json features)" \
-  --argjson fixes "$(array_to_json fixes)" \
-  --argjson perf "$(array_to_json perf)" \
-  --argjson chores "$(array_to_json chores)" \
-  --argjson refactors "$(array_to_json refactors)" \
-  --argjson tests "$(array_to_json tests)" \
-  --argjson ci "$(array_to_json ci)" \
-  --argjson reverts "$(array_to_json reverts)" \
-  --argjson docs "$(array_to_json docs)" \
-  --argjson other "$(array_to_json other)" \
-  '{
+json_obj=$(
+  jq -n \
+    --argjson features "$(array_to_json features)" \
+    --argjson fixes "$(array_to_json fixes)" \
+    --argjson perf "$(array_to_json perf)" \
+    --argjson chores "$(array_to_json chores)" \
+    --argjson refactors "$(array_to_json refactors)" \
+    --argjson tests "$(array_to_json tests)" \
+    --argjson ci "$(array_to_json ci)" \
+    --argjson reverts "$(array_to_json reverts)" \
+    --argjson docs "$(array_to_json docs)" \
+    --argjson other "$(array_to_json other)" \
+    '{
     features: $features,
     fixes: $fixes,
     perf: $perf,

@@ -1,18 +1,32 @@
 name: Bump Version
-description: Calculates and bumps the next version based on the latest Git tag.
+description: Calculates the next version from the latest Git tag and the commits since the previous release.
 
 inputs:
     version-type:
-        description: Type of version bump such as major, minor, or patch.
+        description: Type of version bump such as auto, major, minor, or patch. Auto reads Conventional Commits since the previous release.
         required: true
+    version-suffix:
+        description: Prerelease suffix appended to the next version such as dev, which gives 1.2.0-dev. Empty for a stable version.
+        required: false
+        default: ""
+    auto-major:
+        description: If true, auto bumps major for breaking changes from 1.0.0 on. If false, auto bumps minor for breaking changes and major is only bumped when chosen.
+        required: false
+        default: "true"
 
 outputs:
     latest-version:
         description: The latest version derived from the latest Git tag.
         value: ${{ steps.bump-version.outputs.latest-version }}
     next-version:
-        description: The calculated next version based on the latest version.
+        description: The calculated next version including the suffix such as 1.2.0-dev.
         value: ${{ steps.bump-version.outputs.next-version }}
+    next-base-version:
+        description: The calculated next version without the suffix such as 1.2.0.
+        value: ${{ steps.bump-version.outputs.next-base-version }}
+    bump-type:
+        description: The applied bump type such as major, minor, or patch.
+        value: ${{ steps.bump-version.outputs.bump-type }}
 
 runs:
     using: composite
@@ -22,6 +36,8 @@ runs:
           shell: bash
           env:
               VERSION_TYPE: ${{ inputs.version-type }}
+              VERSION_SUFFIX: ${{ inputs.version-suffix }}
+              AUTO_MAJOR: ${{ inputs.auto-major }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/bump_version.sh"
               "${{ github.action_path }}/scripts/bump_version.sh"

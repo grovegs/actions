@@ -21,6 +21,8 @@ if [ -z "${PACKAGE_NAME:-}" ]; then
   exit 1
 fi
 
+ASSEMBLY_VERSION="${PACKAGE_VERSION%%-*}"
+
 declare -a MODIFIED_FILES=()
 
 update_version_in_file() {
@@ -36,14 +38,14 @@ update_version_in_file() {
 
   if grep -q "<AssemblyVersion>" "${file}"; then
     if ! grep -q "<AssemblyVersion>\$(.*)</AssemblyVersion>" "${file}"; then
-      sed -i.bak "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>${PACKAGE_VERSION}</AssemblyVersion>|g" "${file}"
+      sed -i.bak "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>${ASSEMBLY_VERSION}</AssemblyVersion>|g" "${file}"
       updated=true
     fi
   fi
 
   if grep -q "<FileVersion>" "${file}"; then
     if ! grep -q "<FileVersion>\$(.*)</FileVersion>" "${file}"; then
-      sed -i.bak "s|<FileVersion>.*</FileVersion>|<FileVersion>${PACKAGE_VERSION}</FileVersion>|g" "${file}"
+      sed -i.bak "s|<FileVersion>.*</FileVersion>|<FileVersion>${ASSEMBLY_VERSION}</FileVersion>|g" "${file}"
       updated=true
     fi
   fi
@@ -126,17 +128,22 @@ echo "  Configuration: ${BUILD_CONFIGURATION}"
 echo "  Version: ${PACKAGE_VERSION}"
 echo "  Output: ${PACKAGE_FILE}"
 
-if ! dotnet pack \
+if ! pack_output=$(dotnet pack \
   --no-build \
   --nologo \
   --output "${NUPKGS_DIR}" \
   --configuration "${BUILD_CONFIGURATION}" \
   /p:Version="${PACKAGE_VERSION}" \
-  /p:AssemblyVersion="${PACKAGE_VERSION}" \
-  /p:FileVersion="${PACKAGE_VERSION}" \
+  /p:AssemblyVersion="${ASSEMBLY_VERSION}" \
+  /p:FileVersion="${ASSEMBLY_VERSION}" \
   /p:InformationalVersion="${PACKAGE_VERSION}" \
   /p:PackageVersion="${PACKAGE_VERSION}" \
-  "${PROJECT_FILE}" > /dev/null; then
+  -warnaserror:NU5104 \
+  "${PROJECT_FILE}" 2>&1); then
+  printf "%s\n" "${pack_output}"
+  if printf "%s" "${pack_output}" | grep -q "NU5104"; then
+    echo "::error::A stable package cannot depend on a prerelease package. Release the dependency as a stable version first."
+  fi
   echo "::error::Failed to pack project '${PROJECT_FILE}'"
   exit 1
 fi
