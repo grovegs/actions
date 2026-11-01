@@ -7,7 +7,7 @@ if [ -z "${PACKAGE_FILE:-}" ]; then
 fi
 
 if [ -z "${NUGET_API_KEY:-}" ]; then
-  echo "::error::NUGET_API_KEY environment variable is required"
+  echo "::error::Set api-key, or set user to publish with trusted publishing"
   exit 1
 fi
 
@@ -78,7 +78,7 @@ while [ ${ATTEMPT} -le ${MAX_RETRIES} ]; do
 
   if grep -q "401.*Unauthorized" "${OUTPUT}" 2>/dev/null || \
      grep -q "403.*Forbidden" "${OUTPUT}" 2>/dev/null; then
-    echo "::error::Authentication failed - invalid API key"
+    echo "::error::Authentication failed - check the API key, or the nuget.org trusted publishing policy for this repository and workflow file"
     rm -f "${OUTPUT}"
     break
   fi

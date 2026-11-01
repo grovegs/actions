@@ -1,13 +1,23 @@
 name: Publish NuGet
-description: Upload a NuGet package to nuget.org with automatic duplicate handling.
+description: Upload a NuGet package to nuget.org with an API key or trusted publishing, with automatic duplicate handling.
 
 inputs:
     file:
-        description: Path to the NuGet package file to be published
-        required: true
+        description: Path to the NuGet package file to be published. Leave empty when artifact is set.
+        required: false
+        default: ""
+    artifact:
+        description: Name of a workflow run artifact holding the NuGet package, downloaded before publishing such as nuget-package.
+        required: false
+        default: ""
     api-key:
-        description: NuGet API key used for authenticating and publishing the package
-        required: true
+        description: NuGet API key used for authenticating and publishing the package. Leave empty to use trusted publishing with user.
+        required: false
+        default: ""
+    user:
+        description: The nuget.org username, not the email, for trusted publishing. The job needs id-token write permission and must be defined in the workflow file named by the nuget.org trusted publishing policy.
+        required: false
+        default: ""
     source:
         description: The NuGet server URL to publish to
         required: false
@@ -20,11 +30,46 @@ inputs:
 runs:
     using: composite
     steps:
-        - name: 🚀 Publish NuGet Package
+        - name: 📥 Download NuGet Package
+          if: inputs.artifact != ''
+          uses: actions/download-artifact@v8
+          with:
+              name: ${{ inputs.artifact }}
+              path: ${{ runner.temp }}/publish-nuget
+
+        - name: 🔍 Find NuGet Package
+          id: find-package
           shell: bash
           env:
               PACKAGE_FILE: ${{ inputs.file }}
-              NUGET_API_KEY: ${{ inputs.api-key }}
+              ARTIFACT_NAME: ${{ inputs.artifact }}
+              ARTIFACT_PATH: ${{ runner.temp }}/publish-nuget
+          run: |
+              set -euo pipefail
+
+              if [ -n "${ARTIFACT_NAME}" ]; then
+                  PACKAGE_FILE=$(find "${ARTIFACT_PATH}" -type f -name "*.nupkg" | head -n 1)
+              fi
+
+              if [ -z "${PACKAGE_FILE}" ]; then
+                  echo "::error::Set file, or set artifact to an artifact that holds a .nupkg file"
+                  exit 1
+              fi
+
+              echo "file=${PACKAGE_FILE}" >> "${GITHUB_OUTPUT}"
+
+        - name: 🔑 Log In With Trusted Publishing
+          id: login
+          if: inputs.api-key == '' && inputs.user != ''
+          uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+          with:
+              user: ${{ inputs.user }}
+
+        - name: 🚀 Publish NuGet Package
+          shell: bash
+          env:
+              PACKAGE_FILE: ${{ steps.find-package.outputs.file }}
+              NUGET_API_KEY: ${{ inputs.api-key || steps.login.outputs.NUGET_API_KEY }}
               NUGET_SOURCE: ${{ inputs.source }}
               SKIP_DUPLICATE: ${{ inputs.skip-duplicate }}
           run: |
