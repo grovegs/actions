@@ -1,0 +1,18 @@
+name: Check Unity Meta Files
+description: Checks that every file and folder in a Unity package has a .meta file and that no .meta file is orphaned, because Unity ignores files without a .meta in git packages.
+
+inputs:
+    package:
+        description: Path to the Unity package directory such as src/GroveGames.Tween.Unity/Packages/com.grovegames.tween
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: 🔎 Check Unity Meta Files
+          shell: bash
+          env:
+              PACKAGE_PATH: ${{ inputs.package }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/check_unity_meta_files.sh"
+              "${{ github.action_path }}/scripts/check_unity_meta_files.sh"

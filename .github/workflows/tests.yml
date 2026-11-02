@@ -392,6 +392,43 @@ jobs:
               with:
                   title: "feat: check pull request titles"
 
+            - name: 🔎 Test Unity Meta Files
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  script="${GITHUB_WORKSPACE}/.github/actions/check-unity-meta-files/scripts/check_unity_meta_files.sh"
+                  package="$(mktemp -d)/com.test.meta"
+
+                  mkdir -p "${package}/Runtime" "${package}/Samples~/Demo" "${package}/.hidden"
+                  touch "${package}/package.json" "${package}/package.json.meta"
+                  touch "${package}/Runtime.meta" "${package}/Runtime/Tweener.cs" "${package}/Runtime/Tweener.cs.meta"
+                  touch "${package}/Samples~/Demo/Demo.cs" "${package}/.hidden/notes.txt" "${package}/Runtime/cache.tmp"
+
+                  PACKAGE_PATH="${package}" bash "${script}" > /dev/null || { echo "Rejected a package where every asset has a .meta file"; exit 1; }
+
+                  touch "${package}/Runtime/Extensions.cs"
+                  if PACKAGE_PATH="${package}" bash "${script}" > /dev/null 2>&1; then
+                      echo "Accepted a file without a .meta file"
+                      exit 1
+                  fi
+                  rm "${package}/Runtime/Extensions.cs"
+
+                  touch "${package}/Runtime/Removed.cs.meta"
+                  if PACKAGE_PATH="${package}" bash "${script}" > /dev/null 2>&1; then
+                      echo "Accepted an orphaned .meta file"
+                      exit 1
+                  fi
+                  rm "${package}/Runtime/Removed.cs.meta"
+
+                  mkdir "${package}/Editor"
+                  if PACKAGE_PATH="${package}" bash "${script}" > /dev/null 2>&1; then
+                      echo "Accepted a folder without a .meta file"
+                      exit 1
+                  fi
+
+                  echo "✅ Unity meta files are checked"
+
     test-package-actions:
         name: Test Package Actions
         runs-on: ubuntu-latest
@@ -441,6 +478,11 @@ jobs:
                   echo "✅ Godot package verified"
                   echo "  Package: ${PACKAGE_PATH}"
                   echo "  Modified: ${MODIFIED_FILES}"
+
+            - name: 🔎 Check Unity Meta Files
+              uses: ./.github/actions/check-unity-meta-files
+              with:
+                  package: sandbox/UnityApplication/Packages/com.test.package
 
             - name: 📦 Pack Unity Package
               id: pack-unity
