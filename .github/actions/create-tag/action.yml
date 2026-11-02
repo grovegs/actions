@@ -3,7 +3,7 @@ description: Creates an annotated Git tag for a version on the current commit an
 
 inputs:
     version:
-        description: The version to tag, without the v prefix, such as 1.2.3.
+        description: The version to tag, without the v prefix, such as 1.2.3 or 1.2.3-dev.
         required: true
 
 outputs:

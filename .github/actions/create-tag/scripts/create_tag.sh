@@ -6,8 +6,8 @@ if [ -z "${RELEASE_VERSION:-}" ]; then
   exit 1
 fi
 
-if [[ ! "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::Invalid version: ${RELEASE_VERSION}. Expected format: X.Y.Z"
+if [[ ! "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+  echo "::error::Invalid version: ${RELEASE_VERSION}. Expected format: X.Y.Z or X.Y.Z-suffix"
   exit 1
 fi
 

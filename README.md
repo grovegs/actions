@@ -390,7 +390,7 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 
 **create-tag** - Tag the current commit with a version and push the tag
 
-- Inputs: `version`
+- Inputs: `version` (`X.Y.Z`, or `X.Y.Z-suffix` for prereleases such as `1.2.0-dev`)
 - Outputs: `tag`
 
 **generate-changelog** - Generate structured release notes
