@@ -383,6 +383,11 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Inputs: `title`
 - Squash merges use the title as the commit message, which drives `bump-version` and `generate-changelog`.
 
+**check-unity-meta-files** - Check that every file and folder in a Unity package has a `.meta` file
+
+- Inputs: `package`
+- Unity ignores files without a `.meta` in git packages, so a missing one drops the file for every project that installs the package. Orphaned `.meta` files fail too. Hidden names, names ending in `~`, `cvs` and `*.tmp` are skipped, as Unity skips them.
+
 **create-tag** - Tag the current commit with a version and push the tag
 
 - Inputs: `version`
