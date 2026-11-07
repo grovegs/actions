@@ -1,5 +1,5 @@
 name: Prune Branches
-description: Deletes remote branches whose pull request was merged, and optionally branches with no commits for a number of days. Protected branches, the default branch, excluded branches and branches with an open pull request are always kept.
+description: Deletes remote branches with no commits for a number of days. Protected branches, the default branch, excluded branches and branches with an open pull request are always kept.
 
 inputs:
     github-token:
@@ -17,9 +17,9 @@ inputs:
             main
             develop
     stale-days:
-        description: Delete branches without a merged pull request whose last commit is at least this many days old. Use 0 to only delete merged branches.
+        description: Delete branches whose last commit is at least this many days old.
         required: false
-        default: "0"
+        default: "30"
     dry-run:
         description: List the branches that would be deleted without deleting them.
         required: false

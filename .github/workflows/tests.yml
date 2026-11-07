@@ -443,7 +443,6 @@ jobs:
               id: prune-branches
               uses: ./.github/actions/prune-branches
               with:
-                  stale-days: 30
                   dry-run: true
 
             - name: ✅ Verify Dry Run

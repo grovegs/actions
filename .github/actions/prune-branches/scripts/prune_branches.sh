@@ -11,11 +11,11 @@ if [ -z "${REPOSITORY:-}" ]; then
   exit 1
 fi
 
-STALE_DAYS="${STALE_DAYS:-0}"
+STALE_DAYS="${STALE_DAYS:-}"
 DRY_RUN="${DRY_RUN:-false}"
 
-if ! printf "%s" "${STALE_DAYS}" | grep -qE '^[0-9]+$'; then
-  echo "::error::STALE_DAYS must be a whole number of days, got '${STALE_DAYS}'"
+if ! printf "%s" "${STALE_DAYS}" | grep -qE '^[1-9][0-9]*$'; then
+  echo "::error::STALE_DAYS must be a whole number of days above 0, got '${STALE_DAYS}'"
   exit 1
 fi
 
@@ -61,36 +61,23 @@ while IFS=$'\t' read -r branch sha; do
     continue
   fi
 
-  pull_requests=$(gh api -X GET "repos/${REPOSITORY}/pulls" \
-    -f head="${OWNER}:${branch}" \
-    -f state=all \
-    -f per_page=100 \
-    --jq "[([.[] | select(.state == \"open\")] | length), ([.[] | select(.merged_at != null and .head.sha == \"${sha}\")] | length)] | @tsv")
-  open_count=$(printf "%s" "${pull_requests}" | cut -f1)
-  merged_count=$(printf "%s" "${pull_requests}" | cut -f2)
+  age_days=$(gh api "repos/${REPOSITORY}/commits/${sha}" --jq '(now - (.commit.committer.date | fromdateiso8601)) / 86400 | floor')
+  if [ "${age_days}" -lt "${STALE_DAYS}" ]; then
+    continue
+  fi
 
+  open_count=$(gh api -X GET "repos/${REPOSITORY}/pulls" \
+    -f head="${OWNER}:${branch}" \
+    -f state=open \
+    --jq 'length')
   if [ "${open_count}" -gt 0 ]; then
     continue
   fi
 
-  reason=""
-  if [ "${merged_count}" -gt 0 ]; then
-    reason="merged"
-  elif [ "${STALE_DAYS}" -gt 0 ]; then
-    age_days=$(gh api "repos/${REPOSITORY}/commits/${sha}" --jq '(now - (.commit.committer.date | fromdateiso8601)) / 86400 | floor')
-    if [ "${age_days}" -ge "${STALE_DAYS}" ]; then
-      reason="stale for ${age_days} days"
-    fi
-  fi
-
-  if [ -z "${reason}" ]; then
-    continue
-  fi
-
   if [ "${DRY_RUN}" = "true" ]; then
-    echo "Would delete ${branch} (${reason})"
+    echo "Would delete ${branch} (${age_days} days old)"
   elif gh api -X DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}" > /dev/null; then
-    echo "Deleted ${branch} (${reason})"
+    echo "Deleted ${branch} (${age_days} days old)"
   else
     echo "::warning::Could not delete ${branch}"
     FAILED+=("${branch}")
@@ -98,7 +85,7 @@ while IFS=$'\t' read -r branch sha; do
   fi
 
   DELETED+=("${branch}")
-  SUMMARY_ROWS+=("| \`${branch}\` | ${reason} |")
+  SUMMARY_ROWS+=("| \`${branch}\` | ${age_days} |")
 done <<< "${BRANCHES}"
 
 {
@@ -110,9 +97,9 @@ done <<< "${BRANCHES}"
 } >> "${GITHUB_OUTPUT}"
 
 if [ "${DRY_RUN}" = "true" ]; then
-  HEADING="Branches that would be deleted"
+  HEADING="Stale branches that would be deleted"
 else
-  HEADING="Deleted branches"
+  HEADING="Deleted stale branches"
 fi
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
@@ -122,7 +109,7 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     if [ ${#DELETED[@]} -eq 0 ]; then
       echo "None."
     else
-      echo "| Branch | Reason |"
+      echo "| Branch | Days since last commit |"
       echo "| --- | --- |"
       for row in "${SUMMARY_ROWS[@]}"; do
         echo "${row}"
