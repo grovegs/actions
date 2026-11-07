@@ -429,6 +429,36 @@ jobs:
 
                   echo "✅ Unity meta files are checked"
 
+    test-delete-stale-branches:
+        name: Test Delete Stale Branches
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v7
+
+            - name: 🧹 Delete Stale Branches Dry Run
+              id: delete-stale-branches
+              uses: ./.github/actions/delete-stale-branches
+              with:
+                  dry-run: true
+
+            - name: ✅ Verify Dry Run
+              shell: bash
+              env:
+                  DELETED_BRANCHES: ${{ steps.delete-stale-branches.outputs.deleted-branches }}
+              run: |
+                  set -euo pipefail
+
+                  if printf "%s\n" "${DELETED_BRANCHES}" | grep -qxE "main|develop"; then
+                      echo "Excluded branches should never be listed"
+                      exit 1
+                  fi
+
+                  echo "✅ Delete stale branches dry run keeps excluded branches"
+
     test-package-actions:
         name: Test Package Actions
         runs-on: ubuntu-latest
