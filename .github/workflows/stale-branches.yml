@@ -1,0 +1,31 @@
+name: 🧹 Stale Branches
+
+on:
+    schedule:
+        - cron: "17 3 * * 1"
+    workflow_dispatch:
+        inputs:
+            dry-run:
+                description: List the branches that would be deleted without deleting them
+                required: true
+                default: true
+                type: boolean
+
+permissions:
+    contents: read
+
+jobs:
+    delete-stale-branches:
+        name: Delete Stale Branches
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: read
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v7
+
+            - name: 🧹 Delete Stale Branches
+              uses: ./.github/actions/delete-stale-branches
+              with:
+                  dry-run: ${{ inputs.dry-run == true }}
