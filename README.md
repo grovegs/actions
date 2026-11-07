@@ -388,6 +388,13 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Inputs: `package`
 - Unity ignores files without a `.meta` in git packages, so a missing one drops the file for every project that installs the package. Orphaned `.meta` files fail too. Hidden names, names ending in `~`, `cvs` and `*.tmp` are skipped, as Unity skips them.
 
+**prune-branches** - Delete remote branches whose pull request was merged
+
+- Inputs: `github-token` (default `github.token`), `repository` (default the current one), `exclude-branches` (newline-separated patterns, default `main` and `develop`), `stale-days` (default `0`), `dry-run` (default `false`)
+- Outputs: `deleted-branches`
+- A branch is deleted when a merged pull request has its current commit, so squash merges are detected and a branch pushed to after its merge is kept. With `stale-days` above 0, branches whose last commit is that old are deleted too. Protected branches, the default branch, excluded branches and branches with an open pull request are always kept.
+- The job needs `contents: write` and `pull-requests: read`.
+
 **create-tag** - Tag the current commit with a version and push the tag
 
 - Inputs: `version` (`X.Y.Z`, or `X.Y.Z-suffix` for prereleases such as `1.2.0-dev`)

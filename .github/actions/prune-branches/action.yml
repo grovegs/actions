@@ -1,0 +1,47 @@
+name: Prune Branches
+description: Deletes remote branches whose pull request was merged, and optionally branches with no commits for a number of days. Protected branches, the default branch, excluded branches and branches with an open pull request are always kept.
+
+inputs:
+    github-token:
+        description: The token used to list and delete branches. It needs contents write and pull requests read.
+        required: false
+        default: ${{ github.token }}
+    repository:
+        description: The repository to prune, such as grovegs/actions.
+        required: false
+        default: ${{ github.repository }}
+    exclude-branches:
+        description: Newline-separated branch name patterns to keep, such as main or release/*.
+        required: false
+        default: |
+            main
+            develop
+    stale-days:
+        description: Delete branches without a merged pull request whose last commit is at least this many days old. Use 0 to only delete merged branches.
+        required: false
+        default: "0"
+    dry-run:
+        description: List the branches that would be deleted without deleting them.
+        required: false
+        default: "false"
+
+outputs:
+    deleted-branches:
+        description: Newline-separated names of the deleted branches, or the branches that would be deleted in a dry run.
+        value: ${{ steps.prune-branches.outputs.deleted-branches }}
+
+runs:
+    using: composite
+    steps:
+        - name: 🧹 Prune Branches
+          id: prune-branches
+          shell: bash
+          env:
+              GH_TOKEN: ${{ inputs.github-token }}
+              REPOSITORY: ${{ inputs.repository }}
+              EXCLUDE_BRANCHES: ${{ inputs.exclude-branches }}
+              STALE_DAYS: ${{ inputs.stale-days }}
+              DRY_RUN: ${{ inputs.dry-run }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/prune_branches.sh"
+              "${{ github.action_path }}/scripts/prune_branches.sh"

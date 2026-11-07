@@ -429,6 +429,37 @@ jobs:
 
                   echo "✅ Unity meta files are checked"
 
+    test-prune-branches:
+        name: Test Prune Branches
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v7
+
+            - name: 🧹 Prune Branches Dry Run
+              id: prune-branches
+              uses: ./.github/actions/prune-branches
+              with:
+                  stale-days: 30
+                  dry-run: true
+
+            - name: ✅ Verify Dry Run
+              shell: bash
+              env:
+                  DELETED_BRANCHES: ${{ steps.prune-branches.outputs.deleted-branches }}
+              run: |
+                  set -euo pipefail
+
+                  if printf "%s\n" "${DELETED_BRANCHES}" | grep -qxE "main|develop"; then
+                      echo "Excluded branches should never be listed"
+                      exit 1
+                  fi
+
+                  echo "✅ Prune branches dry run keeps excluded branches"
+
     test-package-actions:
         name: Test Package Actions
         runs-on: ubuntu-latest
