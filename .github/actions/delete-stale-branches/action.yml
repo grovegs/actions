@@ -1,4 +1,4 @@
-name: Prune Branches
+name: Delete Stale Branches
 description: Deletes remote branches with no commits for a number of days. Protected branches, the default branch, excluded branches and branches with an open pull request are always kept.
 
 inputs:
@@ -7,7 +7,7 @@ inputs:
         required: false
         default: ${{ github.token }}
     repository:
-        description: The repository to prune, such as grovegs/actions.
+        description: The repository to clean up, such as grovegs/actions.
         required: false
         default: ${{ github.repository }}
     exclude-branches:
@@ -28,13 +28,13 @@ inputs:
 outputs:
     deleted-branches:
         description: Newline-separated names of the deleted branches, or the branches that would be deleted in a dry run.
-        value: ${{ steps.prune-branches.outputs.deleted-branches }}
+        value: ${{ steps.delete-stale-branches.outputs.deleted-branches }}
 
 runs:
     using: composite
     steps:
-        - name: 🧹 Prune Branches
-          id: prune-branches
+        - name: 🧹 Delete Stale Branches
+          id: delete-stale-branches
           shell: bash
           env:
               GH_TOKEN: ${{ inputs.github-token }}
@@ -43,5 +43,5 @@ runs:
               STALE_DAYS: ${{ inputs.stale-days }}
               DRY_RUN: ${{ inputs.dry-run }}
           run: |
-              chmod +x "${{ github.action_path }}/scripts/prune_branches.sh"
-              "${{ github.action_path }}/scripts/prune_branches.sh"
+              chmod +x "${{ github.action_path }}/scripts/delete_stale_branches.sh"
+              "${{ github.action_path }}/scripts/delete_stale_branches.sh"

@@ -388,7 +388,7 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Inputs: `package`
 - Unity ignores files without a `.meta` in git packages, so a missing one drops the file for every project that installs the package. Orphaned `.meta` files fail too. Hidden names, names ending in `~`, `cvs` and `*.tmp` are skipped, as Unity skips them.
 
-**prune-branches** - Delete stale remote branches
+**delete-stale-branches** - Delete stale remote branches
 
 - Inputs: `github-token` (default `github.token`), `repository` (default the current one), `exclude-branches` (newline-separated patterns, default `main` and `develop`), `stale-days` (default `30`), `dry-run` (default `false`)
 - Outputs: `deleted-branches`
