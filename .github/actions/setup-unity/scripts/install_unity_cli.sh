@@ -48,7 +48,7 @@ update_unity_cli() {
 
   before=$("${unity_cli}" --version 2> /dev/null || echo "unknown")
 
-  if ! "${unity_cli}" self-update --yes --channel "${UNITY_CLI_CHANNEL}" --quiet --no-banner < /dev/null; then
+  if ! "${unity_cli}" self-update --yes --channel "${UNITY_CLI_CHANNEL}" --quiet --no-banner < /dev/null > /dev/null; then
     echo "::warning::Could not update Unity CLI ${before} on the ${UNITY_CLI_CHANNEL} channel. Continuing with the installed version"
     return 0
   fi

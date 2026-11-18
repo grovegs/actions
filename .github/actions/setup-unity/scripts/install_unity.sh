@@ -142,13 +142,33 @@ install_editor() {
   fi
 }
 
+list_installed_modules() {
+  local listing
+
+  if ! listing=$(unity modules "${UNITY_VERSION}" --format tsv 2> /dev/null); then
+    echo "::warning::Could not list the modules of Unity ${UNITY_VERSION}. Every requested module will be installed" >&2
+    return 0
+  fi
+
+  echo "${listing}" | awk -F'\t' '
+    NR == 1 {
+      for (i = 1; i <= NF; i++) {
+        if ($i == "id") { id = i }
+        if ($i == "status") { status = i }
+      }
+      next
+    }
+    id && status && $status == "Installed" { print $id }
+  '
+}
+
 install_missing_modules() {
   if [ "${#MODULE_ARGS[@]}" -eq 0 ]; then
     return 0
   fi
 
   local installed_modules
-  installed_modules=$(unity modules list "${UNITY_VERSION}" --format tsv 2> /dev/null | awk -F'\t' '$4 == "Installed" { print $1 }')
+  installed_modules=$(list_installed_modules)
 
   local -a missing_args
   missing_args=()
