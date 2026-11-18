@@ -108,6 +108,26 @@ if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
   )
 fi
 
+list_failed_tests() {
+  local report="$1"
+
+  grep -o '<test-case [^>]*>' "${report}" 2> /dev/null \
+    | grep 'result="Failed"' \
+    | sed -n 's/.* fullname="\([^"]*\)".*/\1/p' \
+    | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&amp;/\&/g' || true
+}
+
+sign_out_expired_session() {
+  local status
+
+  status=$(unity auth status --format json 2> /dev/null || true)
+
+  if printf '%s' "${status}" | grep -q '"sessionState"[[:space:]]*:[[:space:]]*"expired"'; then
+    echo "::notice::The Unity CLI session on this runner has expired. Signing it out so the editor activates with the license key"
+    unity auth logout --yes > /dev/null 2>&1 || echo "::warning::Could not sign out the expired Unity CLI session"
+  fi
+}
+
 get_result_attribute() {
   local report="$1"
   local attribute="$2"
@@ -118,6 +138,12 @@ get_result_attribute() {
 }
 
 FAILED_MODES=0
+FAILED_SUMMARY=""
+FAILED_TESTS=""
+
+if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
+  sign_out_expired_session
+fi
 
 {
   echo "### 🧪 Unity Test Results"
@@ -159,6 +185,12 @@ for mode in "${MODE_ARRAY[@]}"; do
       RESULT="❌ Failed"
       FAILED_MODES=$((FAILED_MODES + 1))
       echo "::error::${mode}: ${FAILED} test(s) failed (${PASSED} passed, ${SKIPPED} skipped)"
+      FAILED_TESTS=$(list_failed_tests "${REPORT}")
+      if [ -n "${FAILED_TESTS}" ]; then
+        echo "::group::❌ Failed ${mode} tests"
+        echo "${FAILED_TESTS}"
+        echo "::endgroup::"
+      fi
       ;;
     *)
       RESULT="⚠️ Error (exit ${EXIT_CODE})"
@@ -168,7 +200,24 @@ for mode in "${MODE_ARRAY[@]}"; do
   esac
 
   echo "| ${mode} | ${RESULT} | ${PASSED} | ${FAILED} | ${SKIPPED} |" >> "${GITHUB_STEP_SUMMARY}"
+
+  if [ "${EXIT_CODE}" -eq 8 ] && [ -n "${FAILED_TESTS:-}" ]; then
+    FAILED_SUMMARY="${FAILED_SUMMARY}
+<details><summary>Failed ${mode} tests</summary>
+
+\`\`\`text
+${FAILED_TESTS}
+\`\`\`
+
+</details>
+"
+  fi
+  FAILED_TESTS=""
 done
+
+if [ -n "${FAILED_SUMMARY}" ]; then
+  echo "${FAILED_SUMMARY}" >> "${GITHUB_STEP_SUMMARY}"
+fi
 
 if [ "${FAILED_MODES}" -gt 0 ]; then
   echo "::error::${FAILED_MODES} test mode(s) failed. Reports: ${RESULTS_DIR}"
