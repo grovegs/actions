@@ -429,13 +429,6 @@ jobs:
 
                   echo "✅ Unity meta files are checked"
 
-    test-delete-stale-branches:
-        name: Test Delete Stale Branches
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            pull-requests: read
-        steps:
             - name: 🔎 Test Agent Skills
               shell: bash
               run: |
@@ -481,6 +474,13 @@ jobs:
 
                   echo "✅ Agent skills are checked"
 
+    test-delete-stale-branches:
+        name: Test Delete Stale Branches
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
             - name: 📂 Checkout Code
               uses: actions/checkout@v7
 
