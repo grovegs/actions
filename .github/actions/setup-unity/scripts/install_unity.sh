@@ -48,6 +48,27 @@ else
   CHILD_MODULE_ARGS=(--no-child-modules)
 fi
 
+read_cli_path() {
+  local output="$1"
+  local tab
+  local value
+
+  tab=$(printf '\t')
+
+  case "${output}" in
+    *"${tab}"*)
+      value=$(printf '%s\n' "${output}" | awk -F '\t' '$1 == "path" { print $2; exit }')
+      if [ -z "${value}" ]; then
+        value=$(printf '%s\n' "${output}" | awk -F '\t' 'NR > 1 && NF >= 2 { print $2; exit }')
+      fi
+      printf '%s\n' "${value}"
+      ;;
+    *)
+      printf '%s\n' "${output}" | head -n 1
+      ;;
+  esac
+}
+
 get_editor_executable() {
   local editor_dir="$1"
 
@@ -73,7 +94,7 @@ get_unregistered_editor_dirs() {
   fi
 
   local cli_install_path
-  cli_install_path=$(unity install-path --get --quiet 2> /dev/null || echo "")
+  cli_install_path=$(read_cli_path "$(unity install-path --get --quiet 2> /dev/null || echo "")")
   if [ -n "${cli_install_path}" ]; then
     echo "${cli_install_path}/${UNITY_VERSION}"
   fi
@@ -85,7 +106,7 @@ get_unregistered_editor_dirs() {
 }
 
 find_registered_editor() {
-  unity editors path "${UNITY_VERSION}" --quiet 2> /dev/null || true
+  read_cli_path "$(unity editors path "${UNITY_VERSION}" --quiet 2> /dev/null || true)"
 }
 
 restore_install_path() {
@@ -97,7 +118,7 @@ trap restore_install_path EXIT
 
 install_editor() {
   if [ -n "${UNITY_PATH_INPUT}" ]; then
-    PREVIOUS_INSTALL_PATH=$(unity install-path --get --quiet 2> /dev/null || echo "")
+    PREVIOUS_INSTALL_PATH=$(read_cli_path "$(unity install-path --get --quiet 2> /dev/null || echo "")")
     mkdir -p "${UNITY_PATH_INPUT}"
     unity install-path --set "${UNITY_PATH_INPUT}" --quiet
     echo "::notice::Installing into custom directory: ${UNITY_PATH_INPUT}"
