@@ -429,50 +429,37 @@ jobs:
 
                   echo "✅ Unity meta files are checked"
 
-            - name: 🔎 Test Agent Skills
+    test-scripts:
+        name: Test Scripts on ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os:
+                    - ubuntu-latest
+                    - macos-latest
+
+        steps:
+            - name: 📂 Checkout Code
+              uses: actions/checkout@v7
+
+            - name: 🔧 Show Shell Versions
               shell: bash
               run: |
-                  set -euo pipefail
+                  bash --version | head -n 1
+                  awk --version 2> /dev/null | head -n 1 || echo "awk without --version"
 
-                  script="${GITHUB_WORKSPACE}/.github/actions/check-agent-skills/scripts/check_agent_skills.sh"
-                  skills="$(mktemp -d)"
+            - name: 🧪 Test Agent Skills Check
+              shell: bash
+              run: bash .github/tests/test_check_agent_skills.sh
 
-                  write_skill() {
-                      mkdir -p "${skills}/$1"
-                      printf -- '---\nname: %s\ndescription: %s\n---\n\n# Skill\n' "$2" "$3" > "${skills}/$1/SKILL.md"
-                  }
+            - name: 🧪 Test Unity Editor Paths
+              shell: bash
+              run: bash .github/tests/test_setup_unity_paths.sh
 
-                  SKILLS_PATH="${skills}" bash "${script}" > /dev/null || { echo "Rejected a directory without skills"; exit 1; }
-
-                  write_skill "use-tween" "use-tween" "Rules for tweens. Use when animating a value."
-                  write_skill "quoted" "quoted" '"Rules: quoted values may hold a colon"'
-                  SKILLS_PATH="${skills}" bash "${script}" > /dev/null || { echo "Rejected skills with a loadable front matter"; exit 1; }
-
-                  expect_rejected() {
-                      if SKILLS_PATH="${skills}" bash "${script}" > /dev/null 2>&1; then
-                          echo "Accepted $1"
-                          exit 1
-                      fi
-                      rm -rf "${skills}/broken"
-                  }
-
-                  write_skill "broken" "broken" "Rules for tweens: use when animating a value."
-                  expect_rejected "a description with a colon followed by a space"
-
-                  write_skill "broken" "other" "Rules for tweens."
-                  expect_rejected "a name that does not match its folder"
-
-                  write_skill "broken" "Broken_Name" "Rules for tweens."
-                  expect_rejected "a name with uppercase letters"
-
-                  write_skill "broken" "broken" ""
-                  expect_rejected "an empty description"
-
-                  mkdir -p "${skills}/broken"
-                  printf -- '---\nname: broken\ndescription: Rules for tweens.\n' > "${skills}/broken/SKILL.md"
-                  expect_rejected "a front matter that is never closed"
-
-                  echo "✅ Agent skills are checked"
+            - name: 🧪 Test Unity Test Runner
+              shell: bash
+              run: bash .github/tests/test_test_unity.sh
 
     test-delete-stale-branches:
         name: Test Delete Stale Branches

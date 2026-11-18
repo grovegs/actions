@@ -29,6 +29,10 @@ inputs:
         description: Unity Accelerator endpoint such as accelerator.local:10080 to share imported assets between runners.
         required: false
         default: ""
+    graphics:
+        description: Set to true when the runner has a graphics device. The editor then starts without -nographics and tests in the RequiresGraphics category run. By default they are left out.
+        required: false
+        default: "false"
     retries:
         description: Number of times to run a test mode again when tests in it fail.
         required: false
@@ -44,7 +48,7 @@ inputs:
 
 outputs:
     results-dir:
-        description: Directory containing the NUnit test reports and the editor logs
+        description: Directory containing the NUnit test reports
         value: ${{ steps.test-project.outputs.results-dir }}
 
 runs:
@@ -81,6 +85,7 @@ runs:
               UNITY_PASSWORD: ${{ inputs.unity-password }}
               UNITY_LICENSE_KEY: ${{ inputs.unity-license-key }}
               UNITY_ACCELERATOR: ${{ inputs.unity-accelerator }}
+              TEST_GRAPHICS: ${{ inputs.graphics }}
               TEST_RETRIES: ${{ inputs.retries }}
               TEST_TIMEOUT: ${{ inputs.timeout }}
           run: |

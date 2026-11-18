@@ -54,19 +54,24 @@ read_cli_path() {
   local value
 
   tab=$(printf '\t')
+  output=$(printf '%s\n' "${output}" | tr -d '\r')
 
   case "${output}" in
     *"${tab}"*)
       value=$(printf '%s\n' "${output}" | awk -F '\t' '$1 == "path" { print $2; exit }')
       if [ -z "${value}" ]; then
-        value=$(printf '%s\n' "${output}" | awk -F '\t' 'NR > 1 && NF >= 2 { print $2; exit }')
+        value=$(printf '%s\n' "${output}" | awk -F '\t' '{ for (i = NF; i >= 1; i--) { if ($i ~ /^[\/~]/) { print $i; exit } } }')
       fi
-      printf '%s\n' "${value}"
       ;;
     *)
-      printf '%s\n' "${output}" | head -n 1
+      value=$(printf '%s\n' "${output}" | awk '/^[\/~]/ { print; exit }')
+      if [ -z "${value}" ]; then
+        value=$(printf '%s\n' "${output}" | awk 'NR == 1 { print; exit }')
+      fi
       ;;
   esac
+
+  printf '%s\n' "${value}"
 }
 
 get_editor_executable() {
