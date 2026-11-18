@@ -51,7 +51,7 @@ cat > "${WORK}/run.sh" << 'RUN_SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 source "${ACTION}/scripts/run_unity_build.sh"
-run_unity_build Android Build.Run "${RUNNER_TEMP}/build.log" -nographics -password "it's a \"secret\" \$HOME" -outputPath "/tmp/with space/app.aab"
+run_unity_build Android Build.Run "${RUNNER_TEMP}/build.log" -versionName 1.2.3 -password "it's a \"secret\" \$HOME" -outputPath "/tmp/with space/app.aab"
 RUN_SCRIPT
 
 run_build() {

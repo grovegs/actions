@@ -211,7 +211,6 @@ BUILD_PROVENANCE_FILE="${PLATFORM_BUILDS_DIR}/${FILENAME}.provenance.json"
 
 declare -a UNITY_ARGS
 UNITY_ARGS=(
-  -nographics
   -username "${UNITY_EMAIL}"
   -password "${UNITY_PASSWORD}"
   -serial "${UNITY_LICENSE_KEY}"
