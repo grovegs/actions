@@ -85,7 +85,13 @@ if ! curl --fail --location --silent --show-error --retry 3 --output "${INSTALLE
   exit 1
 fi
 
-if ! UNITY_CLI_CHANNEL="${UNITY_CLI_CHANNEL}" bash "${INSTALLER_FILE}"; then
+INSTALLER_CHANNEL="${UNITY_CLI_CHANNEL}"
+
+if [ "${INSTALLER_CHANNEL}" = "stable" ]; then
+  INSTALLER_CHANNEL=""
+fi
+
+if ! UNITY_CLI_CHANNEL="${INSTALLER_CHANNEL}" bash "${INSTALLER_FILE}"; then
   echo "::error::Unity CLI installation failed"
   exit 1
 fi
