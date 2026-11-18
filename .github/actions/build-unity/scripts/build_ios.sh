@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck source=run_unity.sh
-source "${GITHUB_ACTION_PATH}/scripts/run_unity.sh"
+# shellcheck source=run_unity_build.sh
+source "${GITHUB_ACTION_PATH}/scripts/run_unity_build.sh"
 
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
@@ -189,7 +189,7 @@ fi
 
 if [ -n "${BUILD_METHOD:-}" ]; then
   echo "::notice::Using custom build method: ${BUILD_METHOD}"
-  BUILD_METHOD_ARGS=("-executeMethod" "${BUILD_METHOD}")
+  BUILD_METHOD_NAME="${BUILD_METHOD}"
 else
   echo "::notice::Using default build method: BuildiOS.Build"
   BUILD_SCRIPT_DEST="${PROJECT_DIR}/Assets/Editor/BuildiOS.cs"
@@ -203,10 +203,11 @@ else
     exit 1
   fi
 
-  BUILD_METHOD_ARGS=("-executeMethod" "BuildiOS.Build")
+  BUILD_METHOD_NAME="BuildiOS.Build"
 fi
 
 LOG_FILE="${RUNNER_TEMP}/unity-build-ios.log"
+BUILD_PROVENANCE_FILE="${PLATFORM_BUILDS_DIR}/${FILENAME}.provenance.json"
 
 declare -a UNITY_ARGS
 UNITY_ARGS=(
@@ -214,11 +215,6 @@ UNITY_ARGS=(
   -username "${UNITY_EMAIL}"
   -password "${UNITY_PASSWORD}"
   -serial "${UNITY_LICENSE_KEY}"
-  -buildTarget iOS
-)
-
-UNITY_ARGS+=("${BUILD_METHOD_ARGS[@]}")
-UNITY_ARGS+=(
   -outputPath "${XCODE_PROJECT_DIR}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -228,7 +224,7 @@ UNITY_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! run_unity "${LOG_FILE}" "${UNITY_ARGS[@]}"; then
+if ! run_unity_build iOS "${BUILD_METHOD_NAME}" "${LOG_FILE}" "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for iOS"
   echo "::error::Check the Unity log above or ${LOG_FILE} for specific error details"
   exit 1
@@ -472,4 +468,9 @@ fi
 
 FILE_SIZE=$(stat -f%z "${EXPORT_PATH}" 2> /dev/null || stat -c%s "${EXPORT_PATH}" 2> /dev/null || echo "unknown")
 echo "::notice::Build completed successfully: ${EXPORT_PATH} (${FILE_SIZE} bytes)"
-echo "file=${EXPORT_PATH}" >> "${GITHUB_OUTPUT}"
+{
+  echo "file=${EXPORT_PATH}"
+  if [ -f "${BUILD_PROVENANCE_FILE}" ]; then
+    echo "provenance=${BUILD_PROVENANCE_FILE}"
+  fi
+} >> "${GITHUB_OUTPUT}"

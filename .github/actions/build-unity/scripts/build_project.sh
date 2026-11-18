@@ -78,10 +78,10 @@ export UNITY_EDITOR_PATH
 case "${PLATFORM}" in
   "Android")
     chmod +x "${GITHUB_ACTION_PATH}/scripts/build_android.sh"
-    "${GITHUB_ACTION_PATH}/scripts/build_android.sh"
+    exec "${GITHUB_ACTION_PATH}/scripts/build_android.sh"
     ;;
   "iOS")
     chmod +x "${GITHUB_ACTION_PATH}/scripts/build_ios.sh"
-    "${GITHUB_ACTION_PATH}/scripts/build_ios.sh"
+    exec "${GITHUB_ACTION_PATH}/scripts/build_ios.sh"
     ;;
 esac

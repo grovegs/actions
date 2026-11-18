@@ -461,6 +461,10 @@ jobs:
               shell: bash
               run: bash .github/tests/test_test_unity.sh
 
+            - name: 🧪 Test Unity Build Runner
+              shell: bash
+              run: bash .github/tests/test_build_unity.sh
+
     test-delete-stale-branches:
         name: Test Delete Stale Branches
         runs-on: ubuntu-latest
