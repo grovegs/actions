@@ -317,6 +317,7 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Starts the editor directly with `-username`, `-password` and `-serial`, the same way `build-unity` does, so it does not depend on a Unity CLI session on the runner
 - Lists the failed tests with their messages in the log and the job summary
 - `retries` runs a whole test mode again when tests in it fail
+- Runs a mode once more when the editor crashes before it reports results
 - Runs without a graphics device, so it skips tests in the `RequiresGraphics` category. Put `[Category("RequiresGraphics")]` on a test that renders, or that fails without a GPU for another reason
 
 ### Format Actions

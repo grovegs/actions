@@ -179,6 +179,7 @@ for mode in "${MODE_ARRAY[@]}"; do
 
   REPORT="${RESULTS_DIR}/${mode}.xml"
   ATTEMPT=0
+  CRASH_RETRIED=0
 
   while true; do
     rm -f "${REPORT}"
@@ -206,6 +207,12 @@ for mode in "${MODE_ARRAY[@]}"; do
       OUTCOME="passed"
     else
       OUTCOME="error"
+    fi
+
+    if [ "${OUTCOME}" = "error" ] && [ "${EXIT_CODE}" -gt 128 ] && [ "${CRASH_RETRIED}" -eq 0 ]; then
+      CRASH_RETRIED=1
+      echo "::warning::${mode}: the Unity editor crashed (exit code ${EXIT_CODE}) before reporting results. Running the mode once more"
+      continue
     fi
 
     if [ "${OUTCOME}" != "failed" ] || [ "${ATTEMPT}" -ge "${TEST_RETRIES}" ]; then
