@@ -429,6 +429,51 @@ jobs:
 
                   echo "✅ Unity meta files are checked"
 
+            - name: 🔎 Test Agent Skills
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  script="${GITHUB_WORKSPACE}/.github/actions/check-agent-skills/scripts/check_agent_skills.sh"
+                  skills="$(mktemp -d)"
+
+                  write_skill() {
+                      mkdir -p "${skills}/$1"
+                      printf -- '---\nname: %s\ndescription: %s\n---\n\n# Skill\n' "$2" "$3" > "${skills}/$1/SKILL.md"
+                  }
+
+                  SKILLS_PATH="${skills}" bash "${script}" > /dev/null || { echo "Rejected a directory without skills"; exit 1; }
+
+                  write_skill "use-tween" "use-tween" "Rules for tweens. Use when animating a value."
+                  write_skill "quoted" "quoted" '"Rules: quoted values may hold a colon"'
+                  SKILLS_PATH="${skills}" bash "${script}" > /dev/null || { echo "Rejected skills with a loadable front matter"; exit 1; }
+
+                  expect_rejected() {
+                      if SKILLS_PATH="${skills}" bash "${script}" > /dev/null 2>&1; then
+                          echo "Accepted $1"
+                          exit 1
+                      fi
+                      rm -rf "${skills}/broken"
+                  }
+
+                  write_skill "broken" "broken" "Rules for tweens: use when animating a value."
+                  expect_rejected "a description with a colon followed by a space"
+
+                  write_skill "broken" "other" "Rules for tweens."
+                  expect_rejected "a name that does not match its folder"
+
+                  write_skill "broken" "Broken_Name" "Rules for tweens."
+                  expect_rejected "a name with uppercase letters"
+
+                  write_skill "broken" "broken" ""
+                  expect_rejected "an empty description"
+
+                  mkdir -p "${skills}/broken"
+                  printf -- '---\nname: broken\ndescription: Rules for tweens.\n' > "${skills}/broken/SKILL.md"
+                  expect_rejected "a front matter that is never closed"
+
+                  echo "✅ Agent skills are checked"
+
     test-delete-stale-branches:
         name: Test Delete Stale Branches
         runs-on: ubuntu-latest
@@ -513,6 +558,11 @@ jobs:
               uses: ./.github/actions/check-unity-meta-files
               with:
                   package: sandbox/UnityApplication/Packages/com.test.package
+
+            - name: 🔎 Check Agent Skills
+              uses: ./.github/actions/check-agent-skills
+              with:
+                  path: sandbox/UnityApplication/Packages/com.test.package
 
             - name: 📦 Pack Unity Package
               id: pack-unity

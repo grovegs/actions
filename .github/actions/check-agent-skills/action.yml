@@ -1,0 +1,18 @@
+name: Check Agent Skills
+description: Checks that every SKILL.md under a directory has a front matter an agent can load, because a skill with a broken name or description is skipped without any error
+
+inputs:
+    path:
+        description: Directory to search for SKILL.md files such as .claude/skills or src/GroveGames.Tween.Unity/Packages/com.grovegames.tween
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: 🔎 Check Agent Skills
+          shell: bash
+          env:
+              SKILLS_PATH: ${{ inputs.path }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/check_agent_skills.sh"
+              "${{ github.action_path }}/scripts/check_agent_skills.sh"
