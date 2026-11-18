@@ -1,5 +1,5 @@
 name: Check Agent Skills
-description: Checks that every SKILL.md under a directory has a front matter an agent can load, because a skill with a broken name or description is skipped without any error
+description: Checks the front matter of every SKILL.md under a directory, because a skill with a broken name or description is skipped without any error
 
 inputs:
     path:

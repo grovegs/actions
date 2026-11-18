@@ -21,9 +21,20 @@ run_unity_tests() {
       ;;
   esac
 
+  stop_unity_tests() {
+    kill -TERM -- "-${unity_pid}" 2> /dev/null || true
+    sleep 5
+    kill -KILL -- "-${unity_pid}" 2> /dev/null || true
+    kill "${tail_pid}" 2> /dev/null || true
+  }
+
   : > "${log_file}"
   tail -n +1 -F "${log_file}" 2> /dev/null &
   tail_pid=$!
+  unity_pid=""
+
+  trap 'stop_unity_tests; exit 130' INT
+  trap 'stop_unity_tests; exit 143' TERM
 
   set -m
   "${UNITY_EDITOR_EXECUTABLE}" \
@@ -41,16 +52,19 @@ run_unity_tests() {
       sleep 10
       kill -KILL -- "-${unity_pid}" 2> /dev/null || true
       wait "${unity_pid}" 2> /dev/null || true
+      trap - INT TERM
       kill "${tail_pid}" 2> /dev/null || true
       wait "${tail_pid}" 2> /dev/null || true
       return 124
     fi
 
-    sleep "${poll_interval}"
+    sleep "${poll_interval}" &
+    wait $! || true
     elapsed=$((elapsed + poll_interval))
   done
 
   wait "${unity_pid}" || exit_code=$?
+  trap - INT TERM
   sleep 1
   kill "${tail_pid}" 2> /dev/null || true
   wait "${tail_pid}" 2> /dev/null || true

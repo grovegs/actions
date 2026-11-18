@@ -73,7 +73,8 @@ fi
 echo "::notice::Using Unity: ${UNITY_EDITOR_PATH}"
 
 RESULTS_DIR="${RUNNER_TEMP}/unity-test-results"
-mkdir -p "${RESULTS_DIR}"
+LOGS_DIR="${RUNNER_TEMP}/unity-test-logs"
+mkdir -p "${RESULTS_DIR}" "${LOGS_DIR}"
 echo "results-dir=${RESULTS_DIR}" >> "${GITHUB_OUTPUT}"
 
 echo "editor-path=${UNITY_EDITOR_EXECUTABLE}" >> "${GITHUB_OUTPUT}"
@@ -87,8 +88,25 @@ case "${TEST_RETRIES}" in
     ;;
 esac
 
+if [ "${#TEST_RETRIES}" -gt 2 ]; then
+  echo "::error::TEST_RETRIES must be below 100, got '${TEST_RETRIES}'"
+  exit 1
+fi
+
+case "${TEST_GRAPHICS:-false}" in
+  true | false) ;;
+  *)
+    echo "::error::TEST_GRAPHICS must be true or false, got '${TEST_GRAPHICS}'"
+    exit 1
+    ;;
+esac
+
 declare -a UNITY_ARGS
-UNITY_ARGS=(-nographics -testCategory "!RequiresGraphics")
+UNITY_ARGS=()
+
+if [ "${TEST_GRAPHICS:-false}" != "true" ]; then
+  UNITY_ARGS+=(-nographics -testCategory "!Graphics")
+fi
 
 if [ -n "${UNITY_ACCELERATOR:-}" ]; then
   ACCELERATOR="${UNITY_ACCELERATOR}"
@@ -114,40 +132,78 @@ list_failed_tests() {
   fi
 
   awk '
-    /<test-case / {
-      name = ""
-      if ($0 ~ /result="Failed"/ && match($0, /fullname="[^"]*"/)) {
-        name = substr($0, RSTART + 10, RLENGTH - 11)
-      }
-    }
-    name != "" && /<message>/ {
-      text = ""
-      line = $0
-      sub(/^.*<message>(<!\[CDATA\[)?/, "", line)
-      while (1) {
-        closed = (line ~ /<\/message>/)
-        sub(/(\]\]>)?<\/message>.*$/, "", line)
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-        if (line != "") {
-          text = (text == "") ? line : text " | " line
-        }
-        if (closed || (getline line) <= 0) {
-          break
-        }
-      }
-      if (length(text) > 300) {
-        text = substr(text, 1, 300) "..."
-      }
-      print name ": " text
-      name = ""
-    }
-    /<\/test-case>/ {
+    BEGIN { RS = ">" }
+    function flush() {
       if (name != "") {
         print name
       }
       name = ""
+      in_failure = 0
+      collecting = 0
     }
-  ' "${report}" | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&amp;/\&/g'
+    {
+      record = $0
+      if (collecting) {
+        text = text ">" record
+        if (record ~ /\]\]$/ || record ~ /<\/message$/) {
+          sub(/^>/, "", text)
+          sub(/^[[:space:]]*<!\[CDATA\[/, "", text)
+          sub(/\]\]$/, "", text)
+          sub(/<\/message$/, "", text)
+          sub(/\]\]$/, "", text)
+          count = split(text, lines, "\n")
+          text = ""
+          for (i = 1; i <= count; i++) {
+            line = lines[i]
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+            if (line != "") {
+              text = (text == "") ? line : text " | " line
+            }
+          }
+          if (length(text) > 300) {
+            text = substr(text, 1, 300) "..."
+          }
+          print name ": " text
+          name = ""
+          in_failure = 0
+          collecting = 0
+        }
+        next
+      }
+      if (record ~ /<test-case[[:space:]]/) {
+        flush()
+        if (record ~ /result="Failed"/ && match(record, /fullname="[^"]*"/)) {
+          name = substr(record, RSTART + 10, RLENGTH - 11)
+        }
+        if (record ~ /\/$/) {
+          flush()
+        }
+        next
+      }
+      if (record ~ /<\/test-case$/) {
+        flush()
+        next
+      }
+      if (name != "" && record ~ /<failure$/) {
+        in_failure = 1
+        next
+      }
+      if (name != "" && record ~ /<\/failure$/) {
+        in_failure = 0
+        next
+      }
+      if (in_failure && record ~ /<message$/) {
+        collecting = 1
+        text = ""
+        next
+      }
+      if (in_failure && record ~ /<message\/$/) {
+        flush()
+        next
+      }
+    }
+    END { flush() }
+  ' "${report}" | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&apos;/'"'"'/g' -e 's/&amp;/\&/g'
 }
 
 get_result_attribute() {
@@ -160,6 +216,7 @@ get_result_attribute() {
 }
 
 FAILED_MODES=0
+RAN_MODES=0
 FAILED_SUMMARY=""
 FAILED_TESTS=""
 
@@ -180,26 +237,31 @@ for mode in "${MODE_ARRAY[@]}"; do
   REPORT="${RESULTS_DIR}/${mode}.xml"
   ATTEMPT=0
   CRASH_RETRIED=0
+  RUN=0
+  RAN_MODES=$((RAN_MODES + 1))
 
   while true; do
     rm -f "${REPORT}"
+    RUN=$((RUN + 1))
+    LOG_FILE="${LOGS_DIR}/${mode}-${RUN}.log"
 
     echo "::group::🧪 ${mode} tests"
     set +e
-    run_unity_tests "${RESULTS_DIR}/${mode}.log" \
+    run_unity_tests "${LOG_FILE}" \
       -runTests \
       -testPlatform "${mode}" \
       -testResults "${REPORT}" \
-      "${UNITY_ARGS[@]}"
+      ${UNITY_ARGS[@]+"${UNITY_ARGS[@]}"}
     EXIT_CODE=$?
     set -e
     echo "::endgroup::"
 
+    TOTAL=$(get_result_attribute "${REPORT}" total)
     PASSED=$(get_result_attribute "${REPORT}" passed)
     FAILED=$(get_result_attribute "${REPORT}" failed)
     SKIPPED=$(get_result_attribute "${REPORT}" skipped)
 
-    if [ ! -f "${REPORT}" ]; then
+    if [ ! -f "${REPORT}" ] || ! grep -q '<test-run ' "${REPORT}"; then
       OUTCOME="error"
     elif [ "${FAILED}" -gt 0 ]; then
       OUTCOME="failed"
@@ -227,6 +289,10 @@ for mode in "${MODE_ARRAY[@]}"; do
     passed)
       RESULT="✅ Passed"
       echo "::notice::${mode}: ${PASSED} passed, ${FAILED} failed, ${SKIPPED} skipped"
+      if [ "${TOTAL}" -eq 0 ]; then
+        RESULT="⚠️ No tests"
+        echo "::warning::${mode}: no tests ran. Check the test mode, the test assemblies and the category filter"
+      fi
       ;;
     failed)
       RESULT="❌ Failed"
@@ -242,7 +308,7 @@ for mode in "${MODE_ARRAY[@]}"; do
     *)
       RESULT="⚠️ Error (exit ${EXIT_CODE})"
       FAILED_MODES=$((FAILED_MODES + 1))
-      echo "::error::${mode} tests did not complete (exit code ${EXIT_CODE}): compile error, license, timeout or editor crash. Log: ${RESULTS_DIR}/${mode}.log"
+      echo "::error::${mode} tests did not complete (exit code ${EXIT_CODE}): compile error, license, timeout or editor crash. Log: ${LOG_FILE}"
       ;;
   esac
 
@@ -262,8 +328,20 @@ ${FAILED_TESTS}
   FAILED_TESTS=""
 done
 
+if [ "${TEST_GRAPHICS:-false}" != "true" ]; then
+  {
+    echo ""
+    echo "The editor ran without a graphics device, so tests in the \`Graphics\` category were not run and are not counted above."
+  } >> "${GITHUB_STEP_SUMMARY}"
+fi
+
 if [ -n "${FAILED_SUMMARY}" ]; then
   echo "${FAILED_SUMMARY}" >> "${GITHUB_STEP_SUMMARY}"
+fi
+
+if [ "${RAN_MODES}" -eq 0 ]; then
+  echo "::error::No test mode ran. TEST_MODES was '${TEST_MODES}'"
+  exit 1
 fi
 
 if [ "${FAILED_MODES}" -gt 0 ]; then

@@ -311,14 +311,17 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 
 **test-unity** - Run Unity project tests with NUnit reports
 
-- Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `retries`, `timeout`, `cache`
+- Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `graphics`, `retries`, `timeout`, `cache`
 - Outputs: `results-dir`
 - Returns the license from `unity-license-key` when the tests end, even when they fail or are cancelled
 - Starts the editor directly with `-username`, `-password` and `-serial`, the same way `build-unity` does, so it does not depend on a Unity CLI session on the runner
 - Lists the failed tests with their messages in the log and the job summary
 - `retries` runs a whole test mode again when tests in it fail
 - Runs a mode once more when the editor crashes before it reports results
-- Runs without a graphics device, so it skips tests in the `RequiresGraphics` category. Put `[Category("RequiresGraphics")]` on a test that renders, or that fails without a GPU for another reason
+- Runs without a graphics device by default, so tests in the `Graphics` category are left out and the job summary says so. Put `[Category("Graphics")]` on a test that renders. Set `graphics: true` on a runner with a GPU to run them
+- Fails when no test mode ran, and warns when a mode ran no tests
+- Stops the editor when the job is cancelled
+- Keeps the editor logs in `$RUNNER_TEMP/unity-test-logs`, outside `results-dir`, because an editor log can hold the license arguments
 
 ### Format Actions
 
@@ -383,10 +386,11 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - `auto` reads the commits since the previous release: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps major from 1.0.0 on and minor before it, `feat:` bumps minor, and anything else bumps patch. With `auto-major: false`, breaking changes bump minor and major is only bumped when chosen.
 - Choosing a lower bump than the commits suggest logs a warning. Release commits (`chore: release version …`) are ignored.
 
-**check-agent-skills** - Check that every `SKILL.md` under a directory has a front matter an agent can load
+**check-agent-skills** - Check the front matter of every `SKILL.md` under a directory
 
 - Inputs: `path`
-- A skill is skipped without any error when its front matter does not parse. The check fails on a name that does not match its folder, an empty description, and an unquoted description that holds a colon followed by a space.
+- A skill is skipped without any error when its front matter does not load, so the check fails on what usually breaks one: a missing or unclosed front matter, a line that is not `key: value`, a tab indent, a quoted value that does not close, an unquoted value with a colon followed by a space, a name that does not match its folder, and a missing or empty description.
+- It reads the front matter line by line and is not a full YAML parser. Nested values and lists are not checked.
 
 **check-pull-request-title** - Check that a pull request title follows Conventional Commits
 
