@@ -263,6 +263,7 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 **setup-unity** - Install the Unity CLI, Unity editor and modules
 
 - Inputs: `project`, `unity-version`, `unity-modules`, `unity-child-modules`, `unity-path`, `unity-cli-channel`, `cache`
+- Installs the Unity CLI from the `stable` channel. A CLI that is already on the runner, as on a self-hosted one, is updated to the newest release on that channel
 - Outputs: `unity-path`, `unity-executable`, `unity-version`
 - Supports: Linux, macOS with iOS/Android modules
 
