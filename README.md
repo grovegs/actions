@@ -378,6 +378,11 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - `auto` reads the commits since the previous release: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps major from 1.0.0 on and minor before it, `feat:` bumps minor, and anything else bumps patch. With `auto-major: false`, breaking changes bump minor and major is only bumped when chosen.
 - Choosing a lower bump than the commits suggest logs a warning. Release commits (`chore: release version …`) are ignored.
 
+**check-agent-skills** - Check that every `SKILL.md` under a directory has a front matter an agent can load
+
+- Inputs: `path`
+- A skill is skipped without any error when its front matter does not parse. The check fails on a name that does not match its folder, an empty description, and an unquoted description that holds a colon followed by a space.
+
 **check-pull-request-title** - Check that a pull request title follows Conventional Commits
 
 - Inputs: `title`
