@@ -123,13 +123,23 @@ list_failed_tests() {
       }
     }
     name != "" && /<message>/ {
-      text = $0
-      sub(/^.*<message>(<!\[CDATA\[)?/, "", text)
-      while (text ~ /^[[:space:]]*$/ && (getline line) > 0) {
-        text = line
+      text = ""
+      line = $0
+      sub(/^.*<message>(<!\[CDATA\[)?/, "", line)
+      while (1) {
+        closed = (line ~ /<\/message>/)
+        sub(/(\]\]>)?<\/message>.*$/, "", line)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+        if (line != "") {
+          text = (text == "") ? line : text " | " line
+        }
+        if (closed || (getline line) <= 0) {
+          break
+        }
       }
-      sub(/(\]\]>)?<\/message>.*$/, "", text)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
+      if (length(text) > 300) {
+        text = substr(text, 1, 300) "..."
+      }
       print name ": " text
       name = ""
     }
