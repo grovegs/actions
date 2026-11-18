@@ -318,7 +318,7 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Lists the failed tests with their messages in the log and the job summary
 - `retries` runs a whole test mode again when tests in it fail
 - Runs a mode once more when the editor crashes before it reports results
-- Runs without a graphics device by default, so tests in the `RequiresGraphics` category are left out and the job summary says so. Put `[Category("RequiresGraphics")]` on a test that renders. Set `graphics: true` on a runner with a GPU to run them
+- Runs without a graphics device by default, so tests in the `Graphics` category are left out and the job summary says so. Put `[Category("Graphics")]` on a test that renders. Set `graphics: true` on a runner with a GPU to run them
 - Fails when no test mode ran, and warns when a mode ran no tests
 - Stops the editor when the job is cancelled
 - Keeps the editor logs in `$RUNNER_TEMP/unity-test-logs`, outside `results-dir`, because an editor log can hold the license arguments

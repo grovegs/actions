@@ -30,7 +30,7 @@ inputs:
         required: false
         default: ""
     graphics:
-        description: Set to true when the runner has a graphics device. The editor then starts without -nographics and tests in the RequiresGraphics category run. By default they are left out.
+        description: Set to true when the runner has a graphics device. The editor then starts without -nographics and tests in the Graphics category run. By default they are left out.
         required: false
         default: "false"
     retries:

@@ -105,7 +105,7 @@ declare -a UNITY_ARGS
 UNITY_ARGS=()
 
 if [ "${TEST_GRAPHICS:-false}" != "true" ]; then
-  UNITY_ARGS+=(-nographics -testCategory "!RequiresGraphics")
+  UNITY_ARGS+=(-nographics -testCategory "!Graphics")
 fi
 
 if [ -n "${UNITY_ACCELERATOR:-}" ]; then
@@ -331,7 +331,7 @@ done
 if [ "${TEST_GRAPHICS:-false}" != "true" ]; then
   {
     echo ""
-    echo "The editor ran without a graphics device, so tests in the \`RequiresGraphics\` category were not run and are not counted above."
+    echo "The editor ran without a graphics device, so tests in the \`Graphics\` category were not run and are not counted above."
   } >> "${GITHUB_STEP_SUMMARY}"
 fi
 

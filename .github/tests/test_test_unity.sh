@@ -97,9 +97,9 @@ expect() {
 
 expect "pass" 0 1 "EditMode: 3 passed" TEST_MODES=EditMode
 expect "both modes" 0 2 "PlayMode: 3 passed" TEST_MODES="EditMode, PlayMode"
-expect "license arguments" 0 1 "-nographics -testCategory !RequiresGraphics -username a@b.c -password secret -serial KEY" TEST_MODES=EditMode UNITY_EMAIL=a@b.c UNITY_PASSWORD=secret UNITY_LICENSE_KEY=KEY
+expect "license arguments" 0 1 "-nographics -testCategory !Graphics -username a@b.c -password secret -serial KEY" TEST_MODES=EditMode UNITY_EMAIL=a@b.c UNITY_PASSWORD=secret UNITY_LICENSE_KEY=KEY
 expect "graphics on leaves the filter out" 0 1 "-testResults ${WORK}/temp/unity-test-results/EditMode.xml$" TEST_MODES=EditMode TEST_GRAPHICS=true
-expect "summary names the skipped category" 0 1 "RequiresGraphics" TEST_MODES=EditMode
+expect "summary names the skipped category" 0 1 "Graphics" TEST_MODES=EditMode
 expect "failure lists the test and its message" 1 1 "Game.Tests.Breaks: Expected: 1 | But was:  2" TEST_MODES=EditMode FAKE_BEHAVIOR=fail
 expect "retry passes" 0 2 "retry 1 of 1" TEST_MODES=EditMode TEST_RETRIES=1 FAKE_BEHAVIOR=fail-once
 expect "retries run out" 1 3 "EditMode: 1 test(s) failed" TEST_MODES=EditMode TEST_RETRIES=2 FAKE_BEHAVIOR=fail
