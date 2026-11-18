@@ -98,7 +98,7 @@ if [ -n "${TEST_TIMEOUT:-}" ]; then
 fi
 
 declare -a UNITY_ARGS
-UNITY_ARGS=(-nographics)
+UNITY_ARGS=(-nographics -testCategory "!RequiresGraphics")
 
 if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
   UNITY_ARGS+=(

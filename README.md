@@ -314,7 +314,8 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `retries`, `timeout`, `cache`
 - Outputs: `results-dir`
 - Returns the license from `unity-license-key` when the tests end, even when they fail or are cancelled
-- Lists the failed tests in the log and the job summary
+- Lists the failed tests with their messages in the log and the job summary
+- Runs without a graphics device, so it skips tests in the `RequiresGraphics` category. Put `[Category("RequiresGraphics")]` on a test that renders, or that fails without a GPU for another reason
 - Signs an expired Unity CLI session out before the run when `unity-license-key` is set. The CLI hands its session to the editor, and an expired one makes license activation fail on a runner that was signed in once
 
 ### Format Actions
