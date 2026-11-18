@@ -296,9 +296,13 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 **build-unity** - Build Unity projects using Build Profiles
 
 - Inputs: `project`, `version`, `platform`, `configuration`, `filename`, `profile-name`, `unity-email`, `unity-password`, `unity-license-key`, `unity-path`, `android-keystore`, `android-keystore-user`, `android-keystore-password`, `android-format`, `ios-team-id`, `ios-certificate`, `ios-certificate-password`, `ios-provisioning-profile`, `ios-export-method`, `build-method`, `cache`, `unity-accelerator`
-- Outputs: `file`
+- Outputs: `file`, `provenance`
 - Supports: Android (APK/AAB), iOS (IPA)
 - Returns the Unity license when the build ends, even when it fails or is cancelled
+- Runs the build with `unity build` from the Unity CLI, version 1.0 or newer, which `setup-unity` installs. The build method is `BuildAndroid.Build` or `BuildiOS.Build`, or the one given in `build-method`
+- Passes `-username`, `-password` and `-serial` to the editor, so it does not depend on a Unity CLI session on the runner
+- `timeout` stops the editor and fails the build. A cancelled job stops the Unity CLI and the editor too
+- `provenance` is a file the Unity CLI writes beside the build. It records the editor version, the packages, the git revision and the outcome
 
 ### Test Actions
 
