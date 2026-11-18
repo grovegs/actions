@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=run_unity_tests.sh
+source "${GITHUB_ACTION_PATH}/scripts/run_unity_tests.sh"
+
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
   exit 1
@@ -18,11 +21,6 @@ fi
 
 if [ ! -f "${PROJECT_DIR}/ProjectSettings/ProjectSettings.asset" ]; then
   echo "::error::Not a valid Unity project. ProjectSettings/ProjectSettings.asset not found"
-  exit 1
-fi
-
-if ! command -v unity > /dev/null 2>&1; then
-  echo "::error::Unity CLI is not installed. Run setup-unity before test-unity"
   exit 1
 fi
 
@@ -56,49 +54,49 @@ if [ -n "${UNITY_EDITOR_PATH}" ] && [ ! -e "${UNITY_EDITOR_PATH}" ]; then
   exit 1
 fi
 
-if [ -n "${UNITY_LICENSE_KEY:-}" ] && [ -z "${UNITY_EDITOR_PATH}" ]; then
-  echo "::error::Unity editor not found. Run setup-unity before test-unity or set unity-path so the license can be returned"
+if [ -z "${UNITY_EDITOR_PATH}" ]; then
+  echo "::error::Unity editor not found. Run setup-unity before test-unity or set unity-path"
   exit 1
 fi
 
-echo "::notice::Using Unity: ${UNITY_EDITOR_PATH:-resolved by Unity CLI from ProjectVersion.txt}"
+if [ "$(uname)" = "Darwin" ]; then
+  UNITY_EDITOR_EXECUTABLE="${UNITY_EDITOR_PATH}/Contents/MacOS/Unity"
+else
+  UNITY_EDITOR_EXECUTABLE="${UNITY_EDITOR_PATH}"
+fi
+
+if [ ! -x "${UNITY_EDITOR_EXECUTABLE}" ]; then
+  echo "::error::Unity executable not found: ${UNITY_EDITOR_EXECUTABLE}"
+  exit 1
+fi
+
+echo "::notice::Using Unity: ${UNITY_EDITOR_PATH}"
 
 RESULTS_DIR="${RUNNER_TEMP}/unity-test-results"
 mkdir -p "${RESULTS_DIR}"
 echo "results-dir=${RESULTS_DIR}" >> "${GITHUB_OUTPUT}"
 
-if [ -n "${UNITY_EDITOR_PATH}" ]; then
-  if [ "$(uname)" = "Darwin" ]; then
-    echo "editor-path=${UNITY_EDITOR_PATH}/Contents/MacOS/Unity" >> "${GITHUB_OUTPUT}"
-  else
-    echo "editor-path=${UNITY_EDITOR_PATH}" >> "${GITHUB_OUTPUT}"
-  fi
-fi
+echo "editor-path=${UNITY_EDITOR_EXECUTABLE}" >> "${GITHUB_OUTPUT}"
 
-declare -a TEST_ARGS
-TEST_ARGS=(
-  "${PROJECT_DIR}"
-  --non-interactive
-  --no-banner
-  --format github
-  --report-format nunit,junit
-  --retries "${TEST_RETRIES:-0}"
-)
+TEST_RETRIES="${TEST_RETRIES:-0}"
 
-if [ -n "${UNITY_EDITOR_PATH}" ]; then
-  TEST_ARGS+=(--editor-path "${UNITY_EDITOR_PATH}")
-fi
-
-if [ -n "${UNITY_ACCELERATOR:-}" ]; then
-  TEST_ARGS+=(--accelerator "${UNITY_ACCELERATOR}")
-fi
-
-if [ -n "${TEST_TIMEOUT:-}" ]; then
-  TEST_ARGS+=(--timeout "${TEST_TIMEOUT}")
-fi
+case "${TEST_RETRIES}" in
+  "" | *[!0-9]*)
+    echo "::error::TEST_RETRIES must be a whole number, got '${TEST_RETRIES}'"
+    exit 1
+    ;;
+esac
 
 declare -a UNITY_ARGS
 UNITY_ARGS=(-nographics -testCategory "!RequiresGraphics")
+
+if [ -n "${UNITY_ACCELERATOR:-}" ]; then
+  ACCELERATOR="${UNITY_ACCELERATOR}"
+  if [[ "${ACCELERATOR}" != *:* ]]; then
+    ACCELERATOR="${ACCELERATOR}:10080"
+  fi
+  UNITY_ARGS+=(-EnableCacheServer -cacheServerEndpoint "${ACCELERATOR}")
+fi
 
 if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
   UNITY_ARGS+=(
@@ -152,17 +150,6 @@ list_failed_tests() {
   ' "${report}" | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&amp;/\&/g'
 }
 
-sign_out_expired_session() {
-  local status
-
-  status=$(unity auth status --format json 2> /dev/null || true)
-
-  if printf '%s' "${status}" | grep -q '"sessionState"[[:space:]]*:[[:space:]]*"expired"'; then
-    echo "::notice::The Unity CLI session on this runner has expired. Signing it out so the editor activates with the license key"
-    unity auth logout --yes > /dev/null 2>&1 || echo "::warning::Could not sign out the expired Unity CLI session"
-  fi
-}
-
 get_result_attribute() {
   local report="$1"
   local attribute="$2"
@@ -175,10 +162,6 @@ get_result_attribute() {
 FAILED_MODES=0
 FAILED_SUMMARY=""
 FAILED_TESTS=""
-
-if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
-  sign_out_expired_session
-fi
 
 {
   echo "### 🧪 Unity Test Results"
@@ -195,28 +178,50 @@ for mode in "${MODE_ARRAY[@]}"; do
   fi
 
   REPORT="${RESULTS_DIR}/${mode}.xml"
+  ATTEMPT=0
 
-  echo "::group::🧪 ${mode} tests"
-  set +e
-  unity test "${TEST_ARGS[@]}" \
-    --mode "${mode}" \
-    --output "${REPORT}" \
-    --junit-output "${RESULTS_DIR}/${mode}.junit.xml" \
-    -- "${UNITY_ARGS[@]}"
-  EXIT_CODE=$?
-  set -e
-  echo "::endgroup::"
+  while true; do
+    rm -f "${REPORT}"
 
-  PASSED=$(get_result_attribute "${REPORT}" passed)
-  FAILED=$(get_result_attribute "${REPORT}" failed)
-  SKIPPED=$(get_result_attribute "${REPORT}" skipped)
+    echo "::group::🧪 ${mode} tests"
+    set +e
+    run_unity_tests "${RESULTS_DIR}/${mode}.log" \
+      -runTests \
+      -testPlatform "${mode}" \
+      -testResults "${REPORT}" \
+      "${UNITY_ARGS[@]}"
+    EXIT_CODE=$?
+    set -e
+    echo "::endgroup::"
 
-  case "${EXIT_CODE}" in
-    0)
+    PASSED=$(get_result_attribute "${REPORT}" passed)
+    FAILED=$(get_result_attribute "${REPORT}" failed)
+    SKIPPED=$(get_result_attribute "${REPORT}" skipped)
+
+    if [ ! -f "${REPORT}" ]; then
+      OUTCOME="error"
+    elif [ "${FAILED}" -gt 0 ]; then
+      OUTCOME="failed"
+    elif [ "${EXIT_CODE}" -eq 0 ]; then
+      OUTCOME="passed"
+    else
+      OUTCOME="error"
+    fi
+
+    if [ "${OUTCOME}" != "failed" ] || [ "${ATTEMPT}" -ge "${TEST_RETRIES}" ]; then
+      break
+    fi
+
+    ATTEMPT=$((ATTEMPT + 1))
+    echo "::warning::${mode}: ${FAILED} test(s) failed. Running the mode again (retry ${ATTEMPT} of ${TEST_RETRIES})"
+  done
+
+  case "${OUTCOME}" in
+    passed)
       RESULT="✅ Passed"
       echo "::notice::${mode}: ${PASSED} passed, ${FAILED} failed, ${SKIPPED} skipped"
       ;;
-    8)
+    failed)
       RESULT="❌ Failed"
       FAILED_MODES=$((FAILED_MODES + 1))
       echo "::error::${mode}: ${FAILED} test(s) failed (${PASSED} passed, ${SKIPPED} skipped)"
@@ -230,13 +235,13 @@ for mode in "${MODE_ARRAY[@]}"; do
     *)
       RESULT="⚠️ Error (exit ${EXIT_CODE})"
       FAILED_MODES=$((FAILED_MODES + 1))
-      echo "::error::${mode} tests did not complete (exit code ${EXIT_CODE}): compile error, license, timeout or editor crash"
+      echo "::error::${mode} tests did not complete (exit code ${EXIT_CODE}): compile error, license, timeout or editor crash. Log: ${RESULTS_DIR}/${mode}.log"
       ;;
   esac
 
   echo "| ${mode} | ${RESULT} | ${PASSED} | ${FAILED} | ${SKIPPED} |" >> "${GITHUB_STEP_SUMMARY}"
 
-  if [ "${EXIT_CODE}" -eq 8 ] && [ -n "${FAILED_TESTS:-}" ]; then
+  if [ "${OUTCOME}" = "failed" ] && [ -n "${FAILED_TESTS:-}" ]; then
     FAILED_SUMMARY="${FAILED_SUMMARY}
 <details><summary>Failed ${mode} tests</summary>
 

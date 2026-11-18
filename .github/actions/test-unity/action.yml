@@ -1,5 +1,5 @@
 name: Test Unity
-description: Run EditMode and PlayMode tests for a Unity project with the Unity CLI.
+description: Run EditMode and PlayMode tests for a Unity project. Starts the editor directly, the same way build-unity does.
 
 inputs:
     project:
@@ -10,7 +10,7 @@ inputs:
         required: false
         default: EditMode,PlayMode
     unity-path:
-        description: Custom directory for Unity installations. Defaults to the editor installed by setup-unity or registered with the Unity CLI.
+        description: Custom directory for Unity installations. Defaults to the editor installed by setup-unity.
         required: false
         default: ""
     unity-email:
@@ -30,7 +30,7 @@ inputs:
         required: false
         default: ""
     retries:
-        description: Number of times to re-run failing tests. Tests that pass on a retry are reported as flaky.
+        description: Number of times to run a test mode again when tests in it fail.
         required: false
         default: "0"
     timeout:
@@ -44,7 +44,7 @@ inputs:
 
 outputs:
     results-dir:
-        description: Directory containing the NUnit and JUnit test reports
+        description: Directory containing the NUnit test reports and the editor logs
         value: ${{ steps.test-project.outputs.results-dir }}
 
 runs:
