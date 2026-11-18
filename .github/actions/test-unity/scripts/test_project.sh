@@ -111,10 +111,35 @@ fi
 list_failed_tests() {
   local report="$1"
 
-  grep -o '<test-case [^>]*>' "${report}" 2> /dev/null \
-    | grep 'result="Failed"' \
-    | sed -n 's/.* fullname="\([^"]*\)".*/\1/p' \
-    | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&amp;/\&/g' || true
+  if [ ! -f "${report}" ]; then
+    return 0
+  fi
+
+  awk '
+    /<test-case / {
+      name = ""
+      if ($0 ~ /result="Failed"/ && match($0, /fullname="[^"]*"/)) {
+        name = substr($0, RSTART + 10, RLENGTH - 11)
+      }
+    }
+    name != "" && /<message>/ {
+      text = $0
+      sub(/^.*<message>(<!\[CDATA\[)?/, "", text)
+      while (text ~ /^[[:space:]]*$/ && (getline line) > 0) {
+        text = line
+      }
+      sub(/(\]\]>)?<\/message>.*$/, "", text)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
+      print name ": " text
+      name = ""
+    }
+    /<\/test-case>/ {
+      if (name != "") {
+        print name
+      }
+      name = ""
+    }
+  ' "${report}" | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e 's/&amp;/\&/g'
 }
 
 sign_out_expired_session() {
