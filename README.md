@@ -315,13 +315,15 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Inputs: `project`, `test-modes`, `unity-path`, `unity-email`, `unity-password`, `unity-license-key`, `unity-accelerator`, `graphics`, `retries`, `timeout`, `cache`
 - Outputs: `results-dir`
 - Returns the license from `unity-license-key` when the tests end, even when they fail or are cancelled
-- Starts the editor directly with `-username`, `-password` and `-serial`, the same way `build-unity` does, so it does not depend on a Unity CLI session on the runner
+- Runs the tests with `unity test` from the Unity CLI, version 1.0 or newer, which `setup-unity` installs
+- Passes `-username`, `-password` and `-serial` to the editor, the same way `build-unity` does, so it does not depend on a Unity CLI session on the runner
 - Lists the failed tests with their messages in the log and the job summary
-- `retries` runs a whole test mode again when tests in it fail
-- Runs a mode once more when the editor crashes before it reports results
+- `retries` runs only the failed tests again, up to 10 times. A test that passes on a retry is reported as flaky in the log and the job summary, and does not fail the run. Each attempt writes its own report beside the first
+- Runs a mode once more when the editor stops before it reports results, unless the log shows a compile error
+- `timeout` stops the editor and fails the mode when a run takes longer
 - Runs without a graphics device by default, so tests in the `Graphics` category are left out and the job summary says so. Put `[Category("Graphics")]` on a test that renders. Set `graphics: true` on a runner with a GPU to run them
 - Fails when no test mode ran, and warns when a mode ran no tests
-- Stops the editor when the job is cancelled
+- Stops the Unity CLI and the editor when the job is cancelled
 - Keeps the editor logs in `$RUNNER_TEMP/unity-test-logs`, outside `results-dir`, because an editor log can hold the license arguments
 
 ### Format Actions
