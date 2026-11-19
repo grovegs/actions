@@ -82,6 +82,9 @@ outputs:
     file:
         description: The path to the exported project file.
         value: ${{ steps.build-project.outputs.file }}
+    provenance:
+        description: The path to the build provenance file written by the Unity CLI. It records the editor version, the packages, the git revision and the outcome.
+        value: ${{ steps.build-project.outputs.provenance }}
 
 runs:
     using: composite
@@ -139,7 +142,7 @@ runs:
               CACHE_MATCHED_KEY: ${{ steps.cache-unity-library.outputs.cache-matched-key }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/build_project.sh"
-              "${{ github.action_path }}/scripts/build_project.sh"
+              exec "${{ github.action_path }}/scripts/build_project.sh"
 
         - name: 🔓 Return Unity License
           if: always() && steps.build-project.outputs.editor-path != ''

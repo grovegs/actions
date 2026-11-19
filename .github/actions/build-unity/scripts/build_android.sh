@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck source=run_unity.sh
-source "${GITHUB_ACTION_PATH}/scripts/run_unity.sh"
+# shellcheck source=run_unity_build.sh
+source "${GITHUB_ACTION_PATH}/scripts/run_unity_build.sh"
 
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
@@ -132,7 +132,7 @@ fi
 } >&2
 
 if [ -n "${BUILD_METHOD:-}" ]; then
-  BUILD_METHOD_ARGS=("-executeMethod" "${BUILD_METHOD}")
+  BUILD_METHOD_NAME="${BUILD_METHOD}"
   echo "::notice::Using custom build method: ${BUILD_METHOD}"
 else
   BUILD_SCRIPT_DEST="${PROJECT_DIR}/Assets/Editor/BuildAndroid.cs"
@@ -149,7 +149,7 @@ else
     exit 1
   fi
 
-  BUILD_METHOD_ARGS=("-executeMethod" "BuildAndroid.Build")
+  BUILD_METHOD_NAME="BuildAndroid.Build"
   echo "::notice::Using default build method: BuildAndroid.Build"
 fi
 
@@ -159,18 +159,13 @@ mkdir -p "$(dirname "${OUTPUT_FILE}")" || {
 }
 
 LOG_FILE="${RUNNER_TEMP}/unity-build-android.log"
+BUILD_PROVENANCE_FILE="${PLATFORM_BUILDS_DIR}/${FILENAME}.provenance.json"
 
 declare -a UNITY_ARGS
 UNITY_ARGS=(
-  -nographics
   -username "${UNITY_EMAIL}"
   -password "${UNITY_PASSWORD}"
   -serial "${UNITY_LICENSE_KEY}"
-  -buildTarget Android
-)
-
-UNITY_ARGS+=("${BUILD_METHOD_ARGS[@]}")
-UNITY_ARGS+=(
   -outputPath "${OUTPUT_FILE}"
   -versionName "${VERSION}"
   -buildConfig "${CONFIGURATION}"
@@ -183,7 +178,7 @@ UNITY_ARGS+=(
 )
 
 echo "::notice::Starting Unity build..."
-if ! run_unity "${LOG_FILE}" "${UNITY_ARGS[@]}"; then
+if ! run_unity_build Android "${BUILD_METHOD_NAME}" "${LOG_FILE}" "${UNITY_ARGS[@]}"; then
   echo "::error::Unity build failed for Android"
   echo "::error::Check the Unity log above or ${LOG_FILE} for specific error details"
 
@@ -202,4 +197,9 @@ fi
 
 FILE_SIZE=$(stat -f%z "${OUTPUT_FILE}" 2> /dev/null || stat -c%s "${OUTPUT_FILE}" 2> /dev/null || echo "unknown")
 echo "::notice::Build completed successfully: ${OUTPUT_FILE} (${FILE_SIZE} bytes)"
-echo "file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"
+{
+  echo "file=${OUTPUT_FILE}"
+  if [ -f "${BUILD_PROVENANCE_FILE}" ]; then
+    echo "provenance=${BUILD_PROVENANCE_FILE}"
+  fi
+} >> "${GITHUB_OUTPUT}"

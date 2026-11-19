@@ -41,14 +41,35 @@ find_unity_cli() {
   return 1
 }
 
+update_unity_cli() {
+  local unity_cli="$1"
+  local before
+  local after
+
+  before=$("${unity_cli}" --version 2> /dev/null || echo "unknown")
+
+  if ! "${unity_cli}" self-update --yes --channel "${UNITY_CLI_CHANNEL}" --quiet --no-banner < /dev/null > /dev/null; then
+    echo "::warning::Could not update Unity CLI ${before} on the ${UNITY_CLI_CHANNEL} channel. Continuing with the installed version"
+    return 0
+  fi
+
+  after=$("${unity_cli}" --version 2> /dev/null || echo "unknown")
+
+  if [ "${before}" = "${after}" ]; then
+    echo "::notice::Unity CLI already installed: ${after}"
+  else
+    echo "::notice::Updated Unity CLI from ${before} to ${after}"
+  fi
+}
+
 if command -v unity > /dev/null 2>&1; then
-  echo "::notice::Unity CLI already installed: $(unity --version)"
+  update_unity_cli "$(command -v unity)"
   exit 0
 fi
 
 if UNITY_CLI=$(find_unity_cli); then
   dirname "${UNITY_CLI}" >> "${GITHUB_PATH}"
-  echo "::notice::Unity CLI already installed: $("${UNITY_CLI}" --version)"
+  update_unity_cli "${UNITY_CLI}"
   exit 0
 fi
 
@@ -64,7 +85,13 @@ if ! curl --fail --location --silent --show-error --retry 3 --output "${INSTALLE
   exit 1
 fi
 
-if ! UNITY_CLI_CHANNEL="${UNITY_CLI_CHANNEL}" bash "${INSTALLER_FILE}"; then
+INSTALLER_CHANNEL="${UNITY_CLI_CHANNEL}"
+
+if [ "${INSTALLER_CHANNEL}" = "stable" ]; then
+  INSTALLER_CHANNEL=""
+fi
+
+if ! UNITY_CLI_CHANNEL="${INSTALLER_CHANNEL}" bash "${INSTALLER_FILE}"; then
   echo "::error::Unity CLI installation failed"
   exit 1
 fi

@@ -34,7 +34,7 @@ inputs:
         required: false
         default: "false"
     retries:
-        description: Number of times to run a test mode again when tests in it fail.
+        description: Number of times to run the failed tests again, from 0 to 10. A test that passes on a retry is reported as flaky and does not fail the run.
         required: false
         default: "0"
     timeout:
@@ -90,7 +90,7 @@ runs:
               TEST_TIMEOUT: ${{ inputs.timeout }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/test_project.sh"
-              "${{ github.action_path }}/scripts/test_project.sh"
+              exec "${{ github.action_path }}/scripts/test_project.sh"
 
         - name: 🔓 Return Unity License
           if: always() && inputs.unity-license-key != '' && steps.test-project.outputs.editor-path != ''

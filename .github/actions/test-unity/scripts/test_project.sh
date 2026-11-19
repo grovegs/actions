@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck source=run_unity_tests.sh
-source "${GITHUB_ACTION_PATH}/scripts/run_unity_tests.sh"
-
 if [ -z "${PROJECT_DIR:-}" ]; then
   echo "::error::PROJECT_DIR environment variable is required"
   exit 1
@@ -21,6 +18,11 @@ fi
 
 if [ ! -f "${PROJECT_DIR}/ProjectSettings/ProjectSettings.asset" ]; then
   echo "::error::Not a valid Unity project. ProjectSettings/ProjectSettings.asset not found"
+  exit 1
+fi
+
+if ! command -v unity > /dev/null 2>&1; then
+  echo "::error::Unity CLI is not installed. Run setup-unity before test-unity"
   exit 1
 fi
 
@@ -70,7 +72,7 @@ if [ ! -x "${UNITY_EDITOR_EXECUTABLE}" ]; then
   exit 1
 fi
 
-echo "::notice::Using Unity: ${UNITY_EDITOR_PATH}"
+echo "::notice::Using Unity: ${UNITY_EDITOR_PATH} with Unity CLI $(unity --version 2> /dev/null || echo unknown)"
 
 RESULTS_DIR="${RUNNER_TEMP}/unity-test-results"
 LOGS_DIR="${RUNNER_TEMP}/unity-test-logs"
@@ -88,10 +90,19 @@ case "${TEST_RETRIES}" in
     ;;
 esac
 
-if [ "${#TEST_RETRIES}" -gt 2 ]; then
-  echo "::error::TEST_RETRIES must be below 100, got '${TEST_RETRIES}'"
+if [ "${#TEST_RETRIES}" -gt 2 ] || [ "${TEST_RETRIES}" -gt 10 ]; then
+  echo "::error::TEST_RETRIES must be 10 or lower, got '${TEST_RETRIES}'"
   exit 1
 fi
+
+TEST_TIMEOUT="${TEST_TIMEOUT:-}"
+
+case "${TEST_TIMEOUT}" in
+  *[!0-9]*)
+    echo "::error::TEST_TIMEOUT must be a whole number of seconds, got '${TEST_TIMEOUT}'"
+    exit 1
+    ;;
+esac
 
 case "${TEST_GRAPHICS:-false}" in
   true | false) ;;
@@ -101,19 +112,26 @@ case "${TEST_GRAPHICS:-false}" in
     ;;
 esac
 
+declare -a CLI_ARGS
+CLI_ARGS=(--editor-path "${UNITY_EDITOR_PATH}" --non-interactive --no-banner)
+
+if [ -n "${TEST_TIMEOUT}" ] && [ "${TEST_TIMEOUT}" -gt 0 ]; then
+  CLI_ARGS+=(--timeout "${TEST_TIMEOUT}")
+fi
+
+if [ "${TEST_RETRIES}" -gt 0 ]; then
+  CLI_ARGS+=(--retries "${TEST_RETRIES}")
+fi
+
+if [ -n "${UNITY_ACCELERATOR:-}" ]; then
+  CLI_ARGS+=(--accelerator "${UNITY_ACCELERATOR}")
+fi
+
 declare -a UNITY_ARGS
 UNITY_ARGS=()
 
 if [ "${TEST_GRAPHICS:-false}" != "true" ]; then
   UNITY_ARGS+=(-nographics -testCategory "!Graphics")
-fi
-
-if [ -n "${UNITY_ACCELERATOR:-}" ]; then
-  ACCELERATOR="${UNITY_ACCELERATOR}"
-  if [[ "${ACCELERATOR}" != *:* ]]; then
-    ACCELERATOR="${ACCELERATOR}:10080"
-  fi
-  UNITY_ARGS+=(-EnableCacheServer -cacheServerEndpoint "${ACCELERATOR}")
 fi
 
 if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
@@ -123,6 +141,71 @@ if [ -n "${UNITY_LICENSE_KEY:-}" ]; then
     -serial "${UNITY_LICENSE_KEY}"
   )
 fi
+
+CLI_PID=""
+
+stop_unity_tests() {
+  local signal="$1"
+
+  trap - INT TERM
+
+  if [ -n "${CLI_PID}" ] && kill -0 "${CLI_PID}" 2> /dev/null; then
+    echo "::warning::Cancelled. Stopping the Unity CLI and the editor it started"
+    kill "-${signal}" "${CLI_PID}" 2> /dev/null || true
+    wait "${CLI_PID}" 2> /dev/null || true
+  fi
+
+  if [ "${signal}" = "INT" ]; then
+    exit 130
+  fi
+
+  exit 143
+}
+
+trap 'stop_unity_tests INT' INT
+trap 'stop_unity_tests TERM' TERM
+
+run_unity_cli() {
+  local mode="$1"
+  local report="$2"
+  local log_file="$3"
+  local exit_code=0
+
+  unity test "${PROJECT_DIR}" \
+    --mode "${mode}" \
+    --output "${report}" \
+    "${CLI_ARGS[@]}" \
+    -- \
+    -logFile "${log_file}" \
+    ${UNITY_ARGS[@]+"${UNITY_ARGS[@]}"} &
+  CLI_PID=$!
+
+  wait "${CLI_PID}" || exit_code=$?
+  CLI_PID=""
+
+  return "${exit_code}"
+}
+
+has_compile_errors() {
+  local log_file="$1"
+
+  [ -f "${log_file}" ] && grep -q -E "error CS[0-9]+|Scripts have compiler errors" "${log_file}"
+}
+
+get_last_report() {
+  local report="$1"
+  local attempt="$((TEST_RETRIES + 1))"
+
+  while [ "${attempt}" -gt 1 ]; do
+    if [ -f "${report%.xml}.attempt-${attempt}.xml" ]; then
+      echo "${report%.xml}.attempt-${attempt}.xml"
+      return 0
+    fi
+    attempt=$((attempt - 1))
+  done
+
+  echo "${report}"
+}
 
 list_failed_tests() {
   local report="$1"
@@ -219,6 +302,7 @@ FAILED_MODES=0
 RAN_MODES=0
 FAILED_SUMMARY=""
 FAILED_TESTS=""
+FAILED_TITLE=""
 
 {
   echo "### 🧪 Unity Test Results"
@@ -235,54 +319,51 @@ for mode in "${MODE_ARRAY[@]}"; do
   fi
 
   REPORT="${RESULTS_DIR}/${mode}.xml"
-  ATTEMPT=0
-  CRASH_RETRIED=0
+  RERAN=0
   RUN=0
   RAN_MODES=$((RAN_MODES + 1))
 
   while true; do
-    rm -f "${REPORT}"
+    rm -f "${REPORT}" "${REPORT%.xml}".attempt-*.xml "${REPORT%.xml}.retries.json"
     RUN=$((RUN + 1))
     LOG_FILE="${LOGS_DIR}/${mode}-${RUN}.log"
+    rm -f "${LOG_FILE}"
 
     echo "::group::🧪 ${mode} tests"
-    set +e
-    run_unity_tests "${LOG_FILE}" \
-      -runTests \
-      -testPlatform "${mode}" \
-      -testResults "${REPORT}" \
-      ${UNITY_ARGS[@]+"${UNITY_ARGS[@]}"}
-    EXIT_CODE=$?
-    set -e
+    EXIT_CODE=0
+    run_unity_cli "${mode}" "${REPORT}" "${LOG_FILE}" || EXIT_CODE=$?
     echo "::endgroup::"
 
+    LAST_REPORT=$(get_last_report "${REPORT}")
     TOTAL=$(get_result_attribute "${REPORT}" total)
-    PASSED=$(get_result_attribute "${REPORT}" passed)
-    FAILED=$(get_result_attribute "${REPORT}" failed)
     SKIPPED=$(get_result_attribute "${REPORT}" skipped)
+    FIRST_FAILED=$(get_result_attribute "${REPORT}" failed)
+    FAILED=$(get_result_attribute "${LAST_REPORT}" failed)
+    FLAKY=$((FIRST_FAILED - FAILED))
+    PASSED=$(($(get_result_attribute "${REPORT}" passed) + FLAKY))
 
     if [ ! -f "${REPORT}" ] || ! grep -q '<test-run ' "${REPORT}"; then
       OUTCOME="error"
-    elif [ "${FAILED}" -gt 0 ]; then
-      OUTCOME="failed"
     elif [ "${EXIT_CODE}" -eq 0 ]; then
       OUTCOME="passed"
+    elif [ "${EXIT_CODE}" -eq 8 ]; then
+      OUTCOME="failed"
     else
       OUTCOME="error"
     fi
 
-    if [ "${OUTCOME}" = "error" ] && [ "${EXIT_CODE}" -gt 128 ] && [ "${CRASH_RETRIED}" -eq 0 ]; then
-      CRASH_RETRIED=1
-      echo "::warning::${mode}: the Unity editor crashed (exit code ${EXIT_CODE}) before reporting results. Running the mode once more"
-      continue
-    fi
-
-    if [ "${OUTCOME}" != "failed" ] || [ "${ATTEMPT}" -ge "${TEST_RETRIES}" ]; then
+    if [ "${EXIT_CODE}" -eq 14 ]; then
+      OUTCOME="timeout"
       break
     fi
 
-    ATTEMPT=$((ATTEMPT + 1))
-    echo "::warning::${mode}: ${FAILED} test(s) failed. Running the mode again (retry ${ATTEMPT} of ${TEST_RETRIES})"
+    if [ "${OUTCOME}" = "error" ] && [ "${EXIT_CODE}" -eq 6 ] && [ "${RERAN}" -eq 0 ] && [ -f "${LOG_FILE}" ] && ! has_compile_errors "${LOG_FILE}"; then
+      RERAN=1
+      echo "::warning::${mode}: the Unity editor stopped before reporting results. Running the mode once more"
+      continue
+    fi
+
+    break
   done
 
   case "${OUTCOME}" in
@@ -293,30 +374,51 @@ for mode in "${MODE_ARRAY[@]}"; do
         RESULT="⚠️ No tests"
         echo "::warning::${mode}: no tests ran. Check the test mode, the test assemblies and the category filter"
       fi
+      if [ "${FLAKY}" -gt 0 ]; then
+        RESULT="⚠️ Passed after a retry"
+        echo "::warning::${mode}: ${FLAKY} test(s) passed only after a retry"
+        FAILED_TESTS=$(list_failed_tests "${REPORT}")
+        FAILED_TITLE="Flaky ${mode} tests, first attempt"
+      fi
       ;;
     failed)
       RESULT="❌ Failed"
       FAILED_MODES=$((FAILED_MODES + 1))
       echo "::error::${mode}: ${FAILED} test(s) failed (${PASSED} passed, ${SKIPPED} skipped)"
-      FAILED_TESTS=$(list_failed_tests "${REPORT}")
-      if [ -n "${FAILED_TESTS}" ]; then
-        echo "::group::❌ Failed ${mode} tests"
-        echo "${FAILED_TESTS}"
-        echo "::endgroup::"
-      fi
+      FAILED_TESTS=$(list_failed_tests "${LAST_REPORT}")
+      FAILED_TITLE="Failed ${mode} tests"
+      ;;
+    timeout)
+      RESULT="⚠️ Timed out"
+      FAILED_MODES=$((FAILED_MODES + 1))
+      echo "::error::${mode} tests did not finish within ${TEST_TIMEOUT} seconds. Log: ${LOG_FILE}"
       ;;
     *)
       RESULT="⚠️ Error (exit ${EXIT_CODE})"
       FAILED_MODES=$((FAILED_MODES + 1))
-      echo "::error::${mode} tests did not complete (exit code ${EXIT_CODE}): compile error, license, timeout or editor crash. Log: ${LOG_FILE}"
+      echo "::error::${mode} tests did not complete (Unity CLI exit code ${EXIT_CODE}): compile error, license, a project that is already open, or an editor crash. Log: ${LOG_FILE}"
       ;;
   esac
 
+  if [ -n "${FAILED_TESTS}" ]; then
+    echo "::group::${FAILED_TITLE}"
+    echo "${FAILED_TESTS}"
+    echo "::endgroup::"
+  fi
+
+  if [ "${OUTCOME}" = "timeout" ] || [ "${OUTCOME}" = "error" ]; then
+    if [ -f "${LOG_FILE}" ]; then
+      echo "::group::Last lines of the editor log"
+      tail -n 80 "${LOG_FILE}"
+      echo "::endgroup::"
+    fi
+  fi
+
   echo "| ${mode} | ${RESULT} | ${PASSED} | ${FAILED} | ${SKIPPED} |" >> "${GITHUB_STEP_SUMMARY}"
 
-  if [ "${OUTCOME}" = "failed" ] && [ -n "${FAILED_TESTS:-}" ]; then
+  if [ -n "${FAILED_TESTS}" ]; then
     FAILED_SUMMARY="${FAILED_SUMMARY}
-<details><summary>Failed ${mode} tests</summary>
+<details><summary>${FAILED_TITLE}</summary>
 
 \`\`\`text
 ${FAILED_TESTS}

@@ -23,9 +23,9 @@ inputs:
         required: false
         default: ""
     unity-cli-channel:
-        description: Release channel of the Unity CLI to install.
+        description: Release channel of the Unity CLI to install. An installed CLI is updated to the newest release on this channel. Supported values are stable and beta.
         required: false
-        default: beta
+        default: stable
     cache:
         description: Cache the installed Unity editor on GitHub-hosted runners. Editors are several GB, so only enable if your cache quota allows it.
         required: false
