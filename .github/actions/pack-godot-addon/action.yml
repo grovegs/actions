@@ -19,13 +19,17 @@ inputs:
         description: Path to the LICENSE file to include
         required: false
         default: ""
+    skills:
+        description: Path to the folder of agent skills to include. Each skill is its SKILL.md followed by its godot.md when there is one
+        required: false
+        default: ""
 
 outputs:
     package:
         description: Path to the created addon zip file
         value: ${{ steps.pack.outputs.package }}
     modified-files:
-        description: Path to modified plugin.cfg file in workspace
+        description: Space-separated paths to the files changed in the workspace
         value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
@@ -40,6 +44,7 @@ runs:
               ADDON_FILENAME: ${{ inputs.filename }}
               ADDON_README: ${{ inputs.readme }}
               ADDON_LICENSE: ${{ inputs.license }}
+              ADDON_SKILLS: ${{ inputs.skills }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_addon.sh"
               "${{ github.action_path }}/scripts/pack_addon.sh"

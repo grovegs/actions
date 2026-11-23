@@ -350,13 +350,17 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 
 **pack-godot-addon** - Package Godot addons
 
-- Inputs: `addon`, `version`, `filename`
+- Inputs: `addon`, `version`, `filename`, `readme`, `license`, `skills`
 - Outputs: `package`, `modified-files`
+- `readme` and `license` are copied into the addon.
+- `skills` is a folder of agent skills, one folder per skill. Each is written to `skills/<name>/SKILL.md` in the addon as its `SKILL.md` followed by its `godot.md`, when there is one, with a `.gdignore` beside them.
 
 **pack-unity-package** - Package Unity packages as tarballs
 
-- Inputs: `package`, `version`, `filename`
+- Inputs: `package`, `version`, `filename`, `readme`, `license`, `skills`
 - Outputs: `package`, `modified-files`
+- `readme` and `license` are copied into the package, and a `.meta` is created for each when it is missing.
+- `skills` is a folder of agent skills, one folder per skill. Each is written to `Skills~/<name>/SKILL.md` in the package as its `SKILL.md` followed by its `unity.md`, when there is one. A package writes its rules once and keeps only what differs per engine in `unity.md` and `godot.md`.
 
 ### Publish Actions
 
@@ -392,14 +396,6 @@ To publish with nuget.org trusted publishing instead of an API key, add a policy
 - Outputs: `latest-version`, `next-version`, `next-base-version`, `bump-type`
 - `auto` reads the commits since the previous release: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps major from 1.0.0 on and minor before it, `feat:` bumps minor, and anything else bumps patch. With `auto-major: false`, breaking changes bump minor and major is only bumped when chosen.
 - Choosing a lower bump than the commits suggest logs a warning. Release commits (`chore: release version …`) are ignored.
-
-**build-agent-skills** - Write or check the agent skill each engine package ships
-
-- Inputs: `directory`, `check`
-- A package writes its rules for game code once, in `skills/<name>/SKILL.md`, and puts only what differs per engine in `unity.md` and `godot.md` beside it. Both engine files are optional.
-- The Unity package gets `Skills~/<name>/SKILL.md` and the Godot addon gets `skills/<name>/SKILL.md` with a `.gdignore`, each made of the shared rules followed by the engine file. A project still sees one skill.
-- With `check: true`, the default, it fails when a shipped skill does not match its source. With `check: false` it writes them.
-- To write them on a developer machine, run the same script: `curl -fsSL https://raw.githubusercontent.com/grovegs/actions/<tag>/.github/actions/build-agent-skills/scripts/build_agent_skills.sh | bash` from the repository root.
 
 **check-agent-skills** - Check the front matter of every `SKILL.md` under a directory
 

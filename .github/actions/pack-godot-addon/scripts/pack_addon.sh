@@ -56,6 +56,41 @@ if [ -n "${ADDON_LICENSE:-}" ] && [ -f "${ADDON_LICENSE}" ]; then
   MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_LICENSE}"
 fi
 
+if [ -n "${ADDON_SKILLS:-}" ]; then
+  if [ ! -d "${ADDON_SKILLS}" ]; then
+    echo "::error::Skills directory '${ADDON_SKILLS}' does not exist"
+    exit 1
+  fi
+
+  echo "::notice::Syncing agent skills to ${ADDON_PATH}"
+
+  for skill_dir in "${ADDON_SKILLS}"/*; do
+    if [ ! -f "${skill_dir}/SKILL.md" ]; then
+      continue
+    fi
+
+    TARGET_SKILL="${ADDON_PATH}/skills/$(basename "${skill_dir}")/SKILL.md"
+    mkdir -p "$(dirname "${TARGET_SKILL}")"
+    cp "${skill_dir}/SKILL.md" "${TARGET_SKILL}"
+
+    if [ -f "${skill_dir}/godot.md" ]; then
+      {
+        echo ""
+        cat "${skill_dir}/godot.md"
+      } >> "${TARGET_SKILL}"
+    fi
+
+    echo "  ✓ Wrote ${TARGET_SKILL}"
+    MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_SKILL}"
+  done
+
+  if [ -d "${ADDON_PATH}/skills" ]; then
+    TARGET_IGNORE="${ADDON_PATH}/skills/.gdignore"
+    : > "${TARGET_IGNORE}"
+    MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_IGNORE}"
+  fi
+fi
+
 ADDONS_DIR="${HOME}/.godot/addons"
 TEMP_DIR="${ADDONS_DIR}/${ADDON_FILENAME}"
 
