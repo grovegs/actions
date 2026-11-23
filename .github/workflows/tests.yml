@@ -453,6 +453,10 @@ jobs:
               shell: bash
               run: bash .github/tests/test_check_agent_skills.sh
 
+            - name: 🧪 Test Agent Skills Build
+              shell: bash
+              run: bash .github/tests/test_build_agent_skills.sh
+
             - name: 🧪 Test Unity Editor Paths
               shell: bash
               run: bash .github/tests/test_setup_unity_paths.sh

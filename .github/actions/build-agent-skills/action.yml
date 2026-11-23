@@ -1,0 +1,24 @@
+name: Build Agent Skills
+description: Writes or checks the agent skill each engine package ships, built from the shared rules in skills/<name>/SKILL.md and the optional unity.md and godot.md beside it
+
+inputs:
+    directory:
+        description: Root of the package repository, which holds the skills folder and the src folder.
+        required: false
+        default: .
+    check:
+        description: Set to true to fail when a shipped skill does not match its source, or to false to write the shipped skills.
+        required: false
+        default: "true"
+
+runs:
+    using: composite
+    steps:
+        - name: 📦 Build Agent Skills
+          shell: bash
+          env:
+              SKILLS_ROOT: ${{ inputs.directory }}
+              SKILLS_CHECK: ${{ inputs.check }}
+          run: |
+              chmod +x "${{ github.action_path }}/scripts/build_agent_skills.sh"
+              "${{ github.action_path }}/scripts/build_agent_skills.sh"
