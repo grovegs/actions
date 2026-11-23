@@ -84,6 +84,35 @@ if [ -n "${PACKAGE_LICENSE:-}" ] && [ -f "${PACKAGE_LICENSE}" ]; then
   ensure_meta "${TARGET_LICENSE}" "DefaultImporter"
 fi
 
+if [ -n "${PACKAGE_SKILLS:-}" ]; then
+  if [ ! -d "${PACKAGE_SKILLS}" ]; then
+    echo "::error::Skills directory '${PACKAGE_SKILLS}' does not exist"
+    exit 1
+  fi
+
+  echo "::notice::Syncing agent skills to ${PACKAGE_PATH}"
+
+  for skill_dir in "${PACKAGE_SKILLS}"/*; do
+    if [ ! -f "${skill_dir}/SKILL.md" ]; then
+      continue
+    fi
+
+    TARGET_SKILL="${PACKAGE_PATH}/Skills~/$(basename "${skill_dir}")/SKILL.md"
+    mkdir -p "$(dirname "${TARGET_SKILL}")"
+    cp "${skill_dir}/SKILL.md" "${TARGET_SKILL}"
+
+    if [ -f "${skill_dir}/unity.md" ]; then
+      {
+        echo ""
+        cat "${skill_dir}/unity.md"
+      } >> "${TARGET_SKILL}"
+    fi
+
+    echo "  ✓ Wrote ${TARGET_SKILL}"
+    MODIFIED_FILES="${MODIFIED_FILES} ${TARGET_SKILL}"
+  done
+fi
+
 PACKAGES_DIR="${HOME}/.unity/packages"
 TEMP_DIR="${PACKAGES_DIR}/${PACKAGE_FILENAME}"
 

@@ -19,13 +19,17 @@ inputs:
         description: Path to the LICENSE file to include
         required: false
         default: ""
+    skills:
+        description: Path to the folder of agent skills to include. Each skill is its SKILL.md followed by its unity.md when there is one
+        required: false
+        default: ""
 
 outputs:
     package:
         description: Path to the created package tarball file
         value: ${{ steps.pack.outputs.package }}
     modified-files:
-        description: Path to modified package.json file in workspace
+        description: Space-separated paths to the files changed in the workspace
         value: ${{ steps.pack.outputs.modified-files }}
 
 runs:
@@ -40,6 +44,7 @@ runs:
               PACKAGE_FILENAME: ${{ inputs.filename }}
               PACKAGE_README: ${{ inputs.readme }}
               PACKAGE_LICENSE: ${{ inputs.license }}
+              PACKAGE_SKILLS: ${{ inputs.skills }}
           run: |
               chmod +x "${{ github.action_path }}/scripts/pack_package.sh"
               "${{ github.action_path }}/scripts/pack_package.sh"

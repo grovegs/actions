@@ -453,9 +453,9 @@ jobs:
               shell: bash
               run: bash .github/tests/test_check_agent_skills.sh
 
-            - name: 🧪 Test Agent Skills Build
+            - name: 🧪 Test Agent Skills Packing
               shell: bash
-              run: bash .github/tests/test_build_agent_skills.sh
+              run: bash .github/tests/test_pack_agent_skills.sh
 
             - name: 🧪 Test Unity Editor Paths
               shell: bash
