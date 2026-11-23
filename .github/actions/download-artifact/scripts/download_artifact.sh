@@ -29,10 +29,44 @@ if [ ! -d "${DOWNLOAD_DIR}" ]; then
   exit 1
 fi
 
+parse_artifact_name() {
+  local meta_file="$1"
+
+  if command -v jq &>/dev/null; then
+    jq -r '.artifact_name // empty' "${meta_file}" 2>/dev/null || true
+  else
+    { grep -o '"artifact_name"[[:space:]]*:[[:space:]]*"[^"]*"' "${meta_file}" || true; } | sed 's/.*: *"\([^"]*\)".*/\1/'
+  fi
+}
+
+parse_file_paths() {
+  local meta_file="$1"
+
+  if command -v jq &>/dev/null; then
+    jq -r '.files[]? // empty' "${meta_file}" 2>/dev/null
+  else
+    sed -n '/"files":/,/]/p' "${meta_file}" | grep -o '"[^"]*"' | grep -v '"files"' | sed 's/"//g'
+  fi
+}
+
+find_metadata_files() {
+  local candidate
+
+  while IFS= read -r candidate; do
+    if [ -n "${candidate}" ] && [ "$(parse_artifact_name "${candidate}")" = "$(basename "${candidate}" .meta)" ]; then
+      echo "${candidate}"
+    fi
+  done < <(find "${DOWNLOAD_DIR}" -maxdepth 2 -name "*.meta" -type f 2>/dev/null || true)
+}
+
 if [ -n "${DESTINATION_PATH}" ]; then
   echo "::notice::Custom destination path specified, skipping metadata restoration"
 
-  find "${DOWNLOAD_DIR}" -name "*.meta" -type f -delete 2>/dev/null || true
+  while IFS= read -r METADATA_FILE; do
+    if [ -n "${METADATA_FILE}" ]; then
+      rm -f "${METADATA_FILE}"
+    fi
+  done <<< "$(find_metadata_files)"
 
   {
     echo "download-path=${DOWNLOAD_DIR}"
@@ -42,7 +76,7 @@ if [ -n "${DESTINATION_PATH}" ]; then
   exit 0
 fi
 
-METADATA_FILES=$(find "${DOWNLOAD_DIR}" -name "*.meta" -type f 2>/dev/null || true)
+METADATA_FILES=$(find_metadata_files)
 
 if [ -z "${METADATA_FILES}" ]; then
   echo "::warning::No metadata files found. Files will remain in download directory."
@@ -56,26 +90,6 @@ if [ -z "${METADATA_FILES}" ]; then
 fi
 
 echo "::notice::Restoring files to original paths using metadata"
-
-parse_artifact_name() {
-  local meta_file="$1"
-
-  if command -v jq &>/dev/null; then
-    jq -r '.artifact_name // empty' "${meta_file}" 2>/dev/null
-  else
-    grep -o '"artifact_name"[[:space:]]*:[[:space:]]*"[^"]*"' "${meta_file}" | sed 's/.*: *"\([^"]*\)".*/\1/'
-  fi
-}
-
-parse_file_paths() {
-  local meta_file="$1"
-
-  if command -v jq &>/dev/null; then
-    jq -r '.files[]? // empty' "${meta_file}" 2>/dev/null
-  else
-    sed -n '/"files":/,/]/p' "${meta_file}" | grep -o '"[^"]*"' | grep -v '"files"' | sed 's/"//g'
-  fi
-}
 
 RESTORED_COUNT=0
 METADATA_COUNT=0
